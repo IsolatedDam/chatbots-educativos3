@@ -18,6 +18,7 @@ mongoose.connect(process.env.MONGO_URI)
 app.use('/api', require('./routes/auth'));              // login y registro para alumnos
 app.use('/api/upload', require('./routes/upload'));     // carga masiva desde archivo
 app.use('/api/admin', require('./routes/admin'));       // login y gestión para admin/profesor
+app.use('/api/visitas', require('./routes/visita'));    // ruta nueva para visitas/invitados
 
 // Servidor
 const PORT = process.env.PORT || 5000;
