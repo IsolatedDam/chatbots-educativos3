@@ -1,0 +1,163 @@
+.perfil-box {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.05);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.perfil-box h2 {
+  color: #005D8C;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.perfil-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.form-group input {
+  padding: 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #f9f9f9;
+}
+
+.perfil-box {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.05);
+  max-width: 700px;
+  margin: 0 auto;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.perfil-titulo {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #005D8C;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.perfil-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 25px 30px;
+}
+
+.perfil-campo label {
+  font-size: 14px;
+  color: #444;
+}
+
+.perfil-valor {
+  margin-top: 5px;
+  font-size: 16px;
+  font-weight: 500;
+  background: #f4f7fa;
+  padding: 10px 12px;
+  border-radius: 6px;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+@media (max-width: 600px) {
+  .perfil-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.perfil-box {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.05);
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.perfil-titulo {
+  text-align: center;
+  margin-bottom: 25px;
+  font-size: 24px;
+  color: #005D8C;
+}
+
+.perfil-seccion {
+  margin-bottom: 30px;
+}
+
+.perfil-seccion h3 {
+  color: #0079b6;
+  margin-bottom: 15px;
+  font-size: 18px;
+}
+
+.perfil-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 30px;
+}
+
+.perfil-campo label {
+  font-weight: bold;
+  color: #444;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.perfil-campo div {
+  background: #f4f7fa;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.riesgo-tag {
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  display: inline-block;
+  text-align: center;
+  width: fit-content;
+}
+
+.btn-cambiar {
+  padding: 10px 20px;
+  background-color: #00AEEF;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background 0.2s;
+}
+
+.btn-cambiar:hover {
+  background-color: #008bc6;
+}
+
+@media (max-width: 700px) {
+  .perfil-grid {
+    grid-template-columns: 1fr;
+  }
+}

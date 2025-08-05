@@ -1,0 +1,83 @@
+.cargar-container {
+  max-width: 600px;
+  margin: auto;
+  background: #fff;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  font-family: Arial, sans-serif;
+}
+
+.cargar-container h2 {
+  color: #005D8C;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.cargar-container input[type="file"] {
+  margin-bottom: 15px;
+  width: 100%;
+}
+
+.cargar-container button {
+  width: 100%;
+  padding: 12px;
+  background-color: #00AEEF;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.cargar-container button:hover {
+  background-color: #0079b6;
+}
+
+.resultado {
+  margin-top: 20px;
+  font-size: 14px;
+  color: #333;
+}
+
+.tabla-alumnos {
+  margin-top: 30px;
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  width: 100%;
+}
+
+.tabla-alumnos table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto; /* permite que las columnas se ajusten al contenido */
+}
+
+.tabla-alumnos th,
+.tabla-alumnos td {
+  border: 1px solid #ccc;
+  padding: 12px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.tabla-alumnos th {
+  background-color: #f0f0f0;
+  font-weight: bold;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.cargar-container {
+  max-width: 1000px;
+  margin: auto;
+  background: #fff;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  font-family: Arial, sans-serif;
+}

@@ -1,0 +1,52 @@
+.dashboard-container {
+  padding: 30px;
+  max-width: 900px;
+  margin: 0 auto;
+  font-family: Arial, sans-serif;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.dashboard-header h2 {
+  color: #005D8C;
+}
+
+.dashboard-header button {
+  padding: 8px 16px;
+  background-color: #00AEEF;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.dashboard-header button:hover {
+  background-color: #0079b6;
+}
+
+.dashboard-info p {
+  font-size: 16px;
+  margin: 5px 0;
+}
+
+.dashboard-chatbots {
+  margin-top: 30px;
+}
+
+.iframe-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.iframe-grid iframe {
+  width: 100%;
+  height: 300px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}

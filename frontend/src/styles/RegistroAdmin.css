@@ -1,0 +1,57 @@
+.registro-admin-container {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  max-width: 500px;
+  margin: 40px auto;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.05);
+}
+
+.registro-admin-container h2 {
+  text-align: center;
+  color: #005D8C;
+  margin-bottom: 20px;
+}
+
+.registro-admin-container form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.registro-admin-container input,
+.registro-admin-container select {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 15px;
+  background-color: white;
+}
+
+.registro-admin-container button {
+  padding: 12px;
+  background-color: #00AEEF;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.registro-admin-container button:hover {
+  background-color: #0079b6;
+}
+
+.permisos-checkboxes {
+  background: #f9f9f9;
+  padding: 10px 15px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  margin-top: 10px;
+}
+
+.permisos-checkboxes label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+}

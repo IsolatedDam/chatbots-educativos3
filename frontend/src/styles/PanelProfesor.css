@@ -1,0 +1,44 @@
+.panel-profesor {
+  max-width: 600px;
+  margin: 40px auto;
+  background: #fff;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+}
+
+.panel-profesor h2 {
+  text-align: center;
+  color: #005D8C;
+  margin-bottom: 20px;
+}
+
+.editable-box {
+  background: #f3faff;
+  padding: 15px;
+  border: 1px solid #cce4f5;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+.editable-box input {
+  margin-top: 8px;
+  padding: 8px;
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.action-button {
+  padding: 10px 15px;
+  background-color: #00AEEF;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.action-button:hover {
+  background-color: #0079b6;
+}

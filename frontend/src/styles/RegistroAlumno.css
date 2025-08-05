@@ -1,0 +1,88 @@
+.registro-container {
+  max-width: 500px;
+  margin: 50px auto;
+  padding: 30px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  font-family: Arial, sans-serif;
+}
+
+.registro-container h2 {
+  text-align: center;
+  color: #005D8C;
+  margin-bottom: 20px;
+}
+
+.registro-container form input {
+  width: 100%;
+  margin: 8px 0;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.registro-container button {
+  width: 100%;
+  padding: 12px;
+  background-color: #00AEEF;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background-color 0.3s ease;
+}
+
+.registro-container button:hover {
+  background-color: #0079b6;
+}
+
+.mensaje {
+  margin-top: 15px;
+  font-weight: bold;
+  text-align: center;
+  color: red;
+}
+
+.input-field,
+.registro-container form input,
+.registro-container form select {
+  width: 100%;
+  margin: 8px 0;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+/* Estilo base para inputs y selects */
+.input-field,
+.registro-container form input,
+.registro-container form select {
+  width: 100%;
+  margin: 8px 0;
+  padding: 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  transition: all 0.2s ease-in-out;
+  transform: scale(1);
+}
+
+/* Efecto al pasar el mouse o enfocar */
+.input-field:hover,
+.input-field:focus,
+.registro-container form input:hover,
+.registro-container form input:focus,
+.registro-container form select:hover,
+.registro-container form select:focus {
+  outline: none;
+  border-color: #00AEEF;
+  box-shadow: 0 0 5px rgba(0, 174, 239, 0.5);
+  transform: scale(1.05);
+}
