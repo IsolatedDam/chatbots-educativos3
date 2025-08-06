@@ -17,6 +17,7 @@ function Login() {
   });
 
   const navigate = useNavigate();
+  const API_BASE = 'https://chatbots-educativos3.onrender.com';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,8 +32,8 @@ function Login() {
     try {
       const endpoint =
         rol === 'alumno'
-          ? 'http://localhost:5000/api/login'
-          : 'http://localhost:5000/api/admin/login';
+          ? `${API_BASE}/api/login`
+          : `${API_BASE}/api/admin/login`;
 
       const res = await axios.post(endpoint, {
         rut: rutLimpio,
@@ -70,7 +71,7 @@ function Login() {
     }
 
     try {
-      await axios.post('http://localhost:5000/api/visitas/registro', visita);
+      await axios.post(`${API_BASE}/api/visitas/registro`, visita);
 
       Swal.fire({
         icon: 'success',
@@ -98,7 +99,6 @@ function Login() {
         <h2>Portal Educativo</h2>
         <p className="login-info">Solo usuarios registrados por el administrador pueden ingresar.</p>
 
-        {/* Selector de rol */}
         <div className="rol-selector">
           <label>
             <input
@@ -147,7 +147,6 @@ function Login() {
         {mensaje && <p className="login-msg">{mensaje}</p>}
       </div>
 
-      {/* Modal de visitante */}
       {modalAbierto && (
         <div className="modal-backdrop">
           <div className="modal-box">
