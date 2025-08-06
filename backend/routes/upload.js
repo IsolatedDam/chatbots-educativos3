@@ -56,6 +56,7 @@ router.post('/masivo', upload.single('archivo'), async (req, res) => {
           apellido: item.apellido,
           semestre: item.semestre,
           jornada: item.jornada,
+          rol: 'alumno',
           habilitado: true,
           aviso_suspension: false,
           rehabilitar_acceso: false,

@@ -22,8 +22,9 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const rutLimpio = rut.trim().toLowerCase();
+    const contrasenaLimpia = contrasena.trim();
 
-    if (!rutLimpio || !contrasena) {
+    if (!rutLimpio || !contrasenaLimpia) {
       setMensaje('Por favor completa ambos campos');
       setTimeout(() => setMensaje(''), 3000);
       return;
@@ -35,21 +36,31 @@ function Login() {
           ? `${API_BASE}/api/login`
           : `${API_BASE}/api/admin/login`;
 
+      console.log('→ Intentando login con:', { rutLimpio, contrasenaLimpia, endpoint });
+
       const res = await axios.post(endpoint, {
         rut: rutLimpio,
-        contrasena,
+        contrasena: contrasenaLimpia,
       });
+
+      console.log('✅ Respuesta recibida del backend:', res.data);
 
       const usuario = res.data.alumno || res.data.admin;
       const token = res.data.token;
+
+      console.log('💾 Guardando en localStorage:', { token, usuario });
 
       localStorage.setItem('token', token);
       localStorage.setItem('usuario', JSON.stringify(usuario));
 
       if (rol === 'alumno') {
-        navigate('/panel-alumno');
+        console.log('🚀 Redirigiendo a /panel-alumno...');
+        setTimeout(() => {
+          navigate('/panel-alumno');
+        }, 100);
       } else {
         const tipo = usuario.rol;
+        console.log('Rol detectado:', tipo);
         if (tipo === 'superadmin') {
           navigate('/panel-admin');
         } else if (tipo === 'profesor') {
@@ -59,6 +70,7 @@ function Login() {
         }
       }
     } catch (err) {
+      console.error('❌ Error al intentar login:', err);
       const errorMsg = err.response?.data?.msg || 'Error al iniciar sesión';
       setMensaje(errorMsg);
       setTimeout(() => setMensaje(''), 3000);

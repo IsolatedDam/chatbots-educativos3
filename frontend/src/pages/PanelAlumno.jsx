@@ -9,12 +9,15 @@ function PanelAlumno() {
 
   useEffect(() => {
     const datos = localStorage.getItem('usuario');
-    if (!datos) {
-      navigate('/login');
-    } else {
-      setUsuario(JSON.parse(datos));
+    if (datos) {
+      try {
+        const usuarioParseado = JSON.parse(datos);
+        setUsuario(usuarioParseado); // ✅ Sin validación de rol
+      } catch (e) {
+        console.error('Error al leer el usuario desde localStorage:', e);
+      }
     }
-  }, [navigate]);
+  }, []);
 
   const cerrarSesion = () => {
     localStorage.removeItem('token');
@@ -41,76 +44,73 @@ function PanelAlumno() {
 
       <main className="panel-contenido">
         {seccion === 'perfil' && usuario && (
-            <div className="perfil-box">
-                <h2 className="perfil-titulo">Perfil del Alumno</h2>
+          <div className="perfil-box">
+            <h2 className="perfil-titulo">Perfil del Alumno</h2>
 
-                {/* 🧑 Información Personal */}
-                <section className="perfil-seccion">
-                <h3>🧑 Información Personal</h3>
-                <div className="perfil-grid">
-                    <div className="perfil-campo">
-                    <label>Nombre:</label>
-                    <div>{usuario.nombre} {usuario.apellido}</div>
-                    </div>
-                    <div className="perfil-campo">
-                    <label>Documento:</label>
-                    <div>{usuario.tipo_documento} {usuario.numero_documento}</div>
-                    </div>
-                    <div className="perfil-campo">
-                    <label>Jornada:</label>
-                    <div>{usuario.jornada}</div>
-                    </div>
-                    <div className="perfil-campo">
-                    <label>Semestre:</label>
-                    <div>{usuario.semestre}</div>
-                    </div>
+            <section className="perfil-seccion">
+              <h3>Información Personal</h3>
+              <div className="perfil-grid">
+                <div className="perfil-campo">
+                  <label>Nombre:</label>
+                  <div>{usuario.nombre} {usuario.apellido}</div>
                 </div>
-                </section>
-
-                {/* 📧 Información de Contacto */}
-                <section className="perfil-seccion">
-                <h3>📧 Información de Contacto</h3>
-                <div className="perfil-grid">
-                    <div className="perfil-campo">
-                    <label>Correo:</label>
-                    <div>{usuario.correo}</div>
-                    </div>
-                    <div className="perfil-campo">
-                    <label>Teléfono:</label>
-                    <div>{usuario.telefono || 'No registrado'}</div>
-                    </div>
+                <div className="perfil-campo">
+                  <label>Documento:</label>
+                  <div>{usuario.tipo_documento} {usuario.numero_documento}</div>
                 </div>
-                </section>
-
-                {/* 🎓 Información Académica */}
-                <section className="perfil-seccion">
-                <h3>🎓 Información Académica</h3>
-                <div className="perfil-grid">
-                    <div className="perfil-campo">
-                    <label>Estado de cuenta:</label>
-                    <div>{usuario.habilitado ? 'Habilitado' : 'Suspendido'}</div>
-                    </div>
-                    <div className="perfil-campo">
-                    <label>Color de riesgo:</label>
-                    <div
-                        className="riesgo-tag"
-                        style={{ backgroundColor: usuario.color_riesgo === 'verde' ? '#27ae60' : '#c0392b' }}
-                    >
-                        {usuario.color_riesgo?.toUpperCase()}
-                    </div>
-                    </div>
+                <div className="perfil-campo">
+                  <label>Jornada:</label>
+                  <div>{usuario.jornada}</div>
                 </div>
-                </section>
+                <div className="perfil-campo">
+                  <label>Semestre:</label>
+                  <div>{usuario.semestre}</div>
+                </div>
+              </div>
+            </section>
 
-                {/* 🔒 Seguridad */}
-                <section className="perfil-seccion">
-                <h3>🔒 Seguridad</h3>
-                <button className="btn-cambiar" onClick={() => alert('Función en desarrollo')}>
-                    Cambiar contraseña
-                </button>
-                </section>
-            </div>
-            )}
+            <section className="perfil-seccion">
+              <h3>Información de Contacto</h3>
+              <div className="perfil-grid">
+                <div className="perfil-campo">
+                  <label>Correo:</label>
+                  <div>{usuario.correo}</div>
+                </div>
+                <div className="perfil-campo">
+                  <label>Teléfono:</label>
+                  <div>{usuario.telefono || 'No registrado'}</div>
+                </div>
+              </div>
+            </section>
+
+            <section className="perfil-seccion">
+              <h3>Información Académica</h3>
+              <div className="perfil-grid">
+                <div className="perfil-campo">
+                  <label>Estado de cuenta:</label>
+                  <div>{usuario.habilitado ? 'Habilitado' : 'Suspendido'}</div>
+                </div>
+                <div className="perfil-campo">
+                  <label>Color de riesgo:</label>
+                  <div
+                    className="riesgo-tag"
+                    style={{ backgroundColor: usuario.color_riesgo === 'verde' ? '#27ae60' : '#c0392b' }}
+                  >
+                    {usuario.color_riesgo?.toUpperCase()}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="perfil-seccion">
+              <h3>Seguridad</h3>
+              <button className="btn-cambiar" onClick={() => alert('Función en desarrollo')}>
+                Cambiar contraseña
+              </button>
+            </section>
+          </div>
+        )}
+
         {seccion === 'chatbots' && usuario && (
           <div className="panel-box">
             <h2>Chatbots Asignados</h2>

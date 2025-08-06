@@ -40,14 +40,13 @@ function App() {
               </RutaProtegida>
             }
           />
+
+          {/* 🔓 Ruta temporalmente pública */}
           <Route
             path="/panel-alumno"
-            element={
-              <RutaProtegida rolesPermitidos={['alumno']}>
-                <PanelAlumno />
-              </RutaProtegida>
-            }
+            element={<PanelAlumno />}
           />
+
           <Route
             path="/panel-admin"
             element={
