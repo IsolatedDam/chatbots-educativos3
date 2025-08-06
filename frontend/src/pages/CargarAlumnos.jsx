@@ -10,7 +10,7 @@ function CargarAlumnos() {
 
   const fetchAlumnos = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/upload/alumnos');
+      const res = await axios.get('https://chatbots-educativos3.onrender.com/api/upload/alumnos');
       setAlumnos(res.data);
     } catch (err) {
       console.error('Error al obtener alumnos:', err);
@@ -33,9 +33,12 @@ function CargarAlumnos() {
     formData.append('archivo', archivo);
 
     try {
-      const res = await axios.post('http://localhost:5000/api/upload/masivo', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const res = await axios.post('https://chatbots-educativos3.onrender.com/api/upload/masivo', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+            },
+              });
+              
       setResultado(res.data);
       fetchAlumnos(); // Recargar alumnos luego de la carga
     } catch (err) {

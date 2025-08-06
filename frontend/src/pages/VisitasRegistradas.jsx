@@ -8,7 +8,7 @@ function VisitasRegistradas() {
   useEffect(() => {
     const fetchVisitas = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/visitas');
+        const res = await axios.get('https://chatbots-educativos3.onrender.com/api/visitas');
         setVisitas(res.data);
       } catch (err) {
         console.error('Error al obtener visitas:', err);

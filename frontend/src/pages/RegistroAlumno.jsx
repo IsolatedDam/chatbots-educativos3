@@ -64,7 +64,7 @@ function RegistroAlumno() {
     console.log('Alumno a registrar:', alumno); // Para depuración
 
     try {
-      const res = await axios.post('http://localhost:5000/api/registro', alumno);
+      const res = await axios.post('https://chatbots-educativos3.onrender.com/api/registro', alumno);
 
       Swal.fire({
         icon: 'success',

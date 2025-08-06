@@ -16,7 +16,7 @@ function GestionarUsuarios() {
   const obtenerUsuarios = async () => {
     try {
       const endpoint = tipoUsuario === 'alumnos' ? 'alumnos' : 'profesores';
-      const res = await axios.get(`http://localhost:5000/api/${endpoint}`);
+      const res = await axios.get(`https://chatbots-educativos3.onrender.com/api/${endpoint}`);
       setUsuarios(res.data);
     } catch (err) {
       console.error('Error al obtener usuarios', err);
@@ -29,7 +29,7 @@ function GestionarUsuarios() {
 
   const handleEditar = (usuario) => {
     setUsuarioEditando(usuario);
-    setFormulario(usuario);
+    setFormulario(usuario); 
   };
 
   const handleFormularioChange = (e) => {
@@ -40,7 +40,7 @@ function GestionarUsuarios() {
   const guardarCambios = async () => {
     try {
       const endpoint = tipoUsuario === 'alumnos' ? 'alumnos' : 'profesores';
-      await axios.put(`http://localhost:5000/api/${endpoint}/${formulario._id}`, formulario);
+      await axios.put(`https://chatbots-educativos3.onrender.com/api/${endpoint}/${formulario._id}`, formulario);
       setUsuarioEditando(null);
       obtenerUsuarios();
     } catch (err) {
