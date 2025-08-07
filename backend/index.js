@@ -24,6 +24,11 @@ app.use('/api/admin', require('./routes/admin'));       // Admin y profesores
 app.use('/api/visitas', require('./routes/visita'));    // Invitados y exportación de visitas
 app.use('/api/alumnos', require('./routes/alumno'));
 
+// Ruta raíz para evitar "Cannot GET /"
+app.get('/', (req, res) => {
+  res.send('🚀 API funcionando correctamente en Render');
+});
+
 // Servidor
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Backend corriendo en puerto ${PORT}`));
