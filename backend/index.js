@@ -5,8 +5,12 @@ require('dotenv').config();
 
 const app = express();
 
-// Middlewares
-app.use(cors()); // Puedes configurarlo si usas frontend en otro puerto
+// ✅ Configuración de CORS
+app.use(cors({
+  origin: ['http://localhost:3000', 'https://tu-app.vercel.app'],
+  credentials: true
+}));
+
 app.use(express.json());
 
 // Conexión a MongoDB Atlas
@@ -24,7 +28,7 @@ app.use('/api/admin', require('./routes/admin'));       // Admin y profesores
 app.use('/api/visitas', require('./routes/visita'));    // Invitados y exportación de visitas
 app.use('/api/alumnos', require('./routes/alumno'));
 
-// Ruta raíz para evitar "Cannot GET /"
+// Ruta raíz
 app.get('/', (req, res) => {
   res.send('🚀 API funcionando correctamente en Render');
 });
