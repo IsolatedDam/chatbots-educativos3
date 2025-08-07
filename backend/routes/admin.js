@@ -23,6 +23,11 @@ router.post('/registro', async (req, res) => {
       return res.status(400).json({ msg: 'Faltan campos obligatorios' });
     }
 
+    // Validación estricta del rol
+    if (!['superadmin', 'profesor'].includes(rol)) {
+      return res.status(400).json({ msg: 'Rol inválido: solo se permiten superadmin o profesor' });
+    }
+
     // Validar correo y RUT únicos
     const existeCorreo = await Admin.findOne({ correo });
     if (existeCorreo) {
@@ -88,6 +93,27 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Error en el servidor' });
+  }
+});
+
+// Obtener todos los profesores
+router.get('/', async (req, res) => {
+  try {
+    const profesores = await Admin.find({ rol: 'profesor' });
+    res.json(profesores);
+  } catch (err) {
+    res.status(500).json({ msg: 'Error al obtener profesores' });
+  }
+});
+
+// Actualizar un profesor
+router.put('/:id', async (req, res) => {
+  try {
+    const profesor = await Admin.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!profesor) return res.status(404).json({ msg: 'Profesor no encontrado' });
+    res.json(profesor);
+  } catch (err) {
+    res.status(500).json({ msg: 'Error al actualizar profesor' });
   }
 });
 

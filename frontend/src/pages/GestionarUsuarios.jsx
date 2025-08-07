@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import '../styles/GestionarUsuarios.css';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 function GestionarUsuarios() {
   const [usuarios, setUsuarios] = useState([]);
@@ -17,7 +17,7 @@ function GestionarUsuarios() {
 
   const obtenerUsuarios = async () => {
     try {
-      const endpoint = tipoUsuario === 'alumnos' ? 'alumnos' : 'profesores';
+      const endpoint = tipoUsuario === 'alumnos' ? 'alumnos' : 'admin';
       const res = await axios.get(`${API_BASE}/${endpoint}`);
       setUsuarios(res.data);
     } catch (err) {
@@ -31,7 +31,7 @@ function GestionarUsuarios() {
 
   const handleEditar = (usuario) => {
     setUsuarioEditando(usuario);
-    setFormulario(usuario); 
+    setFormulario(usuario);
   };
 
   const handleFormularioChange = (e) => {
@@ -42,7 +42,6 @@ function GestionarUsuarios() {
   const guardarCambios = async () => {
     try {
       const endpoint = tipoUsuario === 'alumnos' ? 'alumnos' : 'profesores';
-      console.log('🧾 Enviando datos:', formulario);
       await axios.put(`${API_BASE}/${endpoint}/${formulario._id}`, formulario);
       setUsuarioEditando(null);
       obtenerUsuarios();
@@ -52,7 +51,7 @@ function GestionarUsuarios() {
   };
 
   const usuariosFiltrados = usuarios.filter((u) => {
-    const texto = `${u.nombre} ${u.apellido} ${u.numero_documento}`.toLowerCase();
+    const texto = `${u.nombre} ${u.apellido} ${u.numero_documento || ''}`.toLowerCase();
     return texto.includes(filtro.toLowerCase());
   });
 
@@ -96,9 +95,18 @@ function GestionarUsuarios() {
               <th>Correo</th>
               <th>Nombre</th>
               <th>Apellido</th>
-              <th>Documento</th>
-              <th>Semestre</th>
-              <th>Jornada</th>
+              {tipoUsuario === 'profesores' ? (
+                <>
+                  <th>RUT</th>
+                  <th>Cargo</th>
+                </>
+              ) : (
+                <>
+                  <th>Documento</th>
+                  <th>Semestre</th>
+                  <th>Jornada</th>
+                </>
+              )}
               <th>Acciones</th>
             </tr>
           </thead>
@@ -108,9 +116,18 @@ function GestionarUsuarios() {
                 <td>{u.correo}</td>
                 <td>{u.nombre}</td>
                 <td>{u.apellido}</td>
-                <td>{u.numero_documento}</td>
-                <td>{u.semestre || '-'}</td>
-                <td>{u.jornada || '-'}</td>
+                {tipoUsuario === 'profesores' ? (
+                  <>
+                    <td>{u.rut}</td>
+                    <td>{u.cargo || '-'}</td>
+                  </>
+                ) : (
+                  <>
+                    <td>{u.numero_documento}</td>
+                    <td>{u.semestre || '-'}</td>
+                    <td>{u.jornada || '-'}</td>
+                  </>
+                )}
                 <td>
                   <button onClick={() => handleEditar(u)}>Editar</button>
                 </td>
@@ -127,9 +144,14 @@ function GestionarUsuarios() {
             <input name="correo" value={formulario.correo} onChange={handleFormularioChange} />
             <input name="nombre" value={formulario.nombre} onChange={handleFormularioChange} />
             <input name="apellido" value={formulario.apellido} onChange={handleFormularioChange} />
-            <input name="numero_documento" value={formulario.numero_documento} onChange={handleFormularioChange} />
-            {tipoUsuario === 'alumnos' && (
+            {tipoUsuario === 'profesores' ? (
               <>
+                <input name="rut" value={formulario.rut || ''} onChange={handleFormularioChange} />
+                <input name="cargo" value={formulario.cargo || ''} onChange={handleFormularioChange} />
+              </>
+            ) : (
+              <>
+                <input name="numero_documento" value={formulario.numero_documento} onChange={handleFormularioChange} />
                 <input name="semestre" value={formulario.semestre || ''} onChange={handleFormularioChange} />
                 <select name="jornada" value={formulario.jornada || ''} onChange={handleFormularioChange}>
                   <option value="">Selecciona jornada</option>

@@ -32,7 +32,6 @@ function RegistroAlumno() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validación básica
     if (
       !form.correo ||
       !form.nombre ||
@@ -58,13 +57,14 @@ function RegistroAlumno() {
       semestre: form.semestre,
       jornada: form.jornada,
       contrasena: contrasenaGenerada,
-      rut: form.tipo_documento === 'RUT' ? form.numero_documento : '' // Nunca undefined
+      rut: form.tipo_documento === 'RUT' ? form.numero_documento : ''
     };
 
-    console.log('Alumno a registrar:', alumno); // Para depuración
+    console.log('Alumno a registrar:', alumno);
 
     try {
-      const res = await axios.post('https://chatbots-educativos3.onrender.com/api/registro', alumno);
+      const API_BASE = import.meta.env.VITE_API_BASE;
+      const res = await axios.post(`${API_BASE}/api/registro`, alumno);
 
       Swal.fire({
         icon: 'success',

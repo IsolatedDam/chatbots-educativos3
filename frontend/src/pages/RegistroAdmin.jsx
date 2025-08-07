@@ -43,13 +43,17 @@ function RegistroAdmin() {
     };
 
     try {
-      await axios.post('https://chatbots-educativos3.onrender.com/api/admin/registro', nuevoAdmin);
+      await axios.post('http://localhost:5000/api/admin/registro', nuevoAdmin);
 
-      Swal.fire(
-        `¡${form.rol === 'profesor' ? 'Profesor' : 'Administrador'} creado!`,
-        `Correo: ${form.correo}\nContraseña: ${contrasena}`,
-        'success'
-      );
+      Swal.fire({
+        icon: 'success',
+        title: `¡${form.rol === 'profesor' ? 'Profesor' : 'Administrador'} creado!`,
+        html: `
+          <p><strong>Correo:</strong> ${form.correo}</p>
+          <p><strong>Contraseña generada:</strong> <code>${contrasena}</code></p>
+        `,
+        confirmButtonText: 'Entendido'
+      });
 
       setForm({
         nombre: '',

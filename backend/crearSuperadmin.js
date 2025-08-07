@@ -8,7 +8,8 @@ mongoose.connect(process.env.MONGO_URI).then(async () => {
   const rut = '12345678-9';
   const correo = 'superadmin@masoterapia.cl';
   const contrasena = 'admin123';
-  const nombre = 'Super Admin';
+  const nombre = 'Super';
+  const apellido = 'Admin';
 
   const existe = await Admin.findOne({ rut });
   if (existe) {
@@ -23,6 +24,7 @@ mongoose.connect(process.env.MONGO_URI).then(async () => {
     correo,
     contrasena: hash,
     nombre,
+    apellido,
     rol: 'superadmin'
   });
 

@@ -1,4 +1,3 @@
-// Login.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -18,7 +17,7 @@ function Login() {
   });
 
   const navigate = useNavigate();
-  const API_BASE = 'https://chatbots-educativos3.onrender.com';
+  const API_BASE = import.meta.env.VITE_API_BASE;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
