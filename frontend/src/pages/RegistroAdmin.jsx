@@ -43,7 +43,7 @@ function RegistroAdmin() {
     };
 
     try {
-      await axios.post('http://localhost:5000/api/admin/registro', nuevoAdmin);
+      await axios.post('https://chatbots-educativos3.onrender.com/api/admin/registro', nuevoAdmin);
 
       Swal.fire({
         icon: 'success',
