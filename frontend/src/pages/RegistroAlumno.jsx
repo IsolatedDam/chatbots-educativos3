@@ -63,7 +63,7 @@ function RegistroAlumno() {
     console.log('Alumno a registrar:', alumno);
 
     try {
-      const API_BASE = import.meta.env.VITE_API_BASE;
+      const API_BASE = 'https://chatbots-educativos3.onrender.com'; // 🔧 URL fija sin Vite
       const res = await axios.post(`${API_BASE}/api/registro`, alumno);
 
       Swal.fire({

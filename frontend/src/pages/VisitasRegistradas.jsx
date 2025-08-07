@@ -18,7 +18,7 @@ function VisitasRegistradas() {
   }, []);
 
   const descargarExcel = () => {
-    window.open('http://localhost:5000/api/visitas/exportar', '_blank');
+    window.open('https://chatbots-educativos3.onrender.com/api/visitas/exportar', '_blank');
   };
 
   return (

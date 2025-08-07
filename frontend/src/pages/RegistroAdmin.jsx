@@ -88,7 +88,6 @@ function RegistroAdmin() {
           <option value="superadmin">Superadmin</option>
         </select>
 
-        {/* Checkboxes de permisos (solo si es profesor) */}
         {form.rol === 'profesor' && (
           <div className="permisos-checkboxes">
             <p><strong>Permisos del profesor:</strong></p>

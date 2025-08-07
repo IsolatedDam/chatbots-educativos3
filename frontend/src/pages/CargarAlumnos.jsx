@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import '../styles/CargarAlumnos.css';
@@ -8,6 +7,10 @@ function CargarAlumnos() {
   const [resultado, setResultado] = useState(null);
   const [alumnos, setAlumnos] = useState([]);
 
+  useEffect(() => {
+    fetchAlumnos();
+  }, []);
+
   const fetchAlumnos = async () => {
     try {
       const res = await axios.get('https://chatbots-educativos3.onrender.com/api/upload/alumnos');
@@ -16,10 +19,6 @@ function CargarAlumnos() {
       console.error('Error al obtener alumnos:', err);
     }
   };
-
-  useEffect(() => {
-    fetchAlumnos();
-  }, []);
 
   const handleFileChange = (e) => {
     setArchivo(e.target.files[0]);
@@ -36,11 +35,11 @@ function CargarAlumnos() {
       const res = await axios.post('https://chatbots-educativos3.onrender.com/api/upload/masivo', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-            },
-              });
-              
+        },
+      });
+
       setResultado(res.data);
-      fetchAlumnos(); // Recargar alumnos luego de la carga
+      fetchAlumnos(); // Recargar la tabla luego de subir
     } catch (err) {
       alert('Error al subir archivo');
     }
