@@ -11,22 +11,18 @@ function PanelProfesor() {
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('usuario');
 
-    // Protección por token y rol
+    // Solo validamos que exista token, pero no el rol
     if (!token) {
       navigate('/login');
       return;
     }
 
     try {
-      const decoded = jwtDecode(token);
-      if (decoded.rol !== 'profesor') {
-        navigate('/no-autorizado');
-      }
+      jwtDecode(token); // Solo para verificar que el token sea válido
     } catch (err) {
       navigate('/login');
     }
 
-    // Cargar usuario desde localStorage
     if (storedUser) {
       setAdmin(JSON.parse(storedUser));
     }
@@ -40,7 +36,7 @@ function PanelProfesor() {
         <p>Bienvenido, {admin.nombre || admin.correo}</p>
       )}
 
-      {/* ✅ Permiso: editar nombre */}
+      {/* Permiso: editar nombre */}
       {admin?.permisos?.columnasEditable?.includes('nombre') && (
         <div className="editable-box">
           [✔] Puedes editar campo: <strong>nombre</strong>
@@ -48,16 +44,14 @@ function PanelProfesor() {
         </div>
       )}
 
-      {/* ✅ Permiso: cargar entrenamientos */}
+      {/* Permiso: cargar entrenamientos */}
       {admin?.permisos?.columnasEditable?.includes('cargar') && (
         <div className="editable-box">
           <button className="action-button">Cargar Entrenamientos</button>
         </div>
       )}
 
-      {/* Agrega más permisos visibles aquí si lo deseas */}
-
-      {/* ❌ Si no tiene ningún permiso */}
+      {/* Si no tiene ningún permiso */}
       {!admin?.permisos?.columnasEditable?.length && (
         <p>No tienes permisos asignados aún.</p>
       )}

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import '../styles/GestionarUsuarios.css';
 
+const API_BASE = 'http://localhost:5000/api';
+
 function GestionarUsuarios() {
   const [usuarios, setUsuarios] = useState([]);
   const [tipoUsuario, setTipoUsuario] = useState('alumnos');
@@ -16,7 +18,7 @@ function GestionarUsuarios() {
   const obtenerUsuarios = async () => {
     try {
       const endpoint = tipoUsuario === 'alumnos' ? 'alumnos' : 'profesores';
-      const res = await axios.get(`https://chatbots-educativos3.onrender.com/api/${endpoint}`);
+      const res = await axios.get(`${API_BASE}/${endpoint}`);
       setUsuarios(res.data);
     } catch (err) {
       console.error('Error al obtener usuarios', err);
@@ -40,11 +42,12 @@ function GestionarUsuarios() {
   const guardarCambios = async () => {
     try {
       const endpoint = tipoUsuario === 'alumnos' ? 'alumnos' : 'profesores';
-      await axios.put(`https://chatbots-educativos3.onrender.com/api/${endpoint}/${formulario._id}`, formulario);
+      console.log('🧾 Enviando datos:', formulario);
+      await axios.put(`${API_BASE}/${endpoint}/${formulario._id}`, formulario);
       setUsuarioEditando(null);
       obtenerUsuarios();
     } catch (err) {
-      console.error('Error al actualizar usuario', err);
+      console.error('❌ Error al actualizar usuario:', err.response?.data || err.message);
     }
   };
 

@@ -1,3 +1,4 @@
+// Login.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -48,19 +49,13 @@ function Login() {
       const usuario = res.data.alumno || res.data.admin;
       const token = res.data.token;
 
-      console.log('💾 Guardando en localStorage:', { token, usuario });
-
       localStorage.setItem('token', token);
       localStorage.setItem('usuario', JSON.stringify(usuario));
 
       if (rol === 'alumno') {
-        console.log('🚀 Redirigiendo a /panel-alumno...');
-        setTimeout(() => {
-          navigate('/panel-alumno');
-        }, 100);
+        navigate('/panel-alumno');
       } else {
         const tipo = usuario.rol;
-        console.log('Rol detectado:', tipo);
         if (tipo === 'superadmin') {
           navigate('/panel-admin');
         } else if (tipo === 'profesor') {
@@ -107,7 +102,7 @@ function Login() {
   return (
     <div className="login-wrapper">
       <div className="login-container">
-        <img src="/logo3.png" alt="Logo" className="login-logo" />
+        <img src="/01.jpg" alt="Logo" className="login-logo" />
         <h2>Portal Educativo</h2>
         <p className="login-info">Solo usuarios registrados por el administrador pueden ingresar.</p>
 

@@ -15,10 +15,11 @@ mongoose.connect(process.env.MONGO_URI)
   .catch(err => console.error('❌ Error de conexión a MongoDB:', err));
 
 // Rutas
-app.use('/api', require('./routes/auth'));              // login y registro para alumnos
-app.use('/api/upload', require('./routes/upload'));     // carga masiva desde archivo
-app.use('/api/admin', require('./routes/admin'));       // login y gestión para admin/profesor
-app.use('/api/visitas', require('./routes/visita'));    // ruta nueva para visitas/invitados
+app.use('/api', require('./routes/auth'));              // Login y registro para alumnos
+app.use('/api/alumnos', require('./routes/alumno'));    // Gestión individual de alumnos
+app.use('/api/upload', require('./routes/upload'));     // Carga masiva desde Excel
+app.use('/api/admin', require('./routes/admin'));       // Admin y profesores
+app.use('/api/visitas', require('./routes/visita'));    // Invitados y exportación de visitas
 
 // Servidor
 const PORT = process.env.PORT || 5000;
