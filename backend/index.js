@@ -7,7 +7,7 @@ const app = express();
 
 // ✅ Configuración de CORS
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://tu-app.vercel.app'],
+  origin: ['http://localhost:3000', 'chatbots-educativos3.vercel.app'],
   credentials: true
 }));
 
