@@ -6,7 +6,6 @@
   height: 100vh;
   background: #f2f6f9;
   padding: 20px;
-  position: relative;
 }
 
 /* Contenedor del login */
@@ -19,7 +18,6 @@
   width: 100%;
   max-width: 400px;
   box-sizing: border-box;
-  z-index: 1;
 }
 
 /* Logo institucional */
@@ -42,6 +40,20 @@
   color: #7F8C8D;
 }
 
+/* Selector de rol */
+.rol-selector {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin: 15px 0;
+}
+
+.rol-selector label {
+  font-weight: bold;
+  font-size: 14px;
+  color: #333;
+}
+
 /* Formulario */
 .login-form input {
   display: block;
@@ -61,10 +73,7 @@
   transform: scale(1.02);
 }
 
-/* Botones */
-.login-form button,
-.visit-button,
-.modal-actions button {
+.login-form button {
   padding: 12px 20px;
   background-color: #00AEEF;
   color: white;
@@ -76,16 +85,9 @@
   transition: all 0.2s ease-in-out;
 }
 
-button:hover {
+.login-form button:hover {
   background-color: #008ec9;
   transform: scale(1.05);
-}
-
-/* Mensaje de error */
-.login-msg {
-  margin-top: 15px;
-  font-weight: bold;
-  color: red;
 }
 
 /* Link para recuperar contraseña */
@@ -101,69 +103,25 @@ button:hover {
   color: #005D8C;
 }
 
-/* Selector de rol */
-.rol-selector {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin: 15px 0;
-}
-
-.rol-selector label {
+/* Mensaje de error */
+.login-msg {
+  margin-top: 15px;
   font-weight: bold;
-  font-size: 14px;
-  color: #333;
+  color: red;
 }
 
-/* ===================== */
-/*      MODAL VISITA     */
-/* ===================== */
-
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 999;
-}
-
-.modal-box {
-  background: white;
-  padding: 30px;
-  border-radius: 12px;
-  width: 100%;
-  max-width: 400px;
-  text-align: center;
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
-}
-
-.modal-box input {
-  width: 100%;
-  padding: 12px;
-  margin: 10px 0;
-  font-size: 14px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  transition: all 0.2s ease-in-out;
-}
-
-.modal-box input:focus {
-  border-color: #00AEEF;
-  box-shadow: 0 0 5px rgba(0, 174, 239, 0.5);
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: space-between;
+/* Botón volver a inicio */
+.volver-inicio {
   margin-top: 20px;
+  background-color: transparent;
+  border: none;
+  color: #007BFF;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 14px;
+  transition: color 0.3s;
 }
 
-.modal-actions button {
-  flex: 1;
-  margin: 0 5px;
+.volver-inicio:hover {
+  color: #0056b3;
 }

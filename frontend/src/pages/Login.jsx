@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import Swal from 'sweetalert2';
 import '../styles/Login.css';
 
 function Login() {
@@ -9,12 +8,6 @@ function Login() {
   const [contrasena, setContrasena] = useState('');
   const [rol, setRol] = useState('alumno');
   const [mensaje, setMensaje] = useState('');
-  const [modalAbierto, setModalAbierto] = useState(false);
-  const [visita, setVisita] = useState({
-    nombre: '',
-    correo: '',
-    whatsapp: ''
-  });
 
   const navigate = useNavigate();
   const API_BASE = 'https://chatbots-educativos3.onrender.com/api';
@@ -66,33 +59,6 @@ function Login() {
     }
   };
 
-  const handleInvitado = async () => {
-    if (!visita.nombre || !visita.correo || !visita.whatsapp) {
-      return Swal.fire('Campos incompletos', 'Por favor llena todos los campos.', 'warning');
-    }
-
-    try {
-      await axios.post(`${API_BASE}/visitas/registro`, visita);
-
-      Swal.fire({
-        icon: 'success',
-        title: '¡Bienvenido!',
-        text: 'Tu visita ha sido registrada.',
-        timer: 1500,
-        showConfirmButton: false
-      });
-
-      setTimeout(() => {
-        navigate('/bienvenida-visita');
-      }, 1600);
-
-      setModalAbierto(false);
-      setVisita({ nombre: '', correo: '', whatsapp: '' });
-    } catch (err) {
-      Swal.fire('Error', 'No se pudo registrar la visita.', 'error');
-    }
-  };
-
   return (
     <div className="login-wrapper">
       <div className="login-container">
@@ -141,43 +107,12 @@ function Login() {
           ¿Olvidaste tu contraseña?
         </p>
 
-        <button className="visit-button" onClick={() => setModalAbierto(true)}>
-          Ingresar como visita
-        </button>
-
         {mensaje && <p className="login-msg">{mensaje}</p>}
+
+        <button className="volver-inicio" onClick={() => navigate('/')}>
+          ← Volver al inicio
+        </button>
       </div>
-
-      {modalAbierto && (
-        <div className="modal-backdrop">
-          <div className="modal-box">
-            <h3>Registro de visita</h3>
-            <input
-              type="text"
-              placeholder="Nombre completo"
-              value={visita.nombre}
-              onChange={(e) => setVisita({ ...visita, nombre: e.target.value })}
-            />
-            <input
-              type="email"
-              placeholder="Correo electrónico"
-              value={visita.correo}
-              onChange={(e) => setVisita({ ...visita, correo: e.target.value })}
-            />
-            <input
-              type="text"
-              placeholder="WhatsApp"
-              value={visita.whatsapp}
-              onChange={(e) => setVisita({ ...visita, whatsapp: e.target.value })}
-            />
-
-            <div className="modal-actions">
-              <button onClick={handleInvitado}>Enviar</button>
-              <button onClick={() => setModalAbierto(false)}>Cancelar</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

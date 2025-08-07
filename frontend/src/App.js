@@ -10,6 +10,9 @@ import PanelProfesor from './pages/PanelProfesor';
 import Inicio from './pages/Inicio';
 import VisitasRegistradas from './pages/VisitasRegistradas';
 import BienvenidaVisita from './pages/BienvenidaVisita';
+import PaginaPrincipal from './pages/PaginaPrincipal';
+import LoginInvitado from './pages/LoginInvitado';
+
 
 // 🔐 Ruta protegida
 import RutaProtegida from './components/RutaProtegida';
@@ -23,13 +26,14 @@ function App() {
       <div className="App">
         <Routes>
           {/* Redirección raíz */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<PaginaPrincipal />} />
 
           {/* Acceso público */}
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={<RegistroAlumno />} />
           <Route path="/inicio" element={<Inicio />} />
           <Route path="/bienvenida-visita" element={<BienvenidaVisita />} />
+          <Route path="/login-invitado" element={<LoginInvitado />} />
 
           {/* Rutas protegidas */}
           <Route
