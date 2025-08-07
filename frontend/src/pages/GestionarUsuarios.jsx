@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import '../styles/GestionarUsuarios.css';
 
-const API_BASE = import.meta.env.VITE_API_BASE;
+const API_BASE = 'https://chatbots-educativos3.onrender.com/api';
 
 function GestionarUsuarios() {
   const [usuarios, setUsuarios] = useState([]);

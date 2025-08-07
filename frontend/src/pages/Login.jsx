@@ -17,7 +17,7 @@ function Login() {
   });
 
   const navigate = useNavigate();
-  const API_BASE = import.meta.env.VITE_API_BASE;
+  const API_BASE = 'https://chatbots-educativos3.onrender.com/api';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,17 +33,13 @@ function Login() {
     try {
       const endpoint =
         rol === 'alumno'
-          ? `${API_BASE}/api/login`
-          : `${API_BASE}/api/admin/login`;
-
-      console.log('→ Intentando login con:', { rutLimpio, contrasenaLimpia, endpoint });
+          ? `${API_BASE}/login`
+          : `${API_BASE}/admin/login`;
 
       const res = await axios.post(endpoint, {
         rut: rutLimpio,
         contrasena: contrasenaLimpia,
       });
-
-      console.log('✅ Respuesta recibida del backend:', res.data);
 
       const usuario = res.data.alumno || res.data.admin;
       const token = res.data.token;
@@ -64,7 +60,6 @@ function Login() {
         }
       }
     } catch (err) {
-      console.error('❌ Error al intentar login:', err);
       const errorMsg = err.response?.data?.msg || 'Error al iniciar sesión';
       setMensaje(errorMsg);
       setTimeout(() => setMensaje(''), 3000);
@@ -77,7 +72,7 @@ function Login() {
     }
 
     try {
-      await axios.post(`${API_BASE}/api/visitas/registro`, visita);
+      await axios.post(`${API_BASE}/visitas/registro`, visita);
 
       Swal.fire({
         icon: 'success',
