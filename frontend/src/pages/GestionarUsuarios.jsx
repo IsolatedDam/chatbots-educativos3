@@ -9,26 +9,49 @@ function GestionarUsuarios() {
   const [tipoUsuario, setTipoUsuario] = useState('alumnos'); // 'alumnos' | 'profesores'
   const [filtroTexto, setFiltroTexto] = useState('');
 
-  // Filtros para alumnos
+  // Filtros (solo aplican a alumnos)
   const [filtroJornada, setFiltroJornada] = useState('');   // '' | 'Diurno' | 'Vespertino'
   const [filtroSemestre, setFiltroSemestre] = useState(''); // '' | '1'...'12'
 
-  // ✅ useCallback para evitar warning de deps
+  const [usuarioEditando, setUsuarioEditando] = useState(null);
+  const [formulario, setFormulario] = useState({});
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState('');
+
+  const token = localStorage.getItem('token') || '';
+
   const obtenerUsuarios = useCallback(async () => {
     try {
-      const endpoint = tipoUsuario === 'alumnos' ? 'alumnos' : 'admin'; // ajusta si listás profesores en otra ruta
-      const res = await axios.get(`${API_BASE}/${endpoint}`, {
-        // headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      setCargando(true);
+      setError('');
+
+      const endpointPath =
+        tipoUsuario === 'alumnos'
+          ? '/alumnos'
+          : '/admin/profesores';
+
+      const { data } = await axios.get(`${API_BASE}${endpointPath}`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
-      setUsuarios(res.data || []);
+
+      // Soporta array o {items: []}
+      const lista = Array.isArray(data) ? data : (data?.items || []);
+      setUsuarios(lista);
     } catch (err) {
-      console.error('Error al obtener usuarios', err?.response?.data || err.message);
+      console.error('Error al obtener usuarios',
+        err?.response?.status,
+        err?.response?.data || err.message
+      );
+      setUsuarios([]);
+      setError(err?.response?.data?.msg || 'No se pudieron cargar los usuarios.');
+    } finally {
+      setCargando(false);
     }
-  }, [tipoUsuario]);
+  }, [tipoUsuario, token]);
 
   useEffect(() => {
     obtenerUsuarios();
-    // Limpia filtros cuando cambias de tipo
+    // Reset filtros al cambiar el tipo
     setFiltroTexto('');
     setFiltroJornada('');
     setFiltroSemestre('');
@@ -73,9 +96,6 @@ function GestionarUsuarios() {
     });
   }, [usuarios, tipoUsuario, filtroTexto, filtroJornada, filtroSemestre]);
 
-  const [usuarioEditando, setUsuarioEditando] = useState(null);
-  const [formulario, setFormulario] = useState({});
-
   const handleEditar = (usuario) => {
     setUsuarioEditando(usuario);
     setFormulario(usuario);
@@ -88,54 +108,67 @@ function GestionarUsuarios() {
 
   const guardarCambios = async () => {
     try {
-      const endpoint = tipoUsuario === 'alumnos' ? 'alumnos' : 'profesores'; // ajusta si tu backend usa /admin/profesores
-      await axios.put(`${API_BASE}/${endpoint}/${formulario._id}`, formulario, {
-        // headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      const endpointPath =
+        tipoUsuario === 'alumnos'
+          ? '/alumnos'
+          : '/admin/profesores';
+
+      await axios.put(`${API_BASE}${endpointPath}/${formulario._id}`, formulario, {
+        headers: { Authorization: `Bearer ${token}` }
       });
+
       setUsuarioEditando(null);
       obtenerUsuarios();
     } catch (err) {
-      console.error('❌ Error al actualizar usuario:', err.response?.data || err.message);
+      console.error('❌ Error al actualizar usuario:',
+        err?.response?.status,
+        err?.response?.data || err.message
+      );
+      alert(err?.response?.data?.msg || 'No se pudo actualizar.');
     }
   };
 
-  // ✅ Import dinámico: xlsx se carga solo cuando exportas
   const exportarExcel = async () => {
-    const XLSX = await import('xlsx'); // <- requiere `npm i xlsx`
-    const esAlumnos = tipoUsuario === 'alumnos';
+    try {
+      const XLSX = await import('xlsx'); // requiere: npm i xlsx
+      const esAlumnos = tipoUsuario === 'alumnos';
 
-    const data = usuariosFiltrados.map(u => {
-      if (esAlumnos) {
-        return {
-          Correo: u.correo || '',
-          Nombre: u.nombre || '',
-          Apellido: u.apellido || '',
-          Documento: u.numero_documento || '',
-          Semestre: u.semestre ?? '',
-          Jornada: u.jornada ?? ''
-        };
-      } else {
-        return {
-          Correo: u.correo || '',
-          Nombre: u.nombre || '',
-          Apellido: u.apellido || '',
-          RUT: u.rut || '',
-          Cargo: u.cargo || '',
-          Rol: u.rol || ''
-        };
-      }
-    });
+      const data = usuariosFiltrados.map(u => {
+        if (esAlumnos) {
+          return {
+            Correo: u.correo || '',
+            Nombre: u.nombre || '',
+            Apellido: u.apellido || '',
+            Documento: u.numero_documento || '',
+            Semestre: u.semestre ?? '',
+            Jornada: u.jornada ?? ''
+          };
+        } else {
+          return {
+            Correo: u.correo || '',
+            Nombre: u.nombre || '',
+            Apellido: u.apellido || '',
+            RUT: u.rut || '',
+            Cargo: u.cargo || '',
+            Rol: u.rol || ''
+          };
+        }
+      });
 
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(data);
-    XLSX.utils.book_append_sheet(wb, ws, esAlumnos ? 'Alumnos' : 'Profesores');
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, esAlumnos ? 'Alumnos' : 'Profesores');
 
-    const fecha = new Date().toISOString().slice(0, 10);
-    const nombre = esAlumnos
-      ? `alumnos_${filtroJornada || 'todos'}_${filtroSemestre || 'todos'}_${fecha}.xlsx`
-      : `profesores_${fecha}.xlsx`;
+      const fecha = new Date().toISOString().slice(0, 10);
+      const nombre = esAlumnos
+        ? `alumnos_${filtroJornada || 'todos'}_${filtroSemestre || 'todos'}_${fecha}.xlsx`
+        : `profesores_${fecha}.xlsx`;
 
-    XLSX.writeFile(wb, nombre);
+      XLSX.writeFile(wb, nombre);
+    } catch (err) {
+      console.error('Export Excel error:', err);
+      alert('No se pudo exportar a Excel.');
+    }
   };
 
   const limpiarFiltros = () => {
@@ -147,6 +180,12 @@ function GestionarUsuarios() {
   return (
     <div className="gestionar-usuarios">
       <h2>Gestionar Usuarios</h2>
+
+      {error && (
+        <div className="alerta-error">
+          {error}
+        </div>
+      )}
 
       <div className="tipo-selector">
         <label>
@@ -208,59 +247,63 @@ function GestionarUsuarios() {
       </div>
 
       <div className="tabla-contenedor">
-        <table>
-          <thead>
-            <tr>
-              <th>Correo</th>
-              <th>Nombre</th>
-              <th>Apellido</th>
-              {tipoUsuario === 'profesores' ? (
-                <>
-                  <th>RUT</th>
-                  <th>Cargo</th>
-                </>
-              ) : (
-                <>
-                  <th>Documento</th>
-                  <th>Semestre</th>
-                  <th>Jornada</th>
-                </>
-              )}
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {usuariosFiltrados.map((u) => (
-              <tr key={u._id}>
-                <td>{u.correo}</td>
-                <td>{u.nombre}</td>
-                <td>{u.apellido}</td>
+        {cargando ? (
+          <div className="tabla-loading">Cargando…</div>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Correo</th>
+                <th>Nombre</th>
+                <th>Apellido</th>
                 {tipoUsuario === 'profesores' ? (
                   <>
-                    <td>{u.rut}</td>
-                    <td>{u.cargo || '-'}</td>
+                    <th>RUT</th>
+                    <th>Cargo</th>
                   </>
                 ) : (
                   <>
-                    <td>{u.numero_documento}</td>
-                    <td>{u.semestre || '-'}</td>
-                    <td>{u.jornada || '-'}</td>
+                    <th>Documento</th>
+                    <th>Semestre</th>
+                    <th>Jornada</th>
                   </>
                 )}
-                <td>
-                  <button onClick={() => handleEditar(u)}>Editar</button>
-                </td>
+                <th>Acciones</th>
               </tr>
-            ))}
-            {!usuariosFiltrados.length && (
-              <tr>
-                <td colSpan={tipoUsuario === 'profesores' ? 6 : 7} style={{ textAlign: 'center', opacity: .7 }}>
-                  Sin resultados.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {usuariosFiltrados.map((u) => (
+                <tr key={u._id}>
+                  <td>{u.correo}</td>
+                  <td>{u.nombre}</td>
+                  <td>{u.apellido}</td>
+                  {tipoUsuario === 'profesores' ? (
+                    <>
+                      <td>{u.rut}</td>
+                      <td>{u.cargo || '-'}</td>
+                    </>
+                  ) : (
+                    <>
+                      <td>{u.numero_documento}</td>
+                      <td>{u.semestre || '-'}</td>
+                      <td>{u.jornada || '-'}</td>
+                    </>
+                  )}
+                  <td>
+                    <button onClick={() => handleEditar(u)}>Editar</button>
+                  </td>
+                </tr>
+              ))}
+              {!usuariosFiltrados.length && (
+                <tr>
+                  <td colSpan={tipoUsuario === 'profesores' ? 6 : 7} style={{ textAlign: 'center', opacity: .7 }}>
+                    Sin resultados.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {usuarioEditando && (
