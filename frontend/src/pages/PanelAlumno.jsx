@@ -12,7 +12,7 @@ function PanelAlumno() {
     if (datos) {
       try {
         const usuarioParseado = JSON.parse(datos);
-        setUsuario(usuarioParseado); // ✅ Sin validación de rol
+        setUsuario(usuarioParseado);
       } catch (e) {
         console.error('Error al leer el usuario desde localStorage:', e);
       }
@@ -100,13 +100,6 @@ function PanelAlumno() {
                   </div>
                 </div>
               </div>
-            </section>
-
-            <section className="perfil-seccion">
-              <h3>Seguridad</h3>
-              <button className="btn-cambiar" onClick={() => alert('Función en desarrollo')}>
-                Cambiar contraseña
-              </button>
             </section>
           </div>
         )}

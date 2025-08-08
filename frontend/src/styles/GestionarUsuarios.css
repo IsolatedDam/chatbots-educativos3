@@ -1,110 +1,126 @@
-.gestionar-usuarios {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
-  font-family: Arial, sans-serif;
-  width: 100%;
-  box-sizing: border-box;
-}
-
 .gestionar-usuarios h2 {
-  font-size: 24px;
-  font-weight: bold;
   color: #005D8C;
   text-align: center;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
+}
+
+/* Radios */
+.tipo-selector {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.tipo-selector label {
+  font-weight: 600;
+}
+
+/* Filtros */
+.filtros-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
 }
 
 .filtro-input {
-  width: 100%;
-  max-width: 400px;
-  padding: 10px;
-  margin: 10px 0;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 14px;
+  min-width: 260px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #dcdcdc;
+  border-radius: 8px;
 }
 
+.filtro-select {
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid #dcdcdc;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.btn-prim, .btn-sec {
+  height: 40px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-prim {
+  background: #00AEEF;
+  color: #fff;
+}
+.btn-prim:hover { background: #008ec9; }
+
+.btn-sec {
+  background: #EAF6FB;
+  color: #005D8C;
+}
+.btn-sec:hover { background: #d9eef9; }
+
+/* Tabla */
 .tabla-contenedor {
-  width: 100%;
-  max-width: 1200px;
-  max-height: 600px;
-  overflow-y: auto;
   overflow-x: auto;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  margin-top: 20px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.05);
 }
 
-.gestionar-usuarios table {
+table {
   width: 100%;
   border-collapse: collapse;
 }
-
-.gestionar-usuarios th,
-.gestionar-usuarios td {
-  border: 1px solid #ccc;
-  padding: 10px;
-  text-align: center;
+thead th {
+  text-align: left;
+  padding: 12px;
+  background: #f4f8fb;
+  color: #005D8C;
+  border-bottom: 1px solid #e6eef2;
+}
+tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f3f6;
+}
+tbody tr:hover {
+  background: #fbfdff;
 }
 
-.gestionar-usuarios th {
-  background-color: #f0f0f0;
-  font-weight: bold;
-}
-
-.gestionar-usuarios button {
-  margin: 0 4px;
-  padding: 6px 12px;
-  background-color: #00AEEF;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.gestionar-usuarios button:hover {
-  background-color: #0079b6;
-}
-
-/* Modal */
+/* Modal (lo que ya tenías + un poco de estilo) */
 .modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 999;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.4);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
 }
-
 .modal-contenido {
-  background: white;
-  padding: 30px;
-  border-radius: 10px;
-  width: 90%;
-  max-width: 500px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  background: #fff;
+  border-radius: 12px;
+  width: min(560px, 92vw);
+  padding: 18px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.18);
 }
-
+.modal-contenido h3 {
+  margin-top: 0; color: #005D8C; text-align: center;
+}
 .modal-contenido input,
 .modal-contenido select {
-  padding: 8px;
-  font-size: 14px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
+  width: 100%;
+  height: 40px;
+  border: 1px solid #dcdcdc;
+  border-radius: 8px;
+  padding: 0 10px;
+  margin: 6px 0;
 }
-
 .modal-botones {
   display: flex;
-  justify-content: space-between;
+  gap: 10px; justify-content: flex-end; margin-top: 10px;
 }
+.modal-botones button {
+  height: 40px; padding: 0 14px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer;
+}
+.modal-botones button:first-child { background: #00AEEF; color: #fff; }
+.modal-botones button:last-child  { background: #EAF6FB; color: #005D8C; }
