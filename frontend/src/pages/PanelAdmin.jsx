@@ -4,9 +4,10 @@ import { jwtDecode } from 'jwt-decode';
 
 import '../styles/PanelAdmin.css';
 
-// Componentes internos del panel
+// Páginas internas
 import RegistroAlumno from './RegistroAlumno';
 import RegistroAdmin from './RegistroAdmin';
+import RegistroProfesor from './RegistroProfesor'; // 👈 NUEVO
 import CargarAlumnos from './CargarAlumnos';
 import GestionarUsuarios from './GestionarUsuarios';
 import VisitasRegistradas from './VisitasRegistradas';
@@ -14,6 +15,11 @@ import VisitasRegistradas from './VisitasRegistradas';
 function PanelAdmin() {
   const [vistaActiva, setVistaActiva] = useState('inicio');
   const navigate = useNavigate();
+
+  // Leemos rol desde localStorage para mostrar/ocultar opciones
+  const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+  const esSuper = usuario?.rol === 'superadmin';
+  const esAdmin = usuario?.rol === 'admin';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -24,7 +30,9 @@ function PanelAdmin() {
 
     try {
       const decoded = jwtDecode(token);
-      if (decoded.rol !== 'superadmin') {
+
+      // 👇 Permitir acceso a superadmin y admin
+      if (!['superadmin', 'admin'].includes(decoded.rol)) {
         navigate('/no-autorizado');
       }
     } catch (error) {
@@ -43,7 +51,17 @@ function PanelAdmin() {
         <h2>Panel Administrador</h2>
         <ul>
           <li onClick={() => setVistaActiva('registroAlumno')}>Registrar Alumno</li>
-          <li onClick={() => setVistaActiva('registroAdmin')}>Registrar Admin</li>
+
+          {/* Solo superadmin puede crear administradores */}
+          {esSuper && (
+            <li onClick={() => setVistaActiva('registroAdmin')}>Registrar Admin</li>
+          )}
+
+          {/* Superadmin y Admin pueden crear profesores */}
+          {(esSuper || esAdmin) && (
+            <li onClick={() => setVistaActiva('registroProfesor')}>Registrar Profesor</li>
+          )}
+
           <li onClick={() => setVistaActiva('usuarios')}>Gestionar Usuarios</li>
           <li onClick={() => setVistaActiva('asignarChatbots')}>Asignar Chatbots</li>
           <li onClick={() => setVistaActiva('cargarAlumnos')}>Cargar desde archivo</li>
@@ -58,7 +76,8 @@ function PanelAdmin() {
       <main className="admin-main">
         {vistaActiva === 'inicio' && <p>Bienvenido al panel de administración.</p>}
         {vistaActiva === 'registroAlumno' && <RegistroAlumno />}
-        {vistaActiva === 'registroAdmin' && <RegistroAdmin />}
+        {vistaActiva === 'registroAdmin' && esSuper && <RegistroAdmin />}
+        {vistaActiva === 'registroProfesor' && (esSuper || esAdmin) && <RegistroProfesor />}
         {vistaActiva === 'usuarios' && <GestionarUsuarios />}
         {vistaActiva === 'asignarChatbots' && <p>Aquí irá la asignación de chatbots.</p>}
         {vistaActiva === 'cargarAlumnos' && <CargarAlumnos />}

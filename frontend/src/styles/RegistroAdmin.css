@@ -1,57 +1,80 @@
+/* ====== Card principal ====== */
 .registro-admin-container {
-  background: white;
-  padding: 30px;
-  border-radius: 12px;
-  max-width: 500px;
-  margin: 40px auto;
-  box-shadow: 0 0 12px rgba(0, 0, 0, 0.05);
+  background: #fff;
+  padding: 32px;
+  border-radius: 14px;
+  max-width: 640px;            /* más compacto: ya no hay permisos */
+  margin: 32px auto;
+  box-shadow: 0 10px 30px rgba(0,0,0,.06);
+  font-family: 'Segoe UI', sans-serif;
 }
 
 .registro-admin-container h2 {
   text-align: center;
   color: #005D8C;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
+  font-weight: 700;
 }
 
+/* ====== Form en grid limpio ====== */
 .registro-admin-container form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 16px 20px;
 }
 
+/* inputs/selects */
 .registro-admin-container input,
 .registro-admin-container select {
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid #dcdcdc;
+  border-radius: 8px;
   font-size: 15px;
-  background-color: white;
+  background-color: #fff;
+  transition: border-color .2s, box-shadow .2s, transform .06s;
+  width: 100%;
 }
 
+.registro-admin-container input:focus,
+.registro-admin-container select:focus {
+  outline: none;
+  border-color: #00AEEF;
+  box-shadow: 0 0 0 3px rgba(0,174,239,.15);
+  transform: translateY(-1px);
+}
+
+/* Select y botón ocupan toda la fila en el final */
+.registro-admin-container select,
+.registro-admin-container button[type="submit"] {
+  grid-column: 1 / -1;
+}
+
+/* ====== Botón principal ====== */
 .registro-admin-container button {
-  padding: 12px;
+  height: 44px;
   background-color: #00AEEF;
-  color: white;
+  color: #fff;
   border: none;
-  border-radius: 6px;
-  font-weight: bold;
+  border-radius: 8px;
+  font-weight: 700;
   cursor: pointer;
+  transition: background-color .2s, transform .06s, box-shadow .2s;
 }
 
 .registro-admin-container button:hover {
-  background-color: #0079b6;
+  background-color: #008ec9;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0,0,0,.08);
 }
 
-.permisos-checkboxes {
-  background: #f9f9f9;
-  padding: 10px 15px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  margin-top: 10px;
-}
-
-.permisos-checkboxes label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
+/* ====== Responsive ====== */
+@media (max-width: 760px) {
+  .registro-admin-container {
+    margin: 20px 14px;
+    padding: 22px;
+  }
+  .registro-admin-container form {
+    grid-template-columns: 1fr; /* todo en una columna */
+  }
 }

@@ -12,27 +12,39 @@ function Login() {
   const navigate = useNavigate();
   const API_BASE = 'https://chatbots-educativos3.onrender.com/api';
 
+  // Normaliza RUT: quita puntos, deja guión, y usa k/K consistente
+  const normalizarRut = (v) =>
+    v.replace(/\./g, '').replace(/\s+/g, '').toUpperCase();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const rutLimpio = rut.trim().toLowerCase();
+
+    const rutLimpio = normalizarRut(rut);
     const contrasenaLimpia = contrasena.trim();
 
-    if (!rutLimpio || !contrasenaLimpia) {
-      setMensaje('Por favor completa ambos campos');
-      setTimeout(() => setMensaje(''), 3000);
-      return;
-    }
-
     try {
-      const endpoint =
-        rol === 'alumno'
-          ? `${API_BASE}/login`
-          : `${API_BASE}/admin/login`;
+      let res;
 
-      const res = await axios.post(endpoint, {
-        rut: rutLimpio,
-        contrasena: contrasenaLimpia,
-      });
+      if (rol === 'alumno') {
+        // ✅ Alumno: solo RUT
+        if (!rutLimpio) {
+          setMensaje('Ingresa tu RUT.');
+          setTimeout(() => setMensaje(''), 2500);
+          return;
+        }
+        res = await axios.post(`${API_BASE}/login`, { rut: rutLimpio });
+      } else {
+        // ✅ Profesor/Admin: requieren contraseña
+        if (!rutLimpio || !contrasenaLimpia) {
+          setMensaje('Completa usuario/RUT y contraseña.');
+          setTimeout(() => setMensaje(''), 2500);
+          return;
+        }
+        res = await axios.post(`${API_BASE}/admin/login`, {
+          rut: rutLimpio,
+          contrasena: contrasenaLimpia,
+        });
+      }
 
       const usuario = res.data.alumno || res.data.admin;
       const token = res.data.token;
@@ -44,13 +56,9 @@ function Login() {
         navigate('/panel-alumno');
       } else {
         const tipo = usuario.rol;
-        if (tipo === 'superadmin') {
-          navigate('/panel-admin');
-        } else if (tipo === 'profesor') {
-          navigate('/panel-profesor');
-        } else {
-          setMensaje('Rol no reconocido');
-        }
+        if (tipo === 'superadmin') navigate('/panel-admin');
+        else if (tipo === 'profesor' || tipo === 'admin') navigate('/panel-profesor');
+        else setMensaje('Rol no reconocido');
       }
     } catch (err) {
       const errorMsg = err.response?.data?.msg || 'Error al iniciar sesión';
@@ -64,7 +72,11 @@ function Login() {
       <div className="login-container">
         <img src="/01.jpg" alt="Logo" className="login-logo" />
         <h2>Portal Educativo</h2>
-        <p className="login-info">Solo usuarios registrados por el administrador pueden ingresar.</p>
+        <p className="login-info">
+          {rol === 'alumno'
+            ? 'Ingresa solo con tu RUT.'
+            : 'Solo usuarios registrados por el administrador pueden ingresar.'}
+        </p>
 
         <div className="rol-selector">
           <label>
@@ -83,29 +95,30 @@ function Login() {
               value="profesor"
               checked={rol === 'profesor'}
               onChange={() => setRol('profesor')}
-            /> Profesor
+            /> Profesor/Admin
           </label>
         </div>
 
         <form className="login-form" onSubmit={handleSubmit}>
           <input
             type="text"
-            placeholder={rol === 'alumno' ? 'RUT (Ej: 12345678-9)' : 'Usuario o correo'}
+            placeholder={rol === 'alumno' ? 'RUT (Ej: 12345678-9)' : 'Usuario o RUT/Correo'}
             value={rut}
             onChange={(e) => setRut(e.target.value)}
           />
-          <input
-            type="password"
-            placeholder="Contraseña"
-            value={contrasena}
-            onChange={(e) => setContrasena(e.target.value)}
-          />
+
+          {/* 🔒 Campo contraseña solo para profesor/admin */}
+          {rol !== 'alumno' && (
+            <input
+              type="password"
+              placeholder="Contraseña"
+              value={contrasena}
+              onChange={(e) => setContrasena(e.target.value)}
+            />
+          )}
+
           <button type="submit">Ingresar</button>
         </form>
-
-        <p className="login-link" onClick={() => alert('Recuperar contraseña...')}>
-          ¿Olvidaste tu contraseña?
-        </p>
 
         {mensaje && <p className="login-msg">{mensaje}</p>}
 

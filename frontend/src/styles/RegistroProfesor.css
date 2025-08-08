@@ -1,0 +1,138 @@
+/* ===== Card ===== */
+.panel-box {
+  background: #fff;
+  padding: 24px;
+  border-radius: 12px;
+  max-width: 860px;
+  margin: 24px auto;
+  box-shadow: 0 10px 24px rgba(0,0,0,.06);
+  font-family: 'Segoe UI', sans-serif;
+}
+.panel-box h2 {
+  text-align: center;
+  color: #005D8C;
+  margin-bottom: 16px;
+  font-weight: 700;
+}
+
+/* ===== Form grid ===== */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 12px 16px;
+}
+.form-grid input:not([type="checkbox"]),
+.form-grid select {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #dcdcdc;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #fff;
+  transition: border-color .2s, box-shadow .2s, transform .06s;
+  width: 100%;
+}
+.form-grid input:not([type="checkbox"]):focus,
+.form-grid select:focus {
+  outline: none;
+  border-color: #00AEEF;
+  box-shadow: 0 0 0 3px rgba(0,174,239,.15);
+  transform: translateY(-1px);
+}
+
+/* Bloque permisos y submit ocupan todo el ancho */
+.perms-box,
+.btn-primary { grid-column: 1 / -1; }
+
+/* ===== Permisos ===== */
+.perms-box {
+  background: #f7fbfe;
+  border: 1px solid #e3f1f8;
+  border-radius: 10px;
+  padding: 14px;
+}
+.perms-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 6px;
+}
+.perms-header strong { color: #005D8C; }
+
+/* Botón centrado */
+.perms-cta {
+  display: flex;
+  justify-content: center;
+  margin: 8px 0 12px;
+}
+.perms-cta button {
+  height: 36px;
+  padding: 0 16px;
+  background: #00AEEF;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color .2s, transform .06s;
+}
+.perms-cta button:hover { background:#008ec9; transform: translateY(-1px); }
+
+/* Grupos */
+.perm-group + .perm-group { margin-top: 10px; }
+.perm-group-title {
+  font-weight: 600;
+  color: #005D8C;
+  margin: 6px 0 8px;
+}
+
+/* Lista de permisos */
+.perms-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 8px 10px;
+}
+.perm-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid #eef3f6;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: #232323;
+}
+.perm-item input[type="checkbox"] {
+  width: 18px; height: 18px; margin: 0;
+  accent-color: #00AEEF;
+  flex: 0 0 auto;
+}
+
+/* ===== Botón principal ===== */
+.btn-primary {
+  height: 42px;
+  background: #00AEEF;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color .2s, transform .06s, box-shadow .2s;
+  margin-top: 6px;
+}
+.btn-primary:hover {
+  background:#008ec9;
+  transform: translateY(-1px);
+  box-shadow:0 6px 14px rgba(0,0,0,.08);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 900px) {
+  .perms-list { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 680px) {
+  .panel-box   { margin: 16px; padding: 18px; }
+  .form-grid   { grid-template-columns: 1fr; }
+  .perms-list  { grid-template-columns: 1fr; }
+}
