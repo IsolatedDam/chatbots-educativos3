@@ -7,7 +7,7 @@ import '../styles/PanelAdmin.css';
 // Páginas internas
 import RegistroAlumno from './RegistroAlumno';
 import RegistroAdmin from './RegistroAdmin';
-import RegistroProfesor from './RegistroProfesor'; // 👈 NUEVO
+import RegistroProfesor from './RegistroProfesor';
 import CargarAlumnos from './CargarAlumnos';
 import GestionarUsuarios from './GestionarUsuarios';
 import VisitasRegistradas from './VisitasRegistradas';
@@ -31,7 +31,7 @@ function PanelAdmin() {
     try {
       const decoded = jwtDecode(token);
 
-      // 👇 Permitir acceso a superadmin y admin
+      // Permitir acceso a superadmin y admin
       if (!['superadmin', 'admin'].includes(decoded.rol)) {
         navigate('/no-autorizado');
       }
@@ -74,7 +74,19 @@ function PanelAdmin() {
       </aside>
 
       <main className="admin-main">
-        {vistaActiva === 'inicio' && <p>Bienvenido al panel de administración.</p>}
+        {vistaActiva === 'inicio' && (
+          <div style={{ width: '100%', height: '80vh' }}>
+            {/* Si quieres mantener el texto, descomenta la línea siguiente */}
+            {/* <p>Bienvenido al panel de administración.</p> */}
+            <iframe
+              src="https://inquisitive-concha-7da15f.netlify.app/"
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              allowFullScreen
+              title="IframePanelAdmin"
+            ></iframe>
+          </div>
+        )}
+
         {vistaActiva === 'registroAlumno' && <RegistroAlumno />}
         {vistaActiva === 'registroAdmin' && esSuper && <RegistroAdmin />}
         {vistaActiva === 'registroProfesor' && (esSuper || esAdmin) && <RegistroProfesor />}

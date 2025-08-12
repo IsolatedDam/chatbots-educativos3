@@ -1,44 +1,118 @@
 .panel-profesor {
-  max-width: 600px;
+  max-width: 880px;
   margin: 40px auto;
-  background: #fff;
-  padding: 25px;
-  border-radius: 12px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+  background: #ffffff;
+  padding: 28px;
+  border-radius: 16px;
+  box-shadow: 0 4px 18px rgba(0,0,0,.06);
 }
 
 .panel-profesor h2 {
   text-align: center;
-  color: #005D8C;
-  margin-bottom: 20px;
+  color: #0a546f;
+  margin: 0 0 6px;
+  letter-spacing: .2px;
 }
 
-.editable-box {
-  background: #f3faff;
-  padding: 15px;
-  border: 1px solid #cce4f5;
+.welcome {
+  text-align: center;
+  color: #4a4a4a;
+  margin: 0 0 22px;
+}
+
+/* Secciones */
+.section {
+  background: #f7fbff;
+  border: 1px solid #d8ebf8;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.section h3 {
+  margin: 0 0 12px;
+  text-align: center;
+  color: #0a546f;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* Filas y texto */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  flex-wrap: wrap;
+  color: #20323a;
+}
+
+.row strong { font-weight: 700; }
+
+/* Inputs */
+.input {
+  flex: 1 1 260px;
+  padding: 10px 12px;
+  border: 1px solid #c7d7e2;
   border-radius: 8px;
-  margin-bottom: 15px;
+  outline: none;
+}
+.input:focus { border-color: #00aeef; box-shadow: 0 0 0 3px rgba(0,174,239,.15); }
+
+/* Pastillas en grilla (Año/Semestre/Jornada) */
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.pill {
+  background: #e9f6ff;
+  border: 1px solid #cfe8f7;
+  color: #0a546f;
+  border-radius: 999px;
+  padding: 8px 12px;
+  text-align: center;
+  font-weight: 600;
 }
 
-.editable-box input {
+/* Botones */
+.btn-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
   margin-top: 8px;
-  padding: 8px;
-  width: 100%;
-  border: 1px solid #ccc;
-  border-radius: 6px;
 }
 
-.action-button {
-  padding: 10px 15px;
-  background-color: #00AEEF;
-  color: white;
-  border: none;
-  border-radius: 6px;
+.btn {
+  padding: 10px 16px;
+  background: #00aeef;
+  color: #fff;
+  border: 0;
+  border-radius: 10px;
+  font-weight: 700;
   cursor: pointer;
-  font-weight: bold;
+  transition: transform .04s ease, box-shadow .2s ease, background .2s ease;
+  box-shadow: 0 2px 6px rgba(0,174,239,.25);
+}
+.btn:hover { background: #0596cc; }
+.btn:active { transform: translateY(1px); }
+
+/* Vacío */
+.empty {
+  text-align: center;
+  color: #6b6b6b;
+  margin-top: 14px;
 }
 
-.action-button:hover {
-  background-color: #0079b6;
+/* Responsive */
+@media (max-width: 720px) {
+  .panel-profesor { padding: 18px; }
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 460px) {
+  .grid-3 { grid-template-columns: 1fr; }
+  .btn-row { justify-content: stretch; }
+  .btn { width: 100%; }
 }

@@ -25,7 +25,7 @@ function PaginaPrincipal() {
         {/* Menú lateral */}
         <aside className="menu-lateral">
           <a
-            href="https://www.masoterapiachile.cl/"
+            href="https://www.masoterapiachile.cl/intranet-2/"
             target="_blank"
             rel="noopener noreferrer"
           >

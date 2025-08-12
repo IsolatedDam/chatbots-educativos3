@@ -247,64 +247,71 @@ function GestionarUsuarios() {
       </div>
 
       <div className="tabla-contenedor">
-        {cargando ? (
-          <div className="tabla-loading">Cargando…</div>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Correo</th>
-                <th>Nombre</th>
-                <th>Apellido</th>
-                {tipoUsuario === 'profesores' ? (
-                  <>
-                    <th>RUT</th>
-                    <th>Cargo</th>
-                  </>
-                ) : (
-                  <>
-                    <th>Documento</th>
-                    <th>Semestre</th>
-                    <th>Jornada</th>
-                  </>
-                )}
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usuariosFiltrados.map((u) => (
-                <tr key={u._id}>
-                  <td>{u.correo}</td>
-                  <td>{u.nombre}</td>
-                  <td>{u.apellido}</td>
-                  {tipoUsuario === 'profesores' ? (
-                    <>
-                      <td>{u.rut}</td>
-                      <td>{u.cargo || '-'}</td>
-                    </>
-                  ) : (
-                    <>
-                      <td>{u.numero_documento}</td>
-                      <td>{u.semestre || '-'}</td>
-                      <td>{u.jornada || '-'}</td>
-                    </>
-                  )}
-                  <td>
-                    <button onClick={() => handleEditar(u)}>Editar</button>
-                  </td>
-                </tr>
-              ))}
-              {!usuariosFiltrados.length && (
-                <tr>
-                  <td colSpan={tipoUsuario === 'profesores' ? 6 : 7} style={{ textAlign: 'center', opacity: .7 }}>
-                    Sin resultados.
-                  </td>
-                </tr>
+  {cargando ? (
+    <div className="tabla-loading">Cargando…</div>
+  ) : (
+    <div className="tabla-scroll">{/* << scroll interno */}
+      <table className="tabla">{/* << estilos de tabla */}
+        <thead>
+          <tr>
+            <th>Correo</th>
+            <th>Nombre</th>
+            <th>Apellido</th>
+            {tipoUsuario === 'profesores' ? (
+              <>
+                <th>RUT</th>
+                <th>Cargo</th>
+              </>
+            ) : (
+              <>
+                <th>Documento</th>
+                <th>Semestre</th>
+                <th>Jornada</th>
+              </>
+            )}
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {usuariosFiltrados.map((u) => (
+            <tr key={u._id}>
+              <td>{u.correo}</td>
+              <td>{u.nombre}</td>
+              <td>{u.apellido}</td>
+              {tipoUsuario === 'profesores' ? (
+                <>
+                  <td>{u.rut}</td>
+                  <td>{u.cargo || '-'}</td>
+                </>
+              ) : (
+                <>
+                  <td>{u.numero_documento}</td>
+                  <td>{u.semestre || '-'}</td>
+                  <td>{u.jornada || '-'}</td>
+                </>
               )}
-            </tbody>
-          </table>
-        )}
-      </div>
+              <td>
+                <button className="btn-edit" onClick={() => handleEditar(u)}>
+                  Editar
+                </button>
+              </td>
+            </tr>
+          ))}
+          {!usuariosFiltrados.length && (
+            <tr>
+              <td
+                colSpan={tipoUsuario === 'profesores' ? 6 : 7}
+              >
+                Sin resultados.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  )}
+</div>
+
 
       {usuarioEditando && (
         <div className="modal">
