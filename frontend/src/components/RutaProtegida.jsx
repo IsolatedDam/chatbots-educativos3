@@ -1,30 +1,48 @@
 import { Navigate } from 'react-router-dom';
 
-function RutaProtegida({ children, rolesPermitidos }) {
-  const token = localStorage.getItem('token');
-  const usuarioRaw = localStorage.getItem('usuario');
+function decodeJwt(t) {
+  try {
+    const p = t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(p));
+  } catch { return null; }
+}
 
-  console.log('Token:', token);
-  console.log('Usuario (raw):', usuarioRaw);
+export default function RutaProtegida({ children, rolesPermitidos = [] }) {
+  // Prioriza credenciales de admin/profesor; cae a alumno si no hay
+  const token =
+    localStorage.getItem('token_admin') ||
+    localStorage.getItem('token') ||
+    '';
 
-  if (!token || !usuarioRaw) {
-    console.warn('Falta token o usuario');
+  const usuarioRaw =
+    localStorage.getItem('usuario_admin') ||
+    localStorage.getItem('usuario') ||
+    '';
+
+  if (!token) return <Navigate to="/login" />;
+
+  // Expiración y rol del JWT (por si usuario no está o está viejo)
+  const payload = decodeJwt(token); // { id, rol, exp? }
+  if (payload?.exp && payload.exp * 1000 < Date.now()) {
+    // limpia todo y fuerza login
+    localStorage.removeItem('token_admin');
+    localStorage.removeItem('usuario_admin');
+    localStorage.removeItem('token');
+    localStorage.removeItem('usuario');
     return <Navigate to="/login" />;
   }
 
-  const usuario = JSON.parse(usuarioRaw);
-  const rolNormalizado = usuario.rol?.toLowerCase();
+  let usuario = null;
+  try { usuario = usuarioRaw ? JSON.parse(usuarioRaw) : null; } catch {}
 
-  console.log('Usuario parseado:', usuario);
-  console.log('Rol:', rolNormalizado);
-  console.log('Roles permitidos:', rolesPermitidos);
+  const rol = (usuario?.rol || payload?.rol || '').toLowerCase();
 
-  if (!rolesPermitidos.includes(rolNormalizado)) {
-    console.warn('Rol no permitido:', rolNormalizado);
-    return <Navigate to="/login" />;
-  }
+  // Si se pasó lista de roles, valida; si no, solo exige rol presente
+  const permitido = rolesPermitidos.length
+    ? rolesPermitidos.map(r => r.toLowerCase()).includes(rol)
+    : Boolean(rol);
+
+  if (!permitido) return <Navigate to="/no-autorizado" />;
 
   return children;
 }
-
-export default RutaProtegida;
