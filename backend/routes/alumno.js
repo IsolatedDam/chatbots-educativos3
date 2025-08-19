@@ -1,4 +1,3 @@
-// routes/alumno.js
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const Alumno = require('../models/Alumno');
@@ -49,6 +48,7 @@ router.get('/', auth, requireRole('profesor', 'admin', 'superadmin'), async (req
             { nombre: { $regex: q, $options: 'i' } },
             { apellido: { $regex: q, $options: 'i' } },
             { curso: { $regex: q, $options: 'i' } },
+            { correo: { $regex: q, $options: 'i' } }
           ],
         }
       : {};
@@ -64,10 +64,12 @@ router.get('/', auth, requireRole('profesor', 'admin', 'superadmin'), async (req
 router.put('/:id', auth, requireRole('profesor', 'admin', 'superadmin'), async (req, res) => {
   try {
     // Campos potencialmente editables que puede mandar el frontend
-    let allowedKeys = ['rut', 'nombre', 'apellido', 'anio', 'semestre', 'jornada', 'curso'];
+    let allowedKeys = [
+      'rut', 'nombre', 'apellido', 'anio', 'fechaIngreso',
+      'semestre', 'jornada', 'curso', 'telefono'
+    ];
 
     if (req.user.rol === 'profesor') {
-      // map de tus keys -> campo real
       const map = {
         'alumnos:editar_doc': 'rut',
         'alumnos:editar_nombre': 'nombre',
@@ -75,7 +77,8 @@ router.put('/:id', auth, requireRole('profesor', 'admin', 'superadmin'), async (
         'alumnos:editar_ano': 'anio',
         'alumnos:editar_semestre': 'semestre',
         'alumnos:editar_jornada': 'jornada',
-        // 'alumnos:editar_curso': 'curso', // si quieres granular "curso"
+        'alumnos:editar_fecha_ingreso': 'fechaIngreso',
+        'alumnos:editar_telefono': 'telefono',
       };
       const permitidos = new Set();
       req.user.permisos.forEach(k => { if (map[k]) permitidos.add(map[k]); });
@@ -83,15 +86,28 @@ router.put('/:id', auth, requireRole('profesor', 'admin', 'superadmin'), async (
       allowedKeys = [...permitidos];
     }
 
-    // filtra payload
+    // Filtra payload
     const body = {};
     for (const k of allowedKeys) if (k in req.body) body[k] = req.body[k];
     if (!Object.keys(body).length) return res.status(400).json({ msg: 'Sin cambios válidos para actualizar' });
 
-    const alumno = await Alumno.findByIdAndUpdate(req.params.id, body, { new: true });
+    const alumno = await Alumno.findByIdAndUpdate(
+      req.params.id,
+      body,
+      { new: true, runValidators: true } // ✅ aplica enum/tipos y activa pre('findOneAndUpdate')
+    );
+
     if (!alumno) return res.status(404).json({ msg: 'Alumno no encontrado' });
     res.json(alumno);
   } catch (err) {
+    if (err?.code === 11000) {
+      const key = Object.keys(err.keyPattern || {})[0] || '';
+      let msg = 'Registro duplicado';
+      if (key === 'correo') msg = 'El correo ya está registrado';
+      else if (key === 'rut') msg = 'El RUT ya está registrado';
+      else if (err?.message?.includes('unique_doc')) msg = 'Ya existe un alumno con ese tipo y número de documento';
+      return res.status(409).json({ msg });
+    }
     console.error('editar alumno error:', err);
     res.status(500).json({ msg: 'Error al actualizar alumno' });
   }

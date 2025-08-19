@@ -1,17 +1,20 @@
+// src/components/GestionarUsuarios.jsx
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import '../styles/GestionarUsuarios.css';
 
 const API_BASE = 'https://chatbots-educativos3.onrender.com/api';
+const JORNADAS = ['Mañana', 'Tarde', 'Vespertino', 'Viernes', 'Sábados'];
 
 function GestionarUsuarios() {
   const [usuarios, setUsuarios] = useState([]);
   const [tipoUsuario, setTipoUsuario] = useState('alumnos'); // 'alumnos' | 'profesores'
   const [filtroTexto, setFiltroTexto] = useState('');
 
-  // Filtros (solo aplican a alumnos)
-  const [filtroJornada, setFiltroJornada] = useState('');   // '' | 'Diurno' | 'Vespertino'
-  const [filtroSemestre, setFiltroSemestre] = useState(''); // '' | '1'...'12'
+  // Filtros (solo alumnos)
+  const [filtroJornada, setFiltroJornada] = useState('');
+  const [filtroSemestre, setFiltroSemestre] = useState('');
+  const [filtroAnio, setFiltroAnio] = useState('');
 
   const [usuarioEditando, setUsuarioEditando] = useState(null);
   const [formulario, setFormulario] = useState({});
@@ -25,16 +28,11 @@ function GestionarUsuarios() {
       setCargando(true);
       setError('');
 
-      const endpointPath =
-        tipoUsuario === 'alumnos'
-          ? '/alumnos'
-          : '/admin/profesores';
-
+      const endpointPath = tipoUsuario === 'alumnos' ? '/alumnos' : '/admin/profesores';
       const { data } = await axios.get(`${API_BASE}${endpointPath}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Soporta array o {items: []}
       const lista = Array.isArray(data) ? data : (data?.items || []);
       setUsuarios(lista);
     } catch (err) {
@@ -51,12 +49,20 @@ function GestionarUsuarios() {
 
   useEffect(() => {
     obtenerUsuarios();
-    // Reset filtros al cambiar el tipo
     setFiltroTexto('');
     setFiltroJornada('');
     setFiltroSemestre('');
+    setFiltroAnio('');
   }, [obtenerUsuarios]);
 
+  // --- helpers de año (usa anio || fechaIngreso || createdAt)
+  const getAnio = (u) => {
+    if (u?.anio != null) return u.anio;
+    const d = u?.fechaIngreso ? new Date(u.fechaIngreso) : (u?.createdAt ? new Date(u.createdAt) : null);
+    return d && !Number.isNaN(d.getTime()) ? d.getFullYear() : '';
+  };
+
+  // Opciones de semestre detectadas
   const opcionesSemestre = useMemo(() => {
     if (tipoUsuario !== 'alumnos') return [];
     const set = new Set(
@@ -69,36 +75,47 @@ function GestionarUsuarios() {
     return arr;
   }, [usuarios, tipoUsuario]);
 
+  // Opciones de año (derivadas con fallback)
+  const opcionesAnio = useMemo(() => {
+    if (tipoUsuario !== 'alumnos') return [];
+    const set = new Set(
+      (usuarios || []).map(u => {
+        const a = getAnio(u);
+        return a ? String(a) : null;
+      }).filter(Boolean)
+    );
+    const arr = Array.from(set);
+    arr.sort((a, b) => Number(b) - Number(a));
+    return arr;
+  }, [usuarios, tipoUsuario]);
+
   const usuariosFiltrados = useMemo(() => {
     const texto = filtroTexto.toLowerCase().trim();
-
     return (usuarios || []).filter(u => {
-      const base = [
-        u.nombre,
-        u.apellido,
-        u.numero_documento,
-        u.rut,
-        u.cargo
-      ].filter(Boolean).join(' ').toLowerCase();
+      const base = [u.correo, u.nombre, u.apellido, u.numero_documento, u.rut, u.cargo]
+        .filter(Boolean).join(' ').toLowerCase();
 
       if (texto && !base.includes(texto)) return false;
 
       if (tipoUsuario === 'alumnos') {
-        if (filtroJornada && (u.jornada || '').toLowerCase() !== filtroJornada.toLowerCase()) {
+        if (filtroJornada && String(u.jornada || '').toLowerCase() !== filtroJornada.toLowerCase()) {
           return false;
         }
         if (filtroSemestre && String(u.semestre) !== String(filtroSemestre)) {
           return false;
         }
+        if (filtroAnio) {
+          const anio = getAnio(u);
+          if (String(anio) !== String(filtroAnio)) return false;
+        }
       }
-
       return true;
     });
-  }, [usuarios, tipoUsuario, filtroTexto, filtroJornada, filtroSemestre]);
+  }, [usuarios, tipoUsuario, filtroTexto, filtroJornada, filtroSemestre, filtroAnio]);
 
   const handleEditar = (usuario) => {
     setUsuarioEditando(usuario);
-    setFormulario(usuario);
+    setFormulario({ ...usuario });
   };
 
   const handleFormularioChange = (e) => {
@@ -108,15 +125,14 @@ function GestionarUsuarios() {
 
   const guardarCambios = async () => {
     try {
-      const endpointPath =
-        tipoUsuario === 'alumnos'
-          ? '/alumnos'
-          : '/admin/profesores';
-
-      await axios.put(`${API_BASE}${endpointPath}/${formulario._id}`, formulario, {
+      const endpointPath = tipoUsuario === 'alumnos' ? '/alumnos' : '/admin/profesores';
+      const payload = { ...formulario };
+      if (tipoUsuario === 'alumnos' && payload.semestre !== undefined && payload.semestre !== '') {
+        payload.semestre = Number(payload.semestre);
+      }
+      await axios.put(`${API_BASE}${endpointPath}/${formulario._id}`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
-
       setUsuarioEditando(null);
       obtenerUsuarios();
     } catch (err) {
@@ -130,18 +146,20 @@ function GestionarUsuarios() {
 
   const exportarExcel = async () => {
     try {
-      const XLSX = await import('xlsx'); // requiere: npm i xlsx
+      const XLSX = await import('xlsx');
       const esAlumnos = tipoUsuario === 'alumnos';
 
       const data = usuariosFiltrados.map(u => {
         if (esAlumnos) {
+          const anio = getAnio(u);
           return {
             Correo: u.correo || '',
             Nombre: u.nombre || '',
             Apellido: u.apellido || '',
             Documento: u.numero_documento || '',
             Semestre: u.semestre ?? '',
-            Jornada: u.jornada ?? ''
+            Jornada: u.jornada ?? '',
+            Año: anio || ''
           };
         } else {
           return {
@@ -161,7 +179,7 @@ function GestionarUsuarios() {
 
       const fecha = new Date().toISOString().slice(0, 10);
       const nombre = esAlumnos
-        ? `alumnos_${filtroJornada || 'todos'}_${filtroSemestre || 'todos'}_${fecha}.xlsx`
+        ? `alumnos_${filtroJornada || 'todas'}_${filtroSemestre || 'todos'}_${filtroAnio || 'todos'}_${fecha}.xlsx`
         : `profesores_${fecha}.xlsx`;
 
       XLSX.writeFile(wb, nombre);
@@ -175,17 +193,14 @@ function GestionarUsuarios() {
     setFiltroTexto('');
     setFiltroJornada('');
     setFiltroSemestre('');
+    setFiltroAnio('');
   };
 
   return (
     <div className="gestionar-usuarios">
       <h2>Gestionar Usuarios</h2>
 
-      {error && (
-        <div className="alerta-error">
-          {error}
-        </div>
-      )}
+      {error && <div className="alerta-error">{error}</div>}
 
       <div className="tipo-selector">
         <label>
@@ -211,7 +226,7 @@ function GestionarUsuarios() {
       <div className="filtros-bar">
         <input
           type="text"
-          placeholder="Buscar por nombre, apellido, documento…"
+          placeholder="Buscar por correo, nombre, apellido, documento…"
           value={filtroTexto}
           onChange={(e) => setFiltroTexto(e.target.value)}
           className="filtro-input"
@@ -225,8 +240,7 @@ function GestionarUsuarios() {
               className="filtro-select"
             >
               <option value="">Jornada: Todas</option>
-              <option value="Diurno">Diurno</option>
-              <option value="Vespertino">Vespertino</option>
+              {JORNADAS.map(j => <option key={j} value={j}>{j}</option>)}
             </select>
 
             <select
@@ -239,6 +253,17 @@ function GestionarUsuarios() {
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
+
+            <select
+              value={filtroAnio}
+              onChange={(e) => setFiltroAnio(e.target.value)}
+              className="filtro-select"
+            >
+              <option value="">Año: Todos</option>
+              {opcionesAnio.map((a) => (
+                <option key={a} value={a}>{a}</option>
+              ))}
+            </select>
           </>
         )}
 
@@ -247,71 +272,70 @@ function GestionarUsuarios() {
       </div>
 
       <div className="tabla-contenedor">
-  {cargando ? (
-    <div className="tabla-loading">Cargando…</div>
-  ) : (
-    <div className="tabla-scroll">{/* << scroll interno */}
-      <table className="tabla">{/* << estilos de tabla */}
-        <thead>
-          <tr>
-            <th>Correo</th>
-            <th>Nombre</th>
-            <th>Apellido</th>
-            {tipoUsuario === 'profesores' ? (
-              <>
-                <th>RUT</th>
-                <th>Cargo</th>
-              </>
-            ) : (
-              <>
-                <th>Documento</th>
-                <th>Semestre</th>
-                <th>Jornada</th>
-              </>
-            )}
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {usuariosFiltrados.map((u) => (
-            <tr key={u._id}>
-              <td>{u.correo}</td>
-              <td>{u.nombre}</td>
-              <td>{u.apellido}</td>
-              {tipoUsuario === 'profesores' ? (
-                <>
-                  <td>{u.rut}</td>
-                  <td>{u.cargo || '-'}</td>
-                </>
-              ) : (
-                <>
-                  <td>{u.numero_documento}</td>
-                  <td>{u.semestre || '-'}</td>
-                  <td>{u.jornada || '-'}</td>
-                </>
-              )}
-              <td>
-                <button className="btn-edit" onClick={() => handleEditar(u)}>
-                  Editar
-                </button>
-              </td>
-            </tr>
-          ))}
-          {!usuariosFiltrados.length && (
-            <tr>
-              <td
-                colSpan={tipoUsuario === 'profesores' ? 6 : 7}
-              >
-                Sin resultados.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  )}
-</div>
-
+        {cargando ? (
+          <div className="tabla-loading">Cargando…</div>
+        ) : (
+          <div className="tabla-scroll">
+            <table className="tabla">
+              <thead>
+                <tr>
+                  <th>Correo</th>
+                  <th>Nombre</th>
+                  <th>Apellido</th>
+                  {tipoUsuario === 'profesores' ? (
+                    <>
+                      <th>RUT</th>
+                      <th>Cargo</th>
+                    </>
+                  ) : (
+                    <>
+                      <th>Documento</th>
+                      <th>Semestre</th>
+                      <th>Jornada</th>
+                      <th>Año</th> {/* ← solo año */}
+                    </>
+                  )}
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usuariosFiltrados.map((u) => (
+                  <tr key={u._id}>
+                    <td>{u.correo}</td>
+                    <td>{u.nombre}</td>
+                    <td>{u.apellido}</td>
+                    {tipoUsuario === 'profesores' ? (
+                      <>
+                        <td>{u.rut}</td>
+                        <td>{u.cargo || '-'}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td>{u.numero_documento}</td>
+                        <td>{u.semestre ?? '-'}</td>
+                        <td>{u.jornada || '-'}</td>
+                        <td>{getAnio(u) || '-'}</td>
+                      </>
+                    )}
+                    <td>
+                      <button className="btn-edit" onClick={() => handleEditar(u)}>
+                        Editar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {!usuariosFiltrados.length && (
+                  <tr>
+                    <td colSpan={tipoUsuario === 'profesores' ? 6 : 8}>
+                      Sin resultados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {usuarioEditando && (
         <div className="modal">
@@ -320,6 +344,7 @@ function GestionarUsuarios() {
             <input name="correo" value={formulario.correo || ''} onChange={handleFormularioChange} />
             <input name="nombre" value={formulario.nombre || ''} onChange={handleFormularioChange} />
             <input name="apellido" value={formulario.apellido || ''} onChange={handleFormularioChange} />
+
             {tipoUsuario === 'profesores' ? (
               <>
                 <input name="rut" value={formulario.rut || ''} onChange={handleFormularioChange} />
@@ -328,14 +353,20 @@ function GestionarUsuarios() {
             ) : (
               <>
                 <input name="numero_documento" value={formulario.numero_documento || ''} onChange={handleFormularioChange} />
-                <input name="semestre" value={formulario.semestre || ''} onChange={handleFormularioChange} />
-                <select name="jornada" value={formulario.jornada || ''} onChange={handleFormularioChange}>
-                  <option value="">Selecciona jornada</option>
-                  <option value="Diurno">Diurno</option>
-                  <option value="Vespertino">Vespertino</option>
+                <select name="semestre" value={String(formulario.semestre ?? '')} onChange={handleFormularioChange}>
+                  <option value="">Semestre</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
                 </select>
+                <select name="jornada" value={formulario.jornada || ''} onChange={handleFormularioChange}>
+                  <option value="">Jornada</option>
+                  {JORNADAS.map(j => <option key={j} value={j}>{j}</option>)}
+                </select>
+                <input name="telefono" value={formulario.telefono || ''} onChange={handleFormularioChange} placeholder="Teléfono" />
+                {/* No editamos fechaIngreso aquí para mantener solo el año en la vista */}
               </>
             )}
+
             <div className="modal-botones">
               <button onClick={guardarCambios}>Guardar</button>
               <button onClick={() => setUsuarioEditando(null)}>Cancelar</button>

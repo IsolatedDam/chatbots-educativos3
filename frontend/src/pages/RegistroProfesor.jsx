@@ -1,8 +1,8 @@
+// src/components/RegistroProfesor.jsx
 import { useState } from 'react';
 import axios from 'axios';
 import '../styles/RegistroProfesor.css';
 
-// Grupos y permisos (label visible + key que se guarda)
 const PERMISOS = [
   {
     grupo: 'Datos del alumno',
@@ -34,19 +34,26 @@ const PERMISOS = [
   }
 ];
 
-const ALL_KEYS = PERMISOS.flatMap(g => g.items.map(i => i.key));
+const ALL_KEYS  = PERMISOS.flatMap(g => g.items.map(i => i.key));
+const API_BASE  = 'https://chatbots-educativos3.onrender.com/api';
+const ENDPOINT  = `${API_BASE}/admin/profesores`;
+const TEL_RE    = /^\+?\d{8,12}$/;
 
 export default function RegistroProfesor() {
-  const API_BASE = 'https://chatbots-educativos3.onrender.com/api';
-  const ENDPOINT = `${API_BASE}/admin/profesores`;
+  const hoyISO = new Date().toISOString().slice(0, 10);
 
   const [form, setForm] = useState({
     nombre: '',
+    apellido: '',            // ✅ ahora incluido
     correo: '',
-    rut: '',
-    password: ''
+    password: '',
+    tipo_documento: 'RUT',
+    numero_documento: '',
+    telefono: '',
+    fechaCreacion: hoyISO,
   });
-  const [permisos, setPermisos] = useState([]); // <- array de keys
+  const [permisos, setPermisos] = useState([]);
+  const [enviando, setEnviando] = useState(false);
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -58,80 +65,196 @@ export default function RegistroProfesor() {
 
   const submit = async (e) => {
     e.preventDefault();
-    const { nombre, correo, password } = form;
-    if (!nombre || !correo || !password) return alert('Completa nombre, correo y contraseña.');
+    if (enviando) return;
+
+    const {
+      nombre, apellido, correo, password,
+      tipo_documento, numero_documento, telefono, fechaCreacion
+    } = form;
+
+    if (!nombre || !correo || !password || !tipo_documento || !numero_documento || !telefono || !fechaCreacion) {
+      return alert('Completa todos los campos obligatorios.');
+    }
+    if (!TEL_RE.test(String(telefono).trim())) {
+      return alert('Teléfono no válido. Usa 8–12 dígitos (puede iniciar con +).');
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaCreacion)) {
+      return alert('Fecha de creación no válida (usa YYYY-MM-DD).');
+    }
+
+    const rutCompat = tipo_documento === 'RUT' ? numero_documento : '';
+    setEnviando(true);
 
     try {
       await axios.post(
         ENDPOINT,
-        { ...form, permisos, rol: 'profesor' },
+        {
+          nombre,
+          apellido, // ✅ se envía al backend
+          correo: correo.trim(),
+          password,
+          permisos,
+          rol: 'profesor',
+          tipo_documento,
+          numero_documento,
+          telefono: String(telefono).trim(),
+          fechaCreacion,
+          rut: rutCompat
+        },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
+
       alert('Profesor creado con permisos.');
-      setForm({ nombre: '', correo: '', rut: '', password: '' });
+      setForm({
+        nombre: '',
+        apellido: '',         // ✅ reset
+        correo: '',
+        password: '',
+        tipo_documento: 'RUT',
+        numero_documento: '',
+        telefono: '',
+        fechaCreacion: hoyISO
+      });
       setPermisos([]);
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.msg || 'Error al crear profesor');
+    } finally {
+      setEnviando(false);
     }
   };
 
+  const allSelected = permisos.length === ALL_KEYS.length;
+
   return (
-    <div className="panel-box">
-      <h2>Registrar Profesor</h2>
+    <div className="rp-card">
+      <h2 className="rp-title">Registrar Profesor</h2>
 
-      <form onSubmit={submit} className="form-grid">
-        <input
-          name="nombre"
-          placeholder="Nombre"
-          value={form.nombre}
-          onChange={onChange}
-        />
-        <input
-          name="correo"
-          type="email"
-          placeholder="Correo"
-          value={form.correo}
-          onChange={onChange}
-        />
-        <input
-          name="rut"
-          placeholder="RUT (opcional)"
-          value={form.rut}
-          onChange={onChange}
-        />
-        <input
-          name="password"
-          type="password"
-          placeholder="Contraseña"
-          value={form.password}
-          onChange={onChange}
-        />
-
-        <div className="perms-box">
-          <div className="perms-header">
-            <strong>Permisos</strong>
+      <form onSubmit={submit} className="rp-form">
+        {/* Grid de 2 columnas */}
+        <div className="rp-grid">
+          <div className="rp-field">
+            <label htmlFor="nombre">Nombre</label>
+            <input
+              id="nombre"
+              name="nombre"
+              value={form.nombre}
+              onChange={onChange}
+              placeholder="Nombre"
+            />
           </div>
 
-          <div className="perms-cta">
-            <button type="button" onClick={toggleAll}>
-              {permisos.length === ALL_KEYS.length ? 'Quitar todos' : 'Seleccionar todos'}
+          <div className="rp-field">
+            <label htmlFor="apellido">Apellido</label>
+            <input
+              id="apellido"
+              name="apellido"
+              value={form.apellido}
+              onChange={onChange}
+              placeholder="Apellido"
+            />
+          </div>
+
+          <div className="rp-field">
+            <label htmlFor="correo">Correo</label>
+            <input
+              id="correo"
+              name="correo"
+              type="email"
+              value={form.correo}
+              onChange={onChange}
+              placeholder="Correo"
+            />
+          </div>
+
+          <div className="rp-field">
+            <label htmlFor="password">Contraseña</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              value={form.password}
+              onChange={onChange}
+              placeholder="Contraseña"
+            />
+          </div>
+
+          <div className="rp-field">
+            <label htmlFor="telefono">Teléfono</label>
+            <input
+              id="telefono"
+              type="tel"
+              name="telefono"
+              value={form.telefono}
+              onChange={onChange}
+              placeholder="Teléfono (8–12 dígitos, opcional +)"
+            />
+          </div>
+
+          <div className="rp-field">
+            <label htmlFor="tipo_documento">Tipo de documento</label>
+            <select
+              id="tipo_documento"
+              name="tipo_documento"
+              value={form.tipo_documento}
+              onChange={onChange}
+            >
+              <option value="RUT">RUT</option>
+              <option value="DNI">DNI</option>
+              <option value="Pasaporte">Pasaporte</option>
+            </select>
+          </div>
+
+          <div className="rp-field">
+            <label htmlFor="numero_documento">Número de documento</label>
+            <input
+              id="numero_documento"
+              name="numero_documento"
+              value={form.numero_documento}
+              onChange={onChange}
+              placeholder={
+                form.tipo_documento === 'RUT'
+                  ? 'RUT (ej: 11111111-1)'
+                  : form.tipo_documento === 'DNI'
+                  ? 'DNI (ej: 12345678)'
+                  : 'Pasaporte (ej: AB1234567)'
+              }
+            />
+          </div>
+
+          <div className="rp-field rp-col-2">
+            <label htmlFor="fechaCreacion">Fecha de creación de cuenta</label>
+            <input
+              id="fechaCreacion"
+              type="date"
+              name="fechaCreacion"
+              value={form.fechaCreacion}
+              onChange={onChange}
+            />
+          </div>
+        </div>
+
+        {/* Permisos (full width) */}
+        <div className="rp-perms">
+          <div className="rp-permsHeader">
+            <strong>Permisos</strong>
+            <button type="button" className="rp-chip" onClick={toggleAll}>
+              {allSelected ? 'Quitar todos' : 'Seleccionar todos'}
             </button>
           </div>
 
-          {/* Render por grupos */}
           {PERMISOS.map((grupo) => (
-            <div key={grupo.grupo} className="perm-group">
-              <div className="perm-group-title">{grupo.grupo}</div>
-              <div className="perms-list">
+            <div key={grupo.grupo} className="rp-permGroup">
+              <div className="rp-permTitle">{grupo.grupo}</div>
+              <div className="rp-permsGrid">
                 {grupo.items.map((p) => (
-                  <label key={p.key} className="perm-item">
+                  <label key={p.key} className="rp-permItem">
                     <input
                       type="checkbox"
                       checked={permisos.includes(p.key)}
                       onChange={() => togglePerm(p.key)}
                     />
-                    {p.label}
+                    <span>{p.label}</span>
                   </label>
                 ))}
               </div>
@@ -139,7 +262,11 @@ export default function RegistroProfesor() {
           ))}
         </div>
 
-        <button type="submit" className="btn-primary">Crear profesor</button>
+        <div className="rp-actions">
+          <button type="submit" className="rp-btn" disabled={enviando}>
+            {enviando ? 'Creando…' : 'Crear profesor'}
+          </button>
+        </div>
       </form>
     </div>
   );

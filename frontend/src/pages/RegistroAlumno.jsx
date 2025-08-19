@@ -10,22 +10,21 @@ function RegistroAlumno() {
     apellido: '',
     tipo_documento: 'RUT',
     numero_documento: '',
-    semestre: '',
-    jornada: ''
+    fechaIngreso: '',  // YYYY-MM-DD
+    telefono: '',
+    semestre: '',      // 1 | 2
+    jornada: ''        // Mañana, Tarde, Vespertino, Viernes, Sábados
   });
 
   const [mensaje, setMensaje] = useState('');
+  const [enviando, setEnviando] = useState(false);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   function generarContrasenaAleatoria(longitud = 10) {
     const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$';
     let clave = '';
-    for (let i = 0; i < longitud; i++) {
-      clave += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
-    }
+    for (let i = 0; i < longitud; i++) clave += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
     return clave;
   }
 
@@ -33,15 +32,31 @@ function RegistroAlumno() {
     e.preventDefault();
 
     if (
-      !form.correo ||
-      !form.nombre ||
-      !form.apellido ||
-      !form.tipo_documento ||
-      !form.numero_documento ||
-      !form.semestre ||
-      !form.jornada
+      !form.correo || !form.nombre || !form.apellido ||
+      !form.tipo_documento || !form.numero_documento ||
+      !form.fechaIngreso || !form.telefono ||
+      !form.semestre || !form.jornada
     ) {
       setMensaje('Por favor completa todos los campos obligatorios.');
+      setTimeout(() => setMensaje(''), 3000);
+      return;
+    }
+
+    if (!['1', '2'].includes(String(form.semestre))) {
+      setMensaje('Semestre debe ser 1 o 2.');
+      setTimeout(() => setMensaje(''), 3000);
+      return;
+    }
+
+    const telOK = /^\+?\d{8,12}$/.test(String(form.telefono).trim());
+    if (!telOK) {
+      setMensaje('Teléfono no válido. Usa 8–12 dígitos (puede iniciar con +).');
+      setTimeout(() => setMensaje(''), 3000);
+      return;
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(form.fechaIngreso)) {
+      setMensaje('Fecha de ingreso no válida.');
       setTimeout(() => setMensaje(''), 3000);
       return;
     }
@@ -54,17 +69,18 @@ function RegistroAlumno() {
       apellido: form.apellido,
       tipo_documento: form.tipo_documento,
       numero_documento: form.numero_documento,
-      semestre: form.semestre,
+      fechaIngreso: form.fechaIngreso,
+      telefono: String(form.telefono).trim(),
+      semestre: Number(form.semestre),
       jornada: form.jornada,
-      contrasena: contrasenaGenerada,
-      rut: form.tipo_documento === 'RUT' ? form.numero_documento : ''
+      contrasena: contrasenaGenerada
+      // 'anio' y 'rut' no se envían: backend los resuelve
     };
 
-    console.log('Alumno a registrar:', alumno);
-
     try {
-      const API_BASE = 'https://chatbots-educativos3.onrender.com'; // 🔧 URL fija sin Vite
-      const res = await axios.post(`${API_BASE}/api/registro`, alumno);
+      setEnviando(true);
+      const API_BASE = 'https://chatbots-educativos3.onrender.com';
+      await axios.post(`${API_BASE}/api/registro`, alumno);
 
       Swal.fire({
         icon: 'success',
@@ -82,12 +98,16 @@ function RegistroAlumno() {
         apellido: '',
         tipo_documento: 'RUT',
         numero_documento: '',
+        fechaIngreso: '',
+        telefono: '',
         semestre: '',
         jornada: ''
       });
     } catch (err) {
       setMensaje(err.response?.data?.msg || 'Error al registrar alumno');
       setTimeout(() => setMensaje(''), 3000);
+    } finally {
+      setEnviando(false);
     }
   };
 
@@ -121,15 +141,41 @@ function RegistroAlumno() {
           className="input-field"
         />
 
-        <input type="text" name="semestre" placeholder="Semestre" value={form.semestre} onChange={handleChange} className="input-field" />
+        <input
+          type="date"
+          name="fechaIngreso"
+          value={form.fechaIngreso}
+          onChange={handleChange}
+          className="input-field"
+        />
+
+        <input
+          type="tel"
+          name="telefono"
+          placeholder="Teléfono (8–12 dígitos, opcional +)"
+          value={form.telefono}
+          onChange={handleChange}
+          className="input-field"
+        />
+
+        <select name="semestre" value={form.semestre} onChange={handleChange} className="input-field">
+          <option value="" disabled>Selecciona semestre</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+        </select>
 
         <select name="jornada" value={form.jornada} onChange={handleChange} className="input-field">
           <option value="" disabled>Selecciona jornada</option>
-          <option value="Diurno">Diurno</option>
+          <option value="Mañana">Mañana</option>
+          <option value="Tarde">Tarde</option>
           <option value="Vespertino">Vespertino</option>
+          <option value="Viernes">Viernes</option>
+          <option value="Sábados">Sábados</option>
         </select>
 
-        <button type="submit">Registrar</button>
+        <button type="submit" disabled={enviando}>
+          {enviando ? 'Registrando…' : 'Registrar'}
+        </button>
       </form>
 
       {mensaje && <p className="mensaje">{mensaje}</p>}

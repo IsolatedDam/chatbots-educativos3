@@ -5,13 +5,20 @@ const Admin = require('../models/Admin');
 
 const router = express.Router();
 
+/* ===== Helpers ===== */
 function normRut(v = '') {
   return String(v).replace(/\./g, '').replace(/\s+/g, '').toUpperCase();
 }
 function normEmail(v = '') {
   return String(v).trim().toLowerCase();
 }
+function normNumDoc(tipo = '', numero = '') {
+  if (String(tipo).toUpperCase() === 'RUT') return normRut(numero);
+  return String(numero).trim();
+}
+const TEL_RE = /^\+?\d{8,12}$/;
 
+/* ===== Auth ===== */
 function auth(req, res, next) {
   const h = req.headers.authorization || '';
   const token = h.startsWith('Bearer ') ? h.slice(7) : null;
@@ -33,6 +40,7 @@ function requireRole(...roles) {
   };
 }
 
+/* ===== Login Admin ===== */
 router.post('/login', async (req, res) => {
   const { rut = '', contrasena = '' } = req.body;
   const key = rut.trim();
@@ -64,6 +72,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
+/* ===== Crear Admin (superadmin) ===== */
 router.post('/registro', auth, requireRole('superadmin'), async (req, res) => {
   try {
     const { nombre, apellido = '', rut = '', correo, cargo = '', rol } = req.body;
@@ -106,31 +115,57 @@ router.post('/registro', auth, requireRole('superadmin'), async (req, res) => {
   }
 });
 
+/* ===== Crear PROFESOR ===== */
 router.post('/profesores', auth, requireRole('superadmin', 'admin'), async (req, res) => {
   try {
     const {
       nombre,
       correo,
       password,
-      rut = '',
       permisos = [],
       apellido = '',
-      cargo = 'Profesor'
+      cargo = 'Profesor',
+      tipo_documento,
+      numero_documento,
+      telefono,
+      fechaCreacion,          // ← ahora sí en el destructuring (opcional)
+      rut = ''
     } = req.body;
 
     if (!nombre || !correo || !password) {
       return res.status(400).json({ msg: 'Nombre, correo y contraseña requeridos' });
     }
+    if (!tipo_documento || !numero_documento || !telefono) {
+      return res.status(400).json({ msg: 'Documento y teléfono son obligatorios' });
+    }
 
     const correoN = normEmail(correo);
-    const rutN = rut ? normRut(rut) : '';
+    const tipoN   = String(tipo_documento).toUpperCase();
+    const numDocN = normNumDoc(tipoN, numero_documento);
+    const tel     = String(telefono).trim();
 
-    const existsCorreo = await Admin.findOne({ correo: correoN });
-    if (existsCorreo) return res.status(400).json({ msg: 'Ese correo ya está registrado' });
+    if (!TEL_RE.test(tel)) {
+      return res.status(400).json({ msg: 'Teléfono no válido (8–12 dígitos, opcional +)' });
+    }
 
-    if (rutN) {
-      const existsRut = await Admin.findOne({ rut: rutN });
-      if (existsRut) return res.status(400).json({ msg: 'Ese RUT ya está registrado' });
+    // fechaCreacion opcional: si no viene, usamos ahora
+    const fecha = fechaCreacion ? new Date(fechaCreacion) : new Date();
+    if (isNaN(fecha.getTime())) {
+      return res.status(400).json({ msg: 'Fecha de creación no válida' });
+    }
+    const anio = fecha.getUTCFullYear();
+
+    const rutN = tipoN === 'RUT' ? numDocN : (rut ? normRut(rut) : '');
+
+    // Duplicados
+    if (await Admin.findOne({ correo: correoN })) {
+      return res.status(400).json({ msg: 'Ese correo ya está registrado' });
+    }
+    if (rutN && await Admin.findOne({ rut: rutN })) {
+      return res.status(400).json({ msg: 'Ese RUT ya está registrado' });
+    }
+    if (await Admin.findOne({ tipo_documento: tipoN, numero_documento: numDocN })) {
+      return res.status(400).json({ msg: 'Ya existe un usuario con ese documento' });
     }
 
     const hash = await bcrypt.hash(password, 10);
@@ -144,20 +179,37 @@ router.post('/profesores', auth, requireRole('superadmin', 'admin'), async (req,
       rol: 'profesor',
       permisos: Array.isArray(permisos) ? permisos : [],
       contrasena: hash,
-      habilitado: true
+      habilitado: true,
+      // nuevos
+      tipo_documento: tipoN,
+      numero_documento: numDocN,
+      telefono: tel,
+      fechaCreacion: fecha,
+      anio
     });
 
     const { contrasena: _omit, ...safe } = prof.toObject();
     res.json({ msg: 'Profesor creado', profesor: safe });
   } catch (err) {
+    if (err?.code === 11000) {
+      if (err.keyPattern?.correo) return res.status(409).json({ msg: 'Correo ya registrado' });
+      if (err.keyPattern?.rut)    return res.status(409).json({ msg: 'RUT ya registrado' });
+      if (err.keyPattern?.tipo_documento && err.keyPattern?.numero_documento) {
+        return res.status(409).json({ msg: 'Documento ya registrado' });
+      }
+      return res.status(409).json({ msg: 'Registro duplicado' });
+    }
     console.error('crear profesor error:', err);
     res.status(500).json({ msg: 'Error al crear profesor' });
   }
 });
 
+/* ===== Listar profesores ===== */
 router.get('/profesores', auth, requireRole('superadmin', 'admin'), async (_req, res) => {
   try {
-    const profs = await Admin.find({ rol: 'profesor' }).select('-contrasena').sort({ createdAt: -1 });
+    const profs = await Admin.find({ rol: 'profesor' })
+      .select('-contrasena')
+      .sort({ createdAt: -1 });
     res.json(profs);
   } catch (err) {
     console.error('listar profesores error:', err);
@@ -165,10 +217,12 @@ router.get('/profesores', auth, requireRole('superadmin', 'admin'), async (_req,
   }
 });
 
-// ⚠️ Compatibilidad con tu front actual: GET /api/admin -> lista profesores
+/* Compat con front actual: GET /api/admin -> lista profesores */
 router.get('/', auth, requireRole('superadmin', 'admin'), async (_req, res) => {
   try {
-    const profs = await Admin.find({ rol: 'profesor' }).select('-contrasena').sort({ createdAt: -1 });
+    const profs = await Admin.find({ rol: 'profesor' })
+      .select('-contrasena')
+      .sort({ createdAt: -1 });
     res.json(profs);
   } catch (err) {
     console.error('listar profesores (compat) error:', err);
@@ -176,45 +230,63 @@ router.get('/', auth, requireRole('superadmin', 'admin'), async (_req, res) => {
   }
 });
 
+/* ===== Editar profesor ===== */
 router.put('/profesores/:id', auth, requireRole('superadmin', 'admin'), async (req, res) => {
   try {
     const { id } = req.params;
-    const update = { ...req.body };
-    delete update.contrasena; // no cambiar clave aquí
+    const body = { ...req.body };
+
+    delete body.contrasena;
+    delete body.anio; // el año de creación no se edita
+
+    if (body.correo) body.correo = normEmail(body.correo);
+
+    if (body.tipo_documento || body.numero_documento) {
+      const t = String(body.tipo_documento || '').toUpperCase();
+      if (body.tipo_documento) body.tipo_documento = t;
+      if (body.numero_documento) body.numero_documento = normNumDoc(t, body.numero_documento);
+      if (t === 'RUT' && body.numero_documento) body.rut = body.numero_documento;
+    }
+
+    if (body.telefono) {
+      const tel = String(body.telefono).trim();
+      if (!TEL_RE.test(tel)) return res.status(400).json({ msg: 'Teléfono no válido' });
+      body.telefono = tel;
+    }
+
+    if (body.fechaCreacion) {
+      const f = new Date(body.fechaCreacion);
+      if (isNaN(f.getTime())) return res.status(400).json({ msg: 'Fecha de creación no válida' });
+      body.fechaCreacion = f;
+      body.anio = f.getUTCFullYear();
+    }
 
     const prof = await Admin.findOneAndUpdate(
       { _id: id, rol: 'profesor' },
-      update,
-      { new: true }
+      body,
+      { new: true, runValidators: true }
     ).select('-contrasena');
 
     if (!prof) return res.status(404).json({ msg: 'Profesor no encontrado' });
     res.json(prof);
   } catch (err) {
+    if (err?.code === 11000) {
+      if (err.keyPattern?.correo) return res.status(409).json({ msg: 'Correo ya registrado' });
+      if (err.keyPattern?.rut)    return res.status(409).json({ msg: 'RUT ya registrado' });
+      if (err.keyPattern?.tipo_documento && err.keyPattern?.numero_documento) {
+        return res.status(409).json({ msg: 'Documento ya registrado' });
+      }
+      return res.status(409).json({ msg: 'Registro duplicado' });
+    }
     console.error('editar profesor error:', err);
     res.status(500).json({ msg: 'Error al actualizar profesor' });
   }
 });
 
-// ⚠️ Compat: PUT /api/admin/:id -> edita profesor
+/* ===== Editar profesor (compat) ===== */
 router.put('/:id', auth, requireRole('superadmin', 'admin'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const update = { ...req.body };
-    delete update.contrasena;
-
-    const prof = await Admin.findOneAndUpdate(
-      { _id: id, rol: 'profesor' },
-      update,
-      { new: true }
-    ).select('-contrasena');
-
-    if (!prof) return res.status(404).json({ msg: 'Profesor no encontrado' });
-    res.json(prof);
-  } catch (err) {
-    console.error('editar profesor (compat) error:', err);
-    res.status(500).json({ msg: 'Error al actualizar profesor' });
-  }
+  req.url = `/profesores/${req.params.id}`; // redirige internamente
+  return router.handle(req, res);
 });
 
 module.exports = router;
