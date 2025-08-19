@@ -1,120 +1,130 @@
-/* ===== Theme ===== */
+/* ===== Variables y reset local (no tocamos body ni html global) ===== */
 :root{
-  --card:#fff; --bg:#f5f7fb; --text:#0f172a; --muted:#6b7280; --line:#e5e7eb;
-  --primary:#0ea5e9; --primary-600:#0284c7; --ring:rgba(14,165,233,.12);
-}
-body{background:var(--bg);}
-
-/* ===== Card ===== */
-.rp-card{
-  max-width: 980px;
-  margin: 24px auto;
-  padding: 24px 28px;
-  background: var(--card);
-  border-radius: 16px;
-  box-shadow: 0 10px 28px rgba(2, 8, 20, 0.06);
-}
-.rp-title{
-  margin: 0 0 16px;
-  text-align: center;
-  color: var(--text);
-  font-size: 28px;
-  font-weight: 800;
+  --radius: 12px;
+  --gap: 14px;
+  --card: #fff;
+  --text: #0f172a;
+  --muted: #6b7280;
+  --brand: #2563eb;
+  --brand-2: #1d4ed8;
+  --ring: 0 0 0 3px rgba(37,99,235,.18);
 }
 
-/* ===== Form ===== */
-.rp-form{display:flex;flex-direction:column;gap:16px}
-
-/* Grid de campos (2 columnas) */
-.rp-grid{
-  display:grid;
-  grid-template-columns: repeat(2, minmax(0,1fr));
-  gap: 14px 16px;
-}
-.rp-col-2{grid-column:1 / -1;}
-
-.rp-field{display:flex;flex-direction:column;gap:8px;}
-.rp-field label{
-  font-size: 12.5px; font-weight: 600; color: var(--muted);
-}
-.rp-field input,
-.rp-field select{
+/* ===== Shell del componente: ancho y scroll controlado ===== */
+.rp-page{
+  /* este wrapper se adapta a cualquier layout (con sidebar, topbar, etc.) */
   width: 100%;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #fff;
-  color: var(--text);
-  outline: none;
-  font-size: 14.5px;
-  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
 }
-.rp-field input::placeholder{color:var(--muted); opacity:.85;}
-.rp-field input:focus, .rp-field select:focus{
-  border-color: var(--primary);
-  box-shadow: 0 0 0 4px var(--ring);
+.rp-shell{
+  /* Centramos y limitamos el ancho del contenido */
+  width: min(980px, 100%);
+  margin: 16px auto 24px;
+  padding: 0 16px;
+  /* SOLO aquí vive el scroll si el contenido se pasa de alto */
+  max-height: calc(100dvh - 48px);    /* resta aprox. el topbar; ajusta si tu header es diferente */
+  overflow: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
 }
+
+/* ===== Encabezado del formulario ===== */
+.rp-header{
+  text-align: center;
+  margin: 0 0 12px;
+}
+.rp-header h2{
+  margin: 0 0 6px;
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 700;
+}
+.rp-header p{
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* ===== Formulario ===== */
+.rp-form{ display:flex; flex-direction:column; gap:12px; }
+.card{
+  background: var(--card);
+  border: 1px solid rgba(2,6,23,.08);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 24px rgba(2,6,23,.06);
+  padding: 18px;
+  margin-bottom: 14px;
+}
+.card__head{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; margin-bottom:12px;
+}
+.card__head h3{ margin:0; font-size:18px; font-weight:600; }
+.card__head--row{ gap:12px; }
+
+/* ===== Grids ===== */
+.grid{ display:grid; gap: var(--gap); }
+.grid--2{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+.grid--3{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+.field--sm-1{ grid-column: span 1; }
+@media (max-width:1024px){ .grid--3{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width:640px){ .grid--2, .grid--3{ grid-template-columns: 1fr; } }
+
+/* ===== Campos ===== */
+.field{ display:flex; flex-direction:column; gap:6px; }
+.field label{ font-size:13px; color:var(--muted); }
+.field input, .field select{
+  width:100%;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid rgba(2,6,23,.12);
+  background:#fff; color:var(--text);
+  outline:none; transition:border-color .15s ease, box-shadow .15s ease;
+}
+.field input::placeholder{ color:#9aa6b2; }
+.field input:focus, .field select:focus{ border-color:var(--brand); box-shadow:var(--ring); }
+.hint{ margin-top:2px; font-size:12px; color:var(--muted); }
 
 /* ===== Permisos ===== */
-.rp-perms{
-  padding: 16px;
-  background: #f8fafc;
-  border: 1px solid var(--line);
-  border-radius: 14px;
+.perm-group{
+  border:1px dashed rgba(2,6,23,.12);
+  padding:6px 8px 10px;
+  border-radius:10px;
+  margin-bottom:10px;
 }
-.rp-permsHeader{
-  display:flex; align-items:center; justify-content:space-between;
-  margin-bottom: 10px; color: var(--text);
+.perm-group legend{ padding:0 6px; font-size:12px; color:var(--muted); }
+.perm-grid{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px; }
+@media (max-width:700px){ .perm-grid{ grid-template-columns: 1fr; } }
+.perm-item{
+  display:flex; align-items:flex-start; gap:10px;
+  background:#fff; border:1px solid rgba(2,6,23,.12);
+  border-radius:12px; padding:10px 12px;
+  transition:border-color .15s ease, transform .05s ease, background .15s ease;
 }
-.rp-chip{
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--primary);
-  background: var(--primary);
-  color: #fff; cursor: pointer;
-  transition: background .15s ease, transform .05s ease;
-}
-.rp-chip:hover{ background: var(--primary-600); }
-.rp-chip:active{ transform: translateY(1px); }
+.perm-item:hover{ border-color: rgba(2,6,23,.22); background:#fbfdff; }
+.perm-item input{ transform: translateY(2px); }
 
-.rp-permGroup{margin-top: 10px;}
-.rp-permTitle{
-  display:inline-block; padding:6px 10px; margin-bottom:8px;
-  background:#eef2ff; color:#1e293b; border:1px solid #e0e7ff; border-radius:10px; font-weight:600;
+/* ===== Acciones ===== */
+.form-actions{
+  display:flex; justify-content:flex-end; gap:10px;
+  margin-top:8px; margin-bottom:0;
 }
-.rp-permsGrid{
-  display:grid; grid-template-columns: repeat(3, minmax(0,1fr));
-  gap: 12px 16px;
+.btn{
+  background: linear-gradient(180deg, var(--brand), var(--brand-2));
+  color:#fff; border:0; padding:12px 18px; border-radius:12px;
+  font-weight:600; cursor:pointer;
+  box-shadow:0 8px 18px rgba(29,78,216,.18);
+  transition: transform .08s ease, box-shadow .15s ease, opacity .15s ease;
 }
-.rp-permItem{
-  display:flex; align-items:center; gap:10px;
-  padding:10px 12px; border:1px solid var(--line); border-radius:10px;
-  background:#fff; min-height:44px; box-sizing:border-box;
-  color:#1f2937;
-}
-.rp-permItem input[type="checkbox"]{
-  width:18px; height:18px; flex:0 0 18px; accent-color: var(--primary);
-}
-.rp-permItem:hover{ border-color:#dbe2ea; background:#fafcff; }
+.btn:hover{ transform: translateY(-1px); }
+.btn:active{ transform: translateY(0); box-shadow:0 6px 14px rgba(29,78,216,.22); }
+.btn:disabled{ opacity:.7; cursor:not-allowed; }
 
-/* ===== Actions ===== */
-.rp-actions{display:flex; justify-content:center;}
-.rp-btn{
-  padding: 12px 18px; min-width:220px;
-  background: var(--primary); color:#fff; border:0; border-radius:12px;
-  font-weight:700; cursor:pointer;
-  box-shadow:0 6px 18px rgba(14,165,233,.25);
-  transition: background .15s ease, transform .05s ease, box-shadow .15s ease;
-}
-.rp-btn:hover{ background: var(--primary-600); }
-.rp-btn:active{ transform: translateY(1px); }
+/* ===== Último elemento sin margen colapsado ===== */
+.rp-form > :last-child{ margin-bottom:0; }
 
-/* ===== Responsive ===== */
-@media (max-width: 900px){
-  .rp-permsGrid{ grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 640px){
-  .rp-grid{ grid-template-columns: 1fr; }
-  .rp-permsGrid{ grid-template-columns: 1fr; }
-  .rp-btn{ width: 100%; }
+/* Para que los inputs nunca se desborden */
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  box-sizing: border-box; /* 👈 asegura que padding + border no sumen al ancho */
 }
