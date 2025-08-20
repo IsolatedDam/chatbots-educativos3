@@ -108,7 +108,6 @@ function RegistroAdmin() {
           required
         >
           <option value="admin">Admin</option>
-          {esSuper && <option value="superadmin">Superadmin</option>}
         </select>
 
         <button type="submit">Registrar</button>
