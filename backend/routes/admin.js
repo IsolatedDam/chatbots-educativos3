@@ -128,7 +128,7 @@ router.post('/profesores', auth, requireRole('superadmin', 'admin'), async (req,
       tipo_documento,
       numero_documento,
       telefono,
-      fechaCreacion,          // ← ahora sí en el destructuring (opcional)
+      fechaCreacion,          // opcional
       rut = ''
     } = req.body;
 
@@ -170,9 +170,11 @@ router.post('/profesores', auth, requireRole('superadmin', 'admin'), async (req,
 
     const hash = await bcrypt.hash(password, 10);
 
+    const ap = (apellido || '').trim(); // normaliza
     const prof = await Admin.create({
       nombre,
-      apellido,
+      apellido: ap,
+      apellidos: ap, // 👈 compat: siempre guardamos ambos
       rut: rutN || undefined,
       correo: correoN,
       cargo,
@@ -259,6 +261,15 @@ router.put('/profesores/:id', auth, requireRole('superadmin', 'admin'), async (r
       if (isNaN(f.getTime())) return res.status(400).json({ msg: 'Fecha de creación no válida' });
       body.fechaCreacion = f;
       body.anio = f.getUTCFullYear();
+    }
+
+    // 👇 Normaliza apellido/apellidos: si llega uno, replica en el otro
+    if (typeof body.apellido === 'string' && body.apellido.trim()) {
+      body.apellido  = body.apellido.trim();
+      body.apellidos = body.apellido;
+    } else if (typeof body.apellidos === 'string' && body.apellidos.trim()) {
+      body.apellidos = body.apellidos.trim();
+      body.apellido  = body.apellidos;
     }
 
     const prof = await Admin.findOneAndUpdate(

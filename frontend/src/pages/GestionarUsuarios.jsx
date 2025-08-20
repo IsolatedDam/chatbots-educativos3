@@ -1,10 +1,13 @@
-// src/components/GestionarUsuarios.jsx
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import '../styles/GestionarUsuarios.css';
 
 const API_BASE = 'https://chatbots-educativos3.onrender.com/api';
 const JORNADAS = ['Mañana', 'Tarde', 'Vespertino', 'Viernes', 'Sábados'];
+
+/* Helper: apellido con fallbacks */
+const getApellido = (u) =>
+  u?.apellido ?? u?.apellidos ?? u?.lastName ?? u?.lastname ?? '';
 
 function GestionarUsuarios() {
   const [usuarios, setUsuarios] = useState([]);
@@ -92,8 +95,14 @@ function GestionarUsuarios() {
   const usuariosFiltrados = useMemo(() => {
     const texto = filtroTexto.toLowerCase().trim();
     return (usuarios || []).filter(u => {
-      const base = [u.correo, u.nombre, u.apellido, u.numero_documento, u.rut, u.cargo]
-        .filter(Boolean).join(' ').toLowerCase();
+      const base = [
+        u.correo,
+        u.nombre,
+        getApellido(u),              // 👈 apellido robusto
+        u.numero_documento,
+        u.rut,
+        u.cargo
+      ].filter(Boolean).join(' ').toLowerCase();
 
       if (texto && !base.includes(texto)) return false;
 
@@ -115,12 +124,20 @@ function GestionarUsuarios() {
 
   const handleEditar = (usuario) => {
     setUsuarioEditando(usuario);
-    setFormulario({ ...usuario });
+    // Normaliza en el formulario
+    const ap = getApellido(usuario);
+    setFormulario({ ...usuario, apellido: ap, apellidos: ap });
   };
 
   const handleFormularioChange = (e) => {
     const { name, value } = e.target;
-    setFormulario({ ...formulario, [name]: value });
+    const next = { ...formulario, [name]: value };
+    // Mantén sincronizados apellido/apellidos para el PUT
+    if (name === 'apellido' || name === 'apellidos') {
+      next.apellido = value;
+      next.apellidos = value;
+    }
+    setFormulario(next);
   };
 
   const guardarCambios = async () => {
@@ -155,7 +172,7 @@ function GestionarUsuarios() {
           return {
             Correo: u.correo || '',
             Nombre: u.nombre || '',
-            Apellido: u.apellido || '',
+            Apellido: getApellido(u) || '',
             Documento: u.numero_documento || '',
             Semestre: u.semestre ?? '',
             Jornada: u.jornada ?? '',
@@ -165,7 +182,7 @@ function GestionarUsuarios() {
           return {
             Correo: u.correo || '',
             Nombre: u.nombre || '',
-            Apellido: u.apellido || '',
+            Apellido: getApellido(u) || '',
             RUT: u.rut || '',
             Cargo: u.cargo || '',
             Rol: u.rol || ''
@@ -292,7 +309,7 @@ function GestionarUsuarios() {
                       <th>Documento</th>
                       <th>Semestre</th>
                       <th>Jornada</th>
-                      <th>Año</th> {/* ← solo año */}
+                      <th>Año</th>
                     </>
                   )}
                   <th>Acciones</th>
@@ -303,7 +320,7 @@ function GestionarUsuarios() {
                   <tr key={u._id}>
                     <td>{u.correo}</td>
                     <td>{u.nombre}</td>
-                    <td>{u.apellido}</td>
+                    <td>{getApellido(u) || '-'}</td> {/* 👈 ahora siempre muestra */}
                     {tipoUsuario === 'profesores' ? (
                       <>
                         <td>{u.rut}</td>
@@ -363,7 +380,6 @@ function GestionarUsuarios() {
                   {JORNADAS.map(j => <option key={j} value={j}>{j}</option>)}
                 </select>
                 <input name="telefono" value={formulario.telefono || ''} onChange={handleFormularioChange} placeholder="Teléfono" />
-                {/* No editamos fechaIngreso aquí para mantener solo el año en la vista */}
               </>
             )}
 

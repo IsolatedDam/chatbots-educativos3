@@ -1,4 +1,3 @@
-// src/components/RegistroProfesor.jsx
 import { useState, useMemo } from 'react';
 import axios from 'axios';
 import '../styles/RegistroProfesor.css';
@@ -67,9 +66,18 @@ export default function RegistroProfesor() {
     setEnviando(true);
     try {
       await axios.post(ENDPOINT, {
-        nombre, apellido, correo: correo.trim(), password, permisos,
-        rol: 'profesor', tipo_documento, numero_documento,
-        telefono: String(telefono).trim(), fechaCreacion, rut
+        nombre,
+        apellido,
+        apellidos: apellido,               // 👈 compat
+        correo: correo.trim(),
+        password,
+        permisos,
+        rol: 'profesor',
+        tipo_documento,
+        numero_documento,
+        telefono: String(telefono).trim(),
+        fechaCreacion,
+        rut
       }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
 
       alert('Profesor creado con permisos.');
@@ -83,7 +91,7 @@ export default function RegistroProfesor() {
   };
 
   return (
-    <div className="rp-page">{/* wrapper aislado, no toca tu layout */}
+    <div className="rp-page">
       <div className="rp-shell">
         <header className="rp-header">
           <h2>Registrar Profesor</h2>
