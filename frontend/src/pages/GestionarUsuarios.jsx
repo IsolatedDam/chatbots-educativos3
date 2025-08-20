@@ -14,10 +14,10 @@ function GestionarUsuarios() {
   const [tipoUsuario, setTipoUsuario] = useState('alumnos'); // 'alumnos' | 'profesores'
   const [filtroTexto, setFiltroTexto] = useState('');
 
-  // Filtros (solo alumnos)
-  const [filtroJornada, setFiltroJornada] = useState('');
-  const [filtroSemestre, setFiltroSemestre] = useState('');
-  const [filtroAnio, setFiltroAnio] = useState('');
+  // Filtros
+  const [filtroJornada, setFiltroJornada] = useState('');   // solo alumnos
+  const [filtroSemestre, setFiltroSemestre] = useState(''); // solo alumnos
+  const [filtroAnio, setFiltroAnio] = useState('');         // alumnos y profesores
 
   const [usuarioEditando, setUsuarioEditando] = useState(null);
   const [formulario, setFormulario] = useState({});
@@ -65,7 +65,7 @@ function GestionarUsuarios() {
     return d && !Number.isNaN(d.getTime()) ? d.getFullYear() : '';
   };
 
-  // Opciones de semestre detectadas
+  // Opciones de semestre detectadas (solo alumnos)
   const opcionesSemestre = useMemo(() => {
     if (tipoUsuario !== 'alumnos') return [];
     const set = new Set(
@@ -78,9 +78,8 @@ function GestionarUsuarios() {
     return arr;
   }, [usuarios, tipoUsuario]);
 
-  // Opciones de año (derivadas con fallback)
+  // Opciones de año (derivadas con fallback) — para ambos tipos
   const opcionesAnio = useMemo(() => {
-    if (tipoUsuario !== 'alumnos') return [];
     const set = new Set(
       (usuarios || []).map(u => {
         const a = getAnio(u);
@@ -90,7 +89,7 @@ function GestionarUsuarios() {
     const arr = Array.from(set);
     arr.sort((a, b) => Number(b) - Number(a));
     return arr;
-  }, [usuarios, tipoUsuario]);
+  }, [usuarios]);
 
   const usuariosFiltrados = useMemo(() => {
     const texto = filtroTexto.toLowerCase().trim();
@@ -98,7 +97,7 @@ function GestionarUsuarios() {
       const base = [
         u.correo,
         u.nombre,
-        getApellido(u),              // 👈 apellido robusto
+        getApellido(u),
         u.numero_documento,
         u.rut,
         u.cargo
@@ -106,16 +105,19 @@ function GestionarUsuarios() {
 
       if (texto && !base.includes(texto)) return false;
 
+      // Filtro por Año (aplica a alumnos y profesores)
+      if (filtroAnio) {
+        const anio = getAnio(u);
+        if (String(anio) !== String(filtroAnio)) return false;
+      }
+
+      // Filtros específicos de alumnos
       if (tipoUsuario === 'alumnos') {
         if (filtroJornada && String(u.jornada || '').toLowerCase() !== filtroJornada.toLowerCase()) {
           return false;
         }
         if (filtroSemestre && String(u.semestre) !== String(filtroSemestre)) {
           return false;
-        }
-        if (filtroAnio) {
-          const anio = getAnio(u);
-          if (String(anio) !== String(filtroAnio)) return false;
         }
       }
       return true;
@@ -167,8 +169,8 @@ function GestionarUsuarios() {
       const esAlumnos = tipoUsuario === 'alumnos';
 
       const data = usuariosFiltrados.map(u => {
+        const anio = getAnio(u);
         if (esAlumnos) {
-          const anio = getAnio(u);
           return {
             Correo: u.correo || '',
             Nombre: u.nombre || '',
@@ -185,6 +187,7 @@ function GestionarUsuarios() {
             Apellido: getApellido(u) || '',
             RUT: u.rut || '',
             Cargo: u.cargo || '',
+            Año: anio || '',
             Rol: u.rol || ''
           };
         }
@@ -197,7 +200,7 @@ function GestionarUsuarios() {
       const fecha = new Date().toISOString().slice(0, 10);
       const nombre = esAlumnos
         ? `alumnos_${filtroJornada || 'todas'}_${filtroSemestre || 'todos'}_${filtroAnio || 'todos'}_${fecha}.xlsx`
-        : `profesores_${fecha}.xlsx`;
+        : `profesores_${filtroAnio || 'todos'}_${fecha}.xlsx`;
 
       XLSX.writeFile(wb, nombre);
     } catch (err) {
@@ -212,6 +215,8 @@ function GestionarUsuarios() {
     setFiltroSemestre('');
     setFiltroAnio('');
   };
+
+  const isProf = tipoUsuario === 'profesores';
 
   return (
     <div className="gestionar-usuarios">
@@ -270,19 +275,20 @@ function GestionarUsuarios() {
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
-
-            <select
-              value={filtroAnio}
-              onChange={(e) => setFiltroAnio(e.target.value)}
-              className="filtro-select"
-            >
-              <option value="">Año: Todos</option>
-              {opcionesAnio.map((a) => (
-                <option key={a} value={a}>{a}</option>
-              ))}
-            </select>
           </>
         )}
+
+        {/* Año visible para alumnos y profesores */}
+        <select
+          value={filtroAnio}
+          onChange={(e) => setFiltroAnio(e.target.value)}
+          className="filtro-select"
+        >
+          <option value="">Año: Todos</option>
+          {opcionesAnio.map((a) => (
+            <option key={a} value={a}>{a}</option>
+          ))}
+        </select>
 
         <button className="btn-sec" onClick={limpiarFiltros}>Limpiar</button>
         <button className="btn-prim" onClick={exportarExcel}>Descargar Excel (filtrado)</button>
@@ -299,10 +305,11 @@ function GestionarUsuarios() {
                   <th>Correo</th>
                   <th>Nombre</th>
                   <th>Apellido</th>
-                  {tipoUsuario === 'profesores' ? (
+                  {isProf ? (
                     <>
                       <th>RUT</th>
                       <th>Cargo</th>
+                      <th>Año</th>
                     </>
                   ) : (
                     <>
@@ -320,11 +327,12 @@ function GestionarUsuarios() {
                   <tr key={u._id}>
                     <td>{u.correo}</td>
                     <td>{u.nombre}</td>
-                    <td>{getApellido(u) || '-'}</td> {/* 👈 ahora siempre muestra */}
-                    {tipoUsuario === 'profesores' ? (
+                    <td>{getApellido(u) || '-'}</td>
+                    {isProf ? (
                       <>
                         <td>{u.rut}</td>
                         <td>{u.cargo || '-'}</td>
+                        <td>{getAnio(u) || '-'}</td>
                       </>
                     ) : (
                       <>
@@ -343,7 +351,7 @@ function GestionarUsuarios() {
                 ))}
                 {!usuariosFiltrados.length && (
                   <tr>
-                    <td colSpan={tipoUsuario === 'profesores' ? 6 : 8}>
+                    <td colSpan={isProf ? 7 : 8}>
                       Sin resultados.
                     </td>
                   </tr>
@@ -362,7 +370,7 @@ function GestionarUsuarios() {
             <input name="nombre" value={formulario.nombre || ''} onChange={handleFormularioChange} />
             <input name="apellido" value={formulario.apellido || ''} onChange={handleFormularioChange} />
 
-            {tipoUsuario === 'profesores' ? (
+            {isProf ? (
               <>
                 <input name="rut" value={formulario.rut || ''} onChange={handleFormularioChange} />
                 <input name="cargo" value={formulario.cargo || ''} onChange={handleFormularioChange} />
