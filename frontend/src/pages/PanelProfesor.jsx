@@ -2,38 +2,29 @@
 import React, { useState, useEffect } from "react";
 import "../styles/PanelProfesor.css";
 
-// 🔹 Igual que en GestionarUsuarios.jsx
 const API_BASE = "https://chatbots-educativos3.onrender.com/api";
 
 export default function PanelProfesor() {
-  // === Estado principal ===
   const [vistaActiva, setVistaActiva] = useState("inicio");
   const [alumnos, setAlumnos] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Modal de edición
   const [editOpen, setEditOpen] = useState(false);
   const [editDraft, setEditDraft] = useState(null);
 
-  // === Cerrar sesión ===
   const handleLogout = () => {
     localStorage.clear();
     window.location.href = "/login";
   };
 
-  // === Cargar alumnos desde backend ===
   async function fetchAlumnos(q = "") {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(
         `${API_BASE}/alumnos?q=${encodeURIComponent(q)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (!res.ok) throw new Error("No autorizado");
@@ -48,12 +39,11 @@ export default function PanelProfesor() {
   }
 
   useEffect(() => {
-    if (vistaActiva === "alumnos" || vistaActiva === "datos") {
+    if (vistaActiva === "datos") {
       fetchAlumnos("");
     }
   }, [vistaActiva]);
 
-  // === Abrir / cerrar modal ===
   const openEdit = (alumno) => {
     setEditDraft({
       ...alumno,
@@ -67,7 +57,6 @@ export default function PanelProfesor() {
     setEditDraft(null);
   };
 
-  // === Guardar cambios alumno ===
   async function handleSave() {
     if (!editDraft?._id) return;
 
@@ -110,7 +99,6 @@ export default function PanelProfesor() {
     }
   }
 
-  // === Eliminar alumno ===
   async function handleDelete(id) {
     if (!window.confirm("¿Eliminar alumno?")) return;
 
@@ -118,9 +106,7 @@ export default function PanelProfesor() {
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_BASE}/alumnos/${id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) throw new Error("Error al eliminar");
@@ -131,7 +117,6 @@ export default function PanelProfesor() {
     }
   }
 
-  // === UI helpers para "datos" y "alumnos" ===
   function BarraBusqueda({ onBuscar, onRefrescar }) {
     return (
       <div className="toolbar">
@@ -308,8 +293,7 @@ export default function PanelProfesor() {
         {vistaActiva === "alumnos" && (
           <section className="section">
             <h3>Administrar alumnos</h3>
-            <BarraBusqueda onBuscar={(q) => fetchAlumnos(q)} onRefrescar={() => fetchAlumnos("")} />
-            <TablaListado />
+            <p>Aquí irán las configuraciones de las clases.</p>
           </section>
         )}
       </main>
