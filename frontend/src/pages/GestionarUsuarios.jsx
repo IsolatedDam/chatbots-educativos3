@@ -5,9 +5,52 @@ import '../styles/GestionarUsuarios.css';
 const API_BASE = 'https://chatbots-educativos3.onrender.com/api';
 const JORNADAS = ['Mañana', 'Tarde', 'Vespertino', 'Viernes', 'Sábados'];
 
+/* === Catálogo de permisos para PROFESORES (mismo que en RegistroProfesor) === */
+const PERMISOS = [
+  { grupo: 'Datos del alumno', items: [
+    { key: 'alumnos:editar_doc',       label: 'Rut / DNI / Pasaporte' },
+    { key: 'alumnos:editar_nombre',    label: 'Nombre alumno' },
+    { key: 'alumnos:editar_apellido',  label: 'Apellido alumno' },
+    { key: 'alumnos:editar_ano',       label: 'Año' },
+    { key: 'alumnos:editar_semestre',  label: 'Semestre' },
+    { key: 'alumnos:editar_jornada',   label: 'Jornada' },
+  ]},
+  { grupo: 'Gestión académica', items: [
+    { key: 'chatbots:autorizar_acceso', label: 'Autorizar / Desautorizar acceso a chatbots (individual/grupo)' },
+    { key: 'alertas:editar_riesgo',     label: 'Edición de alertas de riesgo' },
+  ]},
+  { grupo: 'Acciones administrativas', items: [
+    { key: 'alumnos:eliminar',           label: 'Eliminar alumno individual' },
+    { key: 'chatbots:crear',             label: 'Crear nuevos chatbots' },
+    { key: 'chatbots:subir_material',    label: 'Subir material a cada chatbot' },
+    { key: 'alumnos:carga_masiva',       label: 'Subir Excel con listado de alumnos' },
+    { key: 'profesores:crear_editar',    label: 'Crear / Editar profesores' },
+  ]}
+];
+const ALL_KEYS = PERMISOS.flatMap(g => g.items.map(i => i.key));
+
 /* Helper: apellido con fallbacks */
 const getApellido = (u) =>
   u?.apellido ?? u?.apellidos ?? u?.lastName ?? u?.lastname ?? '';
+
+/* Badge de riesgo (simple) */
+const RiesgoBadge = ({ value }) => {
+  const v = String(value || '').toLowerCase();
+  const map = {
+    verde: { bg: '#e8f7e8', color: '#137a2a', label: 'Verde' },
+    amarillo: { bg: '#fff7cc', color: '#8a6d00', label: 'Amarillo' },
+    rojo: { bg: '#ffe1dd', color: '#9b1c1c', label: 'Rojo' },
+  };
+  const sty = map[v] || { bg: '#eef2f7', color: '#334155', label: v || '-' };
+  return (
+    <span style={{
+      background: sty.bg, color: sty.color,
+      padding: '4px 8px', borderRadius: 999, fontSize: 12, fontWeight: 700
+    }}>
+      {sty.label}
+    </span>
+  );
+};
 
 function GestionarUsuarios() {
   const [usuarios, setUsuarios] = useState([]);
@@ -25,6 +68,12 @@ function GestionarUsuarios() {
   const [error, setError] = useState('');
 
   const token = localStorage.getItem('token') || '';
+
+  // Permisos del usuario actual (para poder editar riesgo)
+  const usuarioActual = JSON.parse(localStorage.getItem('usuario') || '{}');
+  const esSuper = usuarioActual?.rol === 'superadmin';
+  const permisosActual = Array.isArray(usuarioActual?.permisos) ? usuarioActual.permisos : [];
+  const puedeEditarRiesgo = esSuper || permisosActual.includes('alertas:editar_riesgo');
 
   const obtenerUsuarios = useCallback(async () => {
     try {
@@ -100,7 +149,9 @@ function GestionarUsuarios() {
         getApellido(u),
         u.numero_documento,
         u.rut,
-        u.cargo
+        u.cargo,
+        u.telefono,   // que también matchee por teléfono si escribe números
+        u.riesgo      // y por riesgo si escribe "rojo", "verde", etc.
       ].filter(Boolean).join(' ').toLowerCase();
 
       if (texto && !base.includes(texto)) return false;
@@ -126,9 +177,14 @@ function GestionarUsuarios() {
 
   const handleEditar = (usuario) => {
     setUsuarioEditando(usuario);
-    // Normaliza en el formulario
+    // Normaliza en el formulario; asegura arreglo de permisos en profesores
     const ap = getApellido(usuario);
-    setFormulario({ ...usuario, apellido: ap, apellidos: ap });
+    setFormulario({
+      ...usuario,
+      apellido: ap,
+      apellidos: ap,
+      permisos: Array.isArray(usuario.permisos) ? usuario.permisos : []
+    });
   };
 
   const handleFormularioChange = (e) => {
@@ -142,16 +198,44 @@ function GestionarUsuarios() {
     setFormulario(next);
   };
 
+  // Toggle de permisos (profesores)
+  const togglePerm = (key) => {
+    setFormulario((prev) => {
+      const cur = Array.isArray(prev.permisos) ? prev.permisos : [];
+      const next = cur.includes(key) ? cur.filter(k => k !== key) : [...cur, key];
+      return { ...prev, permisos: next };
+    });
+  };
+  const allSelected = useMemo(
+    () => (Array.isArray(formulario.permisos) ? formulario.permisos.length === ALL_KEYS.length : false),
+    [formulario.permisos]
+  );
+  const toggleAll = () => {
+    setFormulario(prev => ({
+      ...prev,
+      permisos: allSelected ? [] : [...ALL_KEYS]
+    }));
+  };
+
   const guardarCambios = async () => {
     try {
       const endpointPath = tipoUsuario === 'alumnos' ? '/alumnos' : '/admin/profesores';
       const payload = { ...formulario };
-      if (tipoUsuario === 'alumnos' && payload.semestre !== undefined && payload.semestre !== '') {
-        payload.semestre = Number(payload.semestre);
+
+      if (tipoUsuario === 'alumnos') {
+        // normaliza tipos numéricos
+        if (payload.semestre !== undefined && payload.semestre !== '') {
+          payload.semestre = Number(payload.semestre);
+        }
+        if (payload.anio !== undefined && payload.anio !== '') {
+          payload.anio = Number(payload.anio);
+        }
+        // riesgo se envía tal cual (string: 'verde'|'amarillo'|'rojo')
       }
-      await axios.put(`${API_BASE}${endpointPath}/${formulario._id}`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+
+      await axios.put(`${API_BASE}${endpointPath}/${formulario._id}`, payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       setUsuarioEditando(null);
       obtenerUsuarios();
     } catch (err) {
@@ -178,7 +262,9 @@ function GestionarUsuarios() {
             Documento: u.numero_documento || '',
             Semestre: u.semestre ?? '',
             Jornada: u.jornada ?? '',
-            Año: anio || ''
+            Año: anio || '',
+            Teléfono: u.telefono || '',
+            Riesgo: (u.riesgo || '').toString() || ''
           };
         } else {
           return {
@@ -317,6 +403,8 @@ function GestionarUsuarios() {
                       <th>Semestre</th>
                       <th>Jornada</th>
                       <th>Año</th>
+                      <th>Teléfono</th> {/* NUEVO */}
+                      <th>Riesgo</th>    {/* NUEVO */}
                     </>
                   )}
                   <th>Acciones</th>
@@ -340,6 +428,8 @@ function GestionarUsuarios() {
                         <td>{u.semestre ?? '-'}</td>
                         <td>{u.jornada || '-'}</td>
                         <td>{getAnio(u) || '-'}</td>
+                        <td>{u.telefono || '-'}</td>             {/* NUEVO */}
+                        <td><RiesgoBadge value={u.riesgo} /></td> {/* NUEVO */}
                       </>
                     )}
                     <td>
@@ -351,7 +441,7 @@ function GestionarUsuarios() {
                 ))}
                 {!usuariosFiltrados.length && (
                   <tr>
-                    <td colSpan={isProf ? 7 : 8}>
+                    <td colSpan={isProf ? 7 : 10}>
                       Sin resultados.
                     </td>
                   </tr>
@@ -366,17 +456,55 @@ function GestionarUsuarios() {
         <div className="modal">
           <div className="modal-contenido">
             <h3>Editar Usuario</h3>
+
+            {/* Campos comunes */}
             <input name="correo" value={formulario.correo || ''} onChange={handleFormularioChange} />
             <input name="nombre" value={formulario.nombre || ''} onChange={handleFormularioChange} />
             <input name="apellido" value={formulario.apellido || ''} onChange={handleFormularioChange} />
 
             {isProf ? (
               <>
+                {/* Profesores: RUT/Cargo */}
                 <input name="rut" value={formulario.rut || ''} onChange={handleFormularioChange} />
                 <input name="cargo" value={formulario.cargo || ''} onChange={handleFormularioChange} />
+
+                {/* === Permisos (PROFESORES) === */}
+                <div style={{ marginTop: 12, padding: 12, border: '1px solid #e8eef5', borderRadius: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <strong>Permisos</strong>
+                    <button type="button" className="btn btn-ghost" onClick={toggleAll}>
+                      {allSelected ? 'Quitar todos' : 'Seleccionar todos'}
+                    </button>
+                  </div>
+
+                  {PERMISOS.map((g) => (
+                    <fieldset key={g.grupo} style={{ border: '1px dashed #e3e8ef', borderRadius: 8, padding: 10, marginBottom: 10 }}>
+                      <legend style={{ fontSize: 12, color: '#6b7280', padding: '0 6px' }}>{g.grupo}</legend>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 8 }}>
+                        {g.items.map((p) => {
+                          const checked = Array.isArray(formulario.permisos) && formulario.permisos.includes(p.key);
+                          return (
+                            <label key={p.key} style={{
+                              display: 'flex', gap: 8, alignItems: 'flex-start',
+                              border: '1px solid #e8eef5', borderRadius: 10, padding: '8px 10px', background: '#fff'
+                            }}>
+                              <input
+                                type="checkbox"
+                                checked={!!checked}
+                                onChange={() => togglePerm(p.key)}
+                              />
+                              <span>{p.label}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </fieldset>
+                  ))}
+                </div>
               </>
             ) : (
               <>
+                {/* Alumnos */}
                 <input name="numero_documento" value={formulario.numero_documento || ''} onChange={handleFormularioChange} />
                 <select name="semestre" value={String(formulario.semestre ?? '')} onChange={handleFormularioChange}>
                   <option value="">Semestre</option>
@@ -388,6 +516,20 @@ function GestionarUsuarios() {
                   {JORNADAS.map(j => <option key={j} value={j}>{j}</option>)}
                 </select>
                 <input name="telefono" value={formulario.telefono || ''} onChange={handleFormularioChange} placeholder="Teléfono" />
+
+                {/* NUEVO: Riesgo (solo editable si tiene permiso) */}
+                <select
+                  name="riesgo"
+                  value={formulario.riesgo || ''}
+                  onChange={handleFormularioChange}
+                  disabled={!puedeEditarRiesgo}
+                  title={!puedeEditarRiesgo ? 'No tienes permiso para editar riesgo' : undefined}
+                >
+                  <option value="">Riesgo (sin definir)</option>
+                  <option value="verde">Verde</option>
+                  <option value="amarillo">Amarillo</option>
+                  <option value="rojo">Rojo</option>
+                </select>
               </>
             )}
 

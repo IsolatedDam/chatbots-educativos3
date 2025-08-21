@@ -3,10 +3,21 @@ import React, { useState, useEffect } from "react";
 import "../styles/PanelProfesor.css";
 
 export default function PanelProfesor() {
-  const [vistaActiva, setVistaActiva] = useState("alumnos");
+  // 'inicio' | 'datos' | 'chatbots' | 'riesgos' | 'alumnos'
+  const [vistaActiva, setVistaActiva] = useState("inicio");
   const [alumnos, setAlumnos] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Modal de edición
+  const [editOpen, setEditOpen] = useState(false);
+  const [editDraft, setEditDraft] = useState(null);
+
+  // === Cerrar sesión (igual que admin) ===
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.href = "/login";
+  };
 
   // === Cargar alumnos desde backend ===
   async function fetchAlumnos(q = "") {
@@ -15,13 +26,11 @@ export default function PanelProfesor() {
       const token = localStorage.getItem("token");
       const res = await fetch(
         `http://localhost:5000/api/alumnos?q=${encodeURIComponent(q)}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       if (!res.ok) throw new Error("No autorizado");
       const data = await res.json();
-      setAlumnos(data);
+      setAlumnos(Array.isArray(data) ? data : []);
     } catch (err) {
       alert(err.message || "No se pudieron cargar alumnos");
     } finally {
@@ -30,35 +39,66 @@ export default function PanelProfesor() {
   }
 
   useEffect(() => {
-    if (vistaActiva === "alumnos") fetchAlumnos("");
+    if (vistaActiva === "alumnos" || vistaActiva === "datos") {
+      fetchAlumnos("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vistaActiva]);
 
-  // === Guardar cambios alumno ===
-  async function handleSave(alumno) {
+  // === Abrir / cerrar modal ===
+  const openEdit = (alumno) => {
+    setEditDraft({
+      ...alumno,
+      documento: alumno.numero_documento ?? alumno.rut ?? "",
+    });
+    setEditOpen(true);
+  };
+  const closeEdit = () => {
+    setEditOpen(false);
+    setEditDraft(null);
+  };
+
+  // === Guardar cambios alumno (desde modal) ===
+  async function handleSave() {
+    if (!editDraft?._id) return;
     try {
       const token = localStorage.getItem("token");
+      const payload = { ...editDraft };
+
+      if (payload.documento != null) {
+        payload.numero_documento = payload.documento;
+        payload.rut = payload.documento;
+        delete payload.documento;
+      }
+      if (payload.anio !== undefined && payload.anio !== "") {
+        payload.anio = Number(payload.anio);
+      }
+      if (payload.semestre !== undefined && payload.semestre !== "") {
+        payload.semestre = Number(payload.semestre);
+      }
+
       const res = await fetch(
-        `http://localhost:5000/api/alumnos/${alumno._id}`,
+        `http://localhost:5000/api/alumnos/${editDraft._id}`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(alumno),
+          body: JSON.stringify(payload),
         }
       );
       if (!res.ok) throw new Error("Error al guardar cambios");
       const updated = await res.json();
-      setAlumnos((prev) =>
-        prev.map((a) => (a._id === updated._id ? updated : a))
-      );
+
+      setAlumnos((prev) => prev.map((a) => (a._id === updated._id ? updated : a)));
+      closeEdit();
     } catch (err) {
-      alert(err.message);
+      alert(err.message || "No se pudo guardar.");
     }
   }
 
-  // === Eliminar alumno ===
+  // === Eliminar alumno (si luego lo cambias a deshabilitar, ajusta aquí) ===
   async function handleDelete(id) {
     if (!window.confirm("¿Eliminar alumno?")) return;
     try {
@@ -74,52 +114,150 @@ export default function PanelProfesor() {
     }
   }
 
+  // === UI helpers para "datos" y "alumnos" ===
+  function BarraBusqueda({ onBuscar, onRefrescar }) {
+    return (
+      <div className="toolbar">
+        <input
+          className="search"
+          placeholder="Buscar por nombre, apellido, RUT/DNI"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <div className="spacer" />
+        <button className="btn btn-ghost" onClick={() => onBuscar(search)}>
+          Buscar
+        </button>
+        <button
+          className="btn btn-ghost"
+          onClick={() => {
+            setSearch("");
+            onRefrescar();
+          }}
+        >
+          Refrescar
+        </button>
+      </div>
+    );
+  }
+
+  function TablaListado() {
+    const rows = alumnos;
+    return (
+      <div className="table-wrap">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>RUT/DNI</th>
+              <th>Nombre</th>
+              <th>Apellido</th>
+              <th>Año</th>
+              <th>Semestre</th>
+              <th>Jornada</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan="99">Cargando…</td>
+              </tr>
+            ) : rows.length ? (
+              rows.map((a) => (
+                <tr key={a._id}>
+                  <td>{a.numero_documento ?? a.rut ?? "-"}</td>
+                  <td>{a.nombre ?? "-"}</td>
+                  <td>{a.apellido ?? "-"}</td>
+                  <td>{a.anio ?? "-"}</td>
+                  <td>{a.semestre ?? "-"}</td>
+                  <td>{a.jornada ?? "-"}</td>
+                  <td className="cell-actions">
+                    <button className="btn btn-primary" onClick={() => openEdit(a)}>
+                      Editar
+                    </button>
+                    <button
+                      className="btn btn-danger"
+                      onClick={() => handleDelete(a._id)}
+                      style={{ marginLeft: 8 }}
+                    >
+                      Eliminar
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="99">Sin resultados</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  const liClass = (key) => (vistaActiva === key ? "active" : "");
+
   return (
     <div className="admin-panel">
       {/* === Sidebar === */}
       <aside className="admin-sidebar">
         <h2>Panel Profesor</h2>
         <ul>
-          <li
-            className={vistaActiva === "datos" ? "active" : ""}
-            onClick={() => setVistaActiva("datos")}
-          >
+          {/* Acceso directo a la página de chatbots (iframe) */}
+          <li className={liClass("inicio")} onClick={() => setVistaActiva("inicio")}>
+            Página Chatbots
+          </li>
+
+          <li className={liClass("datos")} onClick={() => setVistaActiva("datos")}>
             Datos del alumno
           </li>
-          <li
-            className={vistaActiva === "chatbots" ? "active" : ""}
-            onClick={() => setVistaActiva("chatbots")}
-          >
+          <li className={liClass("chatbots")} onClick={() => setVistaActiva("chatbots")}>
             Acceso a chatbots
           </li>
-          <li
-            className={vistaActiva === "riesgos" ? "active" : ""}
-            onClick={() => setVistaActiva("riesgos")}
-          >
+          <li className={liClass("riesgos")} onClick={() => setVistaActiva("riesgos")}>
             Alertas de riesgo
           </li>
-          <li
-            className={vistaActiva === "alumnos" ? "active" : ""}
-            onClick={() => setVistaActiva("alumnos")}
-          >
+          <li className={liClass("alumnos")} onClick={() => setVistaActiva("alumnos")}>
             Administrar alumnos
           </li>
           <li>Crear chatbot</li>
           <li>Subir material</li>
           <li>Carga masiva</li>
         </ul>
+
+        {/* Botón de cerrar sesión fijo abajo */}
+        <div style={{ marginTop: "auto", padding: "1rem" }}>
+          <button className="btn btn-danger" onClick={handleLogout}>
+            Cerrar sesión
+          </button>
+        </div>
       </aside>
 
       {/* === Main === */}
       <main className="admin-main">
+        {/* IFRAME PÁGINA CHATBOTS */}
+        {vistaActiva === "inicio" && (
+          <div className="iframe-wrapper" style={{ width: "100%", height: "80vh" }}>
+            <iframe
+              src="https://inquisitive-concha-7da15f.netlify.app/"
+              style={{ width: "100%", height: "100%", border: "none", borderRadius: 12 }}
+              allowFullScreen
+              title="IframePanelProfesor"
+            />
+          </div>
+        )}
+
+        {/* DATOS DEL ALUMNO */}
         {vistaActiva === "datos" && (
           <section className="section">
             <h3>Datos del alumno</h3>
-            <input className="input" placeholder="Nombre del alumno" />
-            <input className="input mt-12" placeholder="Apellido del alumno" />
+            <BarraBusqueda onBuscar={(q) => fetchAlumnos(q)} onRefrescar={() => fetchAlumnos("")} />
+            <TablaListado />
           </section>
         )}
 
+        {/* ACCESO A CHATBOTS (placeholder) */}
         {vistaActiva === "chatbots" && (
           <section className="section">
             <h3>Acceso a chatbots</h3>
@@ -146,6 +284,7 @@ export default function PanelProfesor() {
           </section>
         )}
 
+        {/* ALERTAS */}
         {vistaActiva === "riesgos" && (
           <section className="section">
             <h3>Alertas de riesgo</h3>
@@ -157,143 +296,101 @@ export default function PanelProfesor() {
           </section>
         )}
 
+        {/* ADMINISTRAR ALUMNOS */}
         {vistaActiva === "alumnos" && (
           <section className="section">
             <h3>Administrar alumnos</h3>
-
-            {/* === Barra búsqueda === */}
-            <div className="toolbar">
-              <input
-                className="search"
-                placeholder="Buscar por nombre, apellido, RUT, curso…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <div className="spacer" />
-              <button
-                className="btn btn-ghost"
-                onClick={() => fetchAlumnos(search)}
-              >
-                Buscar
-              </button>
-              <button
-                className="btn btn-ghost"
-                onClick={() => fetchAlumnos("")}
-              >
-                Refrescar
-              </button>
-            </div>
-
-            {/* === Tabla === */}
-            <div className="table-wrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>RUT/DNI</th>
-                    <th>Nombre</th>
-                    <th>Apellido</th>
-                    <th>Año</th>
-                    <th>Semestre</th>
-                    <th>Jornada</th>
-                    <th>Curso</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan="8">Cargando…</td>
-                    </tr>
-                  ) : alumnos.length ? (
-                    alumnos.map((a) => (
-                      <EditableRow
-                        key={a._id}
-                        row={a}
-                        onSave={handleSave}
-                        onDelete={() => handleDelete(a._id)}
-                      />
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="8">Sin resultados</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <BarraBusqueda onBuscar={(q) => fetchAlumnos(q)} onRefrescar={() => fetchAlumnos("")} />
+            <TablaListado />
           </section>
         )}
       </main>
+
+      {/* ===== Modal de edición ===== */}
+      {editOpen && (
+        <EditAlumnoModal
+          draft={editDraft}
+          setDraft={setEditDraft}
+          onClose={closeEdit}
+          onSave={handleSave}
+        />
+      )}
     </div>
   );
 }
 
-/* === Fila editable === */
-function EditableRow({ row, onSave, onDelete }) {
-  const [draft, setDraft] = useState(row);
-  const [saving, setSaving] = useState(false);
+/* ===================== Modal de edición ===================== */
+function EditAlumnoModal({ draft, setDraft, onClose, onSave }) {
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
-  function bind(key) {
-    return {
-      value: draft[key] || "",
-      onChange: (e) => setDraft({ ...draft, [key]: e.target.value }),
-    };
-  }
+  if (!draft) return null;
 
-  async function handleSave() {
-    setSaving(true);
-    await onSave(draft);
-    setSaving(false);
-  }
+  const bind = (key) => ({
+    value: draft[key] ?? "",
+    onChange: (e) => setDraft({ ...draft, [key]: e.target.value }),
+  });
+
+  const bindDocumento = () => ({
+    value: draft.documento ?? draft.numero_documento ?? draft.rut ?? "",
+    onChange: (e) =>
+      setDraft({
+        ...draft,
+        documento: e.target.value,
+        numero_documento: e.target.value,
+        rut: e.target.value,
+      }),
+  });
 
   return (
-    <tr>
-      <td>
-        <input className="row-input" {...bind("rut")} placeholder="RUT" />
-      </td>
-      <td>
-        <input className="row-input" {...bind("nombre")} placeholder="Nombre" />
-      </td>
-      <td>
-        <input
-          className="row-input"
-          {...bind("apellido")}
-          placeholder="Apellido"
-        />
-      </td>
-      <td>
-        <input className="row-input" {...bind("anio")} placeholder="Año" />
-      </td>
-      <td>
-        <input
-          className="row-input"
-          {...bind("semestre")}
-          placeholder="Semestre"
-        />
-      </td>
-      <td>
-        <input
-          className="row-input"
-          {...bind("jornada")}
-          placeholder="Jornada"
-        />
-      </td>
-      <td>
-        <input className="row-input" {...bind("curso")} placeholder="Curso" />
-      </td>
-      <td className="cell-actions">
-        <button
-          className="btn btn-primary"
-          disabled={saving}
-          onClick={handleSave}
-          style={{ marginRight: 8 }}
-        >
-          {saving ? "Guardando…" : "Guardar"}
-        </button>
-        <button className="btn btn-danger" onClick={onDelete}>
-          Eliminar
-        </button>
-      </td>
-    </tr>
+    <div className="modal" onMouseDown={onClose} aria-modal="true" role="dialog">
+      <div
+        className="modal-contenido"
+        onMouseDown={(e) => e.stopPropagation() }
+        style={{ maxWidth: 720 }}
+      >
+        <h3>Editar alumno</h3>
+
+        <div className="grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <label className="field">
+            <span>RUT / DNI</span>
+            <input {...bindDocumento()} placeholder="11111111-1" />
+          </label>
+          <label className="field">
+            <span>Nombre</span>
+            <input {...bind("nombre")} placeholder="Nombre" />
+          </label>
+          <label className="field">
+            <span>Apellido</span>
+            <input {...bind("apellido")} placeholder="Apellido" />
+          </label>
+          <label className="field">
+            <span>Año</span>
+            <input {...bind("anio")} placeholder="2025" />
+          </label>
+          <label className="field">
+            <span>Semestre</span>
+            <input {...bind("semestre")} placeholder="1" />
+          </label>
+          <label className="field">
+            <span>Jornada</span>
+            <input {...bind("jornada")} placeholder="Vespertino" />
+          </label>
+          <label className="field" style={{ gridColumn: "1 / -1" }} />
+        </div>
+
+        <div className="modal-botones" style={{ marginTop: 16 }}>
+          <button className="btn btn-primary" onClick={onSave}>
+            Guardar
+          </button>
+          <button className="btn btn-ghost" onClick={onClose}>
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

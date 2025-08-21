@@ -1,3 +1,4 @@
+// src/components/PanelAdmin.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
@@ -13,6 +14,7 @@ import GestionarUsuarios from './GestionarUsuarios';
 import VisitasRegistradas from './VisitasRegistradas';
 
 function PanelAdmin() {
+  // Vista por defecto: 'inicio' (iframe)
   const [vistaActiva, setVistaActiva] = useState('inicio');
   const navigate = useNavigate();
 
@@ -30,7 +32,6 @@ function PanelAdmin() {
 
     try {
       const decoded = jwtDecode(token);
-
       // Permitir acceso a superadmin y admin
       if (!['superadmin', 'admin'].includes(decoded.rol)) {
         navigate('/no-autorizado');
@@ -45,27 +46,51 @@ function PanelAdmin() {
     navigate('/login');
   };
 
+  const liClass = (key) => (vistaActiva === key ? 'active' : '');
+
   return (
     <div className="admin-panel">
       <aside className="admin-sidebar">
         <h2>Panel Administrador</h2>
         <ul>
-          <li onClick={() => setVistaActiva('registroAlumno')}>Registrar Alumno</li>
+          {/* NUEVO: acceso directo al iframe */}
+          <li className={liClass('inicio')} onClick={() => setVistaActiva('inicio')}>
+            Página Chatbots
+          </li>
+
+          <li className={liClass('registroAlumno')} onClick={() => setVistaActiva('registroAlumno')}>
+            Registrar Alumno
+          </li>
 
           {/* Solo superadmin puede crear administradores */}
           {esSuper && (
-            <li onClick={() => setVistaActiva('registroAdmin')}>Registrar Admin</li>
+            <li className={liClass('registroAdmin')} onClick={() => setVistaActiva('registroAdmin')}>
+              Registrar Admin
+            </li>
           )}
 
           {/* Superadmin y Admin pueden crear profesores */}
           {(esSuper || esAdmin) && (
-            <li onClick={() => setVistaActiva('registroProfesor')}>Registrar Profesor</li>
+            <li className={liClass('registroProfesor')} onClick={() => setVistaActiva('registroProfesor')}>
+              Registrar Profesor
+            </li>
           )}
 
-          <li onClick={() => setVistaActiva('usuarios')}>Gestionar Usuarios</li>
-          <li onClick={() => setVistaActiva('asignarChatbots')}>Asignar Chatbots</li>
-          <li onClick={() => setVistaActiva('cargarAlumnos')}>Cargar desde archivo</li>
-          <li onClick={() => setVistaActiva('visitas')}>Visitas Registradas</li>
+          <li className={liClass('usuarios')} onClick={() => setVistaActiva('usuarios')}>
+            Gestionar Usuarios
+          </li>
+
+          <li className={liClass('asignarChatbots')} onClick={() => setVistaActiva('asignarChatbots')}>
+            Asignar Chatbots
+          </li>
+
+          <li className={liClass('cargarAlumnos')} onClick={() => setVistaActiva('cargarAlumnos')}>
+            Cargar desde archivo
+          </li>
+
+          <li className={liClass('visitas')} onClick={() => setVistaActiva('visitas')}>
+            Visitas Registradas
+          </li>
         </ul>
 
         <button className="logout-button" onClick={handleLogout}>
@@ -75,15 +100,13 @@ function PanelAdmin() {
 
       <main className="admin-main">
         {vistaActiva === 'inicio' && (
-          <div style={{ width: '100%', height: '80vh' }}>
-            {/* Si quieres mantener el texto, descomenta la línea siguiente */}
-            {/* <p>Bienvenido al panel de administración.</p> */}
+          <div className="iframe-wrapper" style={{ width: '100%', height: '80vh' }}>
             <iframe
               src="https://inquisitive-concha-7da15f.netlify.app/"
-              style={{ width: '100%', height: '100%', border: 'none' }}
+              style={{ width: '100%', height: '100%', border: 'none', borderRadius: 12 }}
               allowFullScreen
               title="IframePanelAdmin"
-            ></iframe>
+            />
           </div>
         )}
 
