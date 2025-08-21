@@ -2,11 +2,9 @@
 import React, { useState, useEffect } from "react";
 import "../styles/PanelProfesor.css";
 
-const API_BASE = "https://chatbots-educativos3.onrender.com/api";
-
 export default function PanelProfesor() {
-  // 'inicio' | 'datos' | 'chatbots' | 'riesgos' | 'alumnos'
-  const [vistaActiva, setVistaActiva] = useState("inicio");
+  // === Estado principal ===
+  const [vistaActiva, setVistaActiva] = useState("inicio"); // 'inicio' | 'datos' | 'chatbots' | 'riesgos' | 'alumnos'
   const [alumnos, setAlumnos] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -15,21 +13,28 @@ export default function PanelProfesor() {
   const [editOpen, setEditOpen] = useState(false);
   const [editDraft, setEditDraft] = useState(null);
 
-  // === Cerrar sesión (igual que admin) ===
+  // === Cerrar sesión ===
   const handleLogout = () => {
     localStorage.clear();
     window.location.href = "/login";
   };
 
-  // === Cargar alumnos desde backend (Render) ===
+  // === Cargar alumnos desde backend ===
   async function fetchAlumnos(q = "") {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/alumnos?q=${encodeURIComponent(q)}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `http://localhost:5000/api/alumnos?q=${encodeURIComponent(q)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
       if (!res.ok) throw new Error("No autorizado");
+
       const data = await res.json();
       setAlumnos(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -54,6 +59,7 @@ export default function PanelProfesor() {
     });
     setEditOpen(true);
   };
+
   const closeEdit = () => {
     setEditOpen(false);
     setEditDraft(null);
@@ -62,16 +68,17 @@ export default function PanelProfesor() {
   // === Guardar cambios alumno (desde modal) ===
   async function handleSave() {
     if (!editDraft?._id) return;
+
     try {
       const token = localStorage.getItem("token");
       const payload = { ...editDraft };
 
-      // Normaliza documento y tipos numéricos
       if (payload.documento != null) {
         payload.numero_documento = payload.documento;
         payload.rut = payload.documento;
         delete payload.documento;
       }
+
       if (payload.anio !== undefined && payload.anio !== "") {
         payload.anio = Number(payload.anio);
       }
@@ -79,34 +86,49 @@ export default function PanelProfesor() {
         payload.semestre = Number(payload.semestre);
       }
 
-      const res = await fetch(`${API_BASE}/alumnos/${editDraft._id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error("Error al guardar cambios");
-      const updated = await res.json();
+      const res = await fetch(
+        `http://localhost:5000/api/alumnos/${editDraft._id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
-      setAlumnos((prev) => prev.map((a) => (a._id === updated._id ? updated : a)));
+      if (!res.ok) throw new Error("Error al guardar cambios");
+
+      const updated = await res.json();
+      setAlumnos((prev) =>
+        prev.map((a) => (a._id === updated._id ? updated : a))
+      );
+
       closeEdit();
     } catch (err) {
       alert(err.message || "No se pudo guardar.");
     }
   }
 
-  // === Eliminar alumno (si luego lo cambias a deshabilitar, ajusta aquí) ===
+  // === Eliminar alumno ===
   async function handleDelete(id) {
     if (!window.confirm("¿Eliminar alumno?")) return;
+
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/alumnos/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `http://localhost:5000/api/alumnos/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
       if (!res.ok) throw new Error("Error al eliminar");
+
       setAlumnos((prev) => prev.filter((a) => a._id !== id));
     } catch (err) {
       alert(err.message);
@@ -142,6 +164,7 @@ export default function PanelProfesor() {
 
   function TablaListado() {
     const rows = alumnos;
+
     return (
       <div className="table-wrap">
         <table className="table">
@@ -171,7 +194,10 @@ export default function PanelProfesor() {
                   <td>{a.semestre ?? "-"}</td>
                   <td>{a.jornada ?? "-"}</td>
                   <td className="cell-actions">
-                    <button className="btn btn-primary" onClick={() => openEdit(a)}>
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => openEdit(a)}
+                    >
                       Editar
                     </button>
                     <button
@@ -203,29 +229,41 @@ export default function PanelProfesor() {
       <aside className="admin-sidebar">
         <h2>Panel Profesor</h2>
         <ul>
-          {/* Acceso directo a la página de chatbots (iframe) */}
-          <li className={liClass("inicio")} onClick={() => setVistaActiva("inicio")}>
+          <li
+            className={liClass("inicio")}
+            onClick={() => setVistaActiva("inicio")}
+          >
             Página Chatbots
           </li>
-
-          <li className={liClass("datos")} onClick={() => setVistaActiva("datos")}>
+          <li
+            className={liClass("datos")}
+            onClick={() => setVistaActiva("datos")}
+          >
             Datos del alumno
           </li>
-          <li className={liClass("chatbots")} onClick={() => setVistaActiva("chatbots")}>
+          <li
+            className={liClass("chatbots")}
+            onClick={() => setVistaActiva("chatbots")}
+          >
             Acceso a chatbots
           </li>
-          <li className={liClass("riesgos")} onClick={() => setVistaActiva("riesgos")}>
+          <li
+            className={liClass("riesgos")}
+            onClick={() => setVistaActiva("riesgos")}
+          >
             Alertas de riesgo
           </li>
-          <li className={liClass("alumnos")} onClick={() => setVistaActiva("alumnos")}>
+          <li
+            className={liClass("alumnos")}
+            onClick={() => setVistaActiva("alumnos")}
+          >
             Administrar alumnos
           </li>
           <li>Crear chatbot</li>
           <li>Subir material</li>
           <li>Carga masiva</li>
         </ul>
-
-        {/* Botón de cerrar sesión fijo abajo */}
+        {/* Botón de cerrar sesión */}
         <div style={{ marginTop: "auto", padding: "1rem" }}>
           <button className="btn btn-danger" onClick={handleLogout}>
             Cerrar sesión
@@ -235,7 +273,7 @@ export default function PanelProfesor() {
 
       {/* === Main === */}
       <main className="admin-main">
-        {/* IFRAME PÁGINA CHATBOTS */}
+        {/* Página Chatbots */}
         {vistaActiva === "inicio" && (
           <div className="iframe-wrapper" style={{ width: "100%", height: "80vh" }}>
             <iframe
@@ -247,7 +285,7 @@ export default function PanelProfesor() {
           </div>
         )}
 
-        {/* DATOS DEL ALUMNO */}
+        {/* Datos del alumno */}
         {vistaActiva === "datos" && (
           <section className="section">
             <h3>Datos del alumno</h3>
@@ -256,22 +294,18 @@ export default function PanelProfesor() {
           </section>
         )}
 
-        {/* ACCESO A CHATBOTS (placeholder) */}
+        {/* Acceso a chatbots */}
         {vistaActiva === "chatbots" && (
           <section className="section">
             <h3>Acceso a chatbots</h3>
             <div className="toolbar">
               <select className="select" defaultValue="">
-                <option value="" disabled>
-                  Selecciona chatbot…
-                </option>
+                <option value="" disabled>Selecciona chatbot…</option>
                 <option value="chatbotA">Chatbot A</option>
                 <option value="chatbotB">Chatbot B</option>
               </select>
               <select className="select" defaultValue="">
-                <option value="" disabled>
-                  Ámbito…
-                </option>
+                <option value="" disabled>Ámbito…</option>
                 <option value="individual">Individual</option>
                 <option value="grupo">Grupo/Masivo</option>
               </select>
@@ -283,7 +317,7 @@ export default function PanelProfesor() {
           </section>
         )}
 
-        {/* ALERTAS */}
+        {/* Alertas */}
         {vistaActiva === "riesgos" && (
           <section className="section">
             <h3>Alertas de riesgo</h3>
@@ -295,7 +329,7 @@ export default function PanelProfesor() {
           </section>
         )}
 
-        {/* ADMINISTRAR ALUMNOS */}
+        {/* Administrar alumnos */}
         {vistaActiva === "alumnos" && (
           <section className="section">
             <h3>Administrar alumnos</h3>
@@ -305,9 +339,14 @@ export default function PanelProfesor() {
         )}
       </main>
 
-      {/* ===== Modal de edición ===== */}
+      {/* Modal de edición */}
       {editOpen && (
-        <EditAlumnoModal draft={editDraft} setDraft={setEditDraft} onClose={closeEdit} onSave={handleSave} />
+        <EditAlumnoModal
+          draft={editDraft}
+          setDraft={setEditDraft}
+          onClose={closeEdit}
+          onSave={handleSave}
+        />
       )}
     </div>
   );
@@ -347,8 +386,10 @@ function EditAlumnoModal({ draft, setDraft, onClose, onSave }) {
         style={{ maxWidth: 720 }}
       >
         <h3>Editar alumno</h3>
-
-        <div className="grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div
+          className="grid"
+          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
+        >
           <label className="field">
             <span>RUT / DNI</span>
             <input {...bindDocumento()} placeholder="11111111-1" />
@@ -375,7 +416,6 @@ function EditAlumnoModal({ draft, setDraft, onClose, onSave }) {
           </label>
           <label className="field" style={{ gridColumn: "1 / -1" }} />
         </div>
-
         <div className="modal-botones" style={{ marginTop: 16 }}>
           <button className="btn btn-primary" onClick={onSave}>
             Guardar
