@@ -2,9 +2,12 @@
 import React, { useState, useEffect } from "react";
 import "../styles/PanelProfesor.css";
 
+// 🔹 Igual que en GestionarUsuarios.jsx
+const API_BASE = "https://chatbots-educativos3.onrender.com/api";
+
 export default function PanelProfesor() {
   // === Estado principal ===
-  const [vistaActiva, setVistaActiva] = useState("inicio"); // 'inicio' | 'datos' | 'chatbots' | 'riesgos' | 'alumnos'
+  const [vistaActiva, setVistaActiva] = useState("inicio");
   const [alumnos, setAlumnos] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,7 +28,7 @@ export default function PanelProfesor() {
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(
-        `http://localhost:5000/api/alumnos?q=${encodeURIComponent(q)}`,
+        `${API_BASE}/alumnos?q=${encodeURIComponent(q)}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -48,7 +51,6 @@ export default function PanelProfesor() {
     if (vistaActiva === "alumnos" || vistaActiva === "datos") {
       fetchAlumnos("");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vistaActiva]);
 
   // === Abrir / cerrar modal ===
@@ -65,7 +67,7 @@ export default function PanelProfesor() {
     setEditDraft(null);
   };
 
-  // === Guardar cambios alumno (desde modal) ===
+  // === Guardar cambios alumno ===
   async function handleSave() {
     if (!editDraft?._id) return;
 
@@ -86,17 +88,14 @@ export default function PanelProfesor() {
         payload.semestre = Number(payload.semestre);
       }
 
-      const res = await fetch(
-        `http://localhost:5000/api/alumnos/${editDraft._id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+      const res = await fetch(`${API_BASE}/alumnos/${editDraft._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
 
       if (!res.ok) throw new Error("Error al guardar cambios");
 
@@ -117,15 +116,12 @@ export default function PanelProfesor() {
 
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(
-        `http://localhost:5000/api/alumnos/${id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const res = await fetch(`${API_BASE}/alumnos/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (!res.ok) throw new Error("Error al eliminar");
 
@@ -225,45 +221,29 @@ export default function PanelProfesor() {
 
   return (
     <div className="admin-panel">
-      {/* === Sidebar === */}
+      {/* Sidebar */}
       <aside className="admin-sidebar">
         <h2>Panel Profesor</h2>
         <ul>
-          <li
-            className={liClass("inicio")}
-            onClick={() => setVistaActiva("inicio")}
-          >
+          <li className={liClass("inicio")} onClick={() => setVistaActiva("inicio")}>
             Página Chatbots
           </li>
-          <li
-            className={liClass("datos")}
-            onClick={() => setVistaActiva("datos")}
-          >
+          <li className={liClass("datos")} onClick={() => setVistaActiva("datos")}>
             Datos del alumno
           </li>
-          <li
-            className={liClass("chatbots")}
-            onClick={() => setVistaActiva("chatbots")}
-          >
+          <li className={liClass("chatbots")} onClick={() => setVistaActiva("chatbots")}>
             Acceso a chatbots
           </li>
-          <li
-            className={liClass("riesgos")}
-            onClick={() => setVistaActiva("riesgos")}
-          >
+          <li className={liClass("riesgos")} onClick={() => setVistaActiva("riesgos")}>
             Alertas de riesgo
           </li>
-          <li
-            className={liClass("alumnos")}
-            onClick={() => setVistaActiva("alumnos")}
-          >
+          <li className={liClass("alumnos")} onClick={() => setVistaActiva("alumnos")}>
             Administrar alumnos
           </li>
           <li>Crear chatbot</li>
           <li>Subir material</li>
           <li>Carga masiva</li>
         </ul>
-        {/* Botón de cerrar sesión */}
         <div style={{ marginTop: "auto", padding: "1rem" }}>
           <button className="btn btn-danger" onClick={handleLogout}>
             Cerrar sesión
@@ -271,9 +251,8 @@ export default function PanelProfesor() {
         </div>
       </aside>
 
-      {/* === Main === */}
+      {/* Main */}
       <main className="admin-main">
-        {/* Página Chatbots */}
         {vistaActiva === "inicio" && (
           <div className="iframe-wrapper" style={{ width: "100%", height: "80vh" }}>
             <iframe
@@ -285,7 +264,6 @@ export default function PanelProfesor() {
           </div>
         )}
 
-        {/* Datos del alumno */}
         {vistaActiva === "datos" && (
           <section className="section">
             <h3>Datos del alumno</h3>
@@ -294,7 +272,6 @@ export default function PanelProfesor() {
           </section>
         )}
 
-        {/* Acceso a chatbots */}
         {vistaActiva === "chatbots" && (
           <section className="section">
             <h3>Acceso a chatbots</h3>
@@ -317,7 +294,6 @@ export default function PanelProfesor() {
           </section>
         )}
 
-        {/* Alertas */}
         {vistaActiva === "riesgos" && (
           <section className="section">
             <h3>Alertas de riesgo</h3>
@@ -329,7 +305,6 @@ export default function PanelProfesor() {
           </section>
         )}
 
-        {/* Administrar alumnos */}
         {vistaActiva === "alumnos" && (
           <section className="section">
             <h3>Administrar alumnos</h3>
@@ -339,7 +314,6 @@ export default function PanelProfesor() {
         )}
       </main>
 
-      {/* Modal de edición */}
       {editOpen && (
         <EditAlumnoModal
           draft={editDraft}
@@ -352,7 +326,7 @@ export default function PanelProfesor() {
   );
 }
 
-/* ===================== Modal de edición ===================== */
+/* Modal de edición */
 function EditAlumnoModal({ draft, setDraft, onClose, onSave }) {
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
