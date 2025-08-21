@@ -1,6 +1,8 @@
+// src/components/PanelProfesor.jsx
 import React, { useState, useEffect } from "react";
 import "../styles/PanelProfesor.css";
-import { API_BASE } from "../config/apiBase";
+
+const API_BASE = "https://chatbots-educativos3.onrender.com/api";
 
 export default function PanelProfesor() {
   // 'inicio' | 'datos' | 'chatbots' | 'riesgos' | 'alumnos'
@@ -19,15 +21,14 @@ export default function PanelProfesor() {
     window.location.href = "/login";
   };
 
-  // === Cargar alumnos desde backend ===
+  // === Cargar alumnos desde backend (Render) ===
   async function fetchAlumnos(q = "") {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(
-        `${API_BASE}/alumnos?q=${encodeURIComponent(q)}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await fetch(`${API_BASE}/alumnos?q=${encodeURIComponent(q)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) throw new Error("No autorizado");
       const data = await res.json();
       setAlumnos(Array.isArray(data) ? data : []);
@@ -65,6 +66,7 @@ export default function PanelProfesor() {
       const token = localStorage.getItem("token");
       const payload = { ...editDraft };
 
+      // Normaliza documento y tipos numéricos
       if (payload.documento != null) {
         payload.numero_documento = payload.documento;
         payload.rut = payload.documento;
@@ -201,9 +203,11 @@ export default function PanelProfesor() {
       <aside className="admin-sidebar">
         <h2>Panel Profesor</h2>
         <ul>
+          {/* Acceso directo a la página de chatbots (iframe) */}
           <li className={liClass("inicio")} onClick={() => setVistaActiva("inicio")}>
             Página Chatbots
           </li>
+
           <li className={liClass("datos")} onClick={() => setVistaActiva("datos")}>
             Datos del alumno
           </li>
@@ -303,12 +307,7 @@ export default function PanelProfesor() {
 
       {/* ===== Modal de edición ===== */}
       {editOpen && (
-        <EditAlumnoModal
-          draft={editDraft}
-          setDraft={setEditDraft}
-          onClose={closeEdit}
-          onSave={handleSave}
-        />
+        <EditAlumnoModal draft={editDraft} setDraft={setEditDraft} onClose={closeEdit} onSave={handleSave} />
       )}
     </div>
   );
