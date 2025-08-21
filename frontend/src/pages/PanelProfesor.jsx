@@ -1,6 +1,6 @@
-// src/components/PanelProfesor.jsx
 import React, { useState, useEffect } from "react";
 import "../styles/PanelProfesor.css";
+import { API_BASE } from "../config/apiBase";
 
 export default function PanelProfesor() {
   // 'inicio' | 'datos' | 'chatbots' | 'riesgos' | 'alumnos'
@@ -25,7 +25,7 @@ export default function PanelProfesor() {
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(
-        `http://localhost:5000/api/alumnos?q=${encodeURIComponent(q)}`,
+        `${API_BASE}/alumnos?q=${encodeURIComponent(q)}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (!res.ok) throw new Error("No autorizado");
@@ -77,17 +77,14 @@ export default function PanelProfesor() {
         payload.semestre = Number(payload.semestre);
       }
 
-      const res = await fetch(
-        `http://localhost:5000/api/alumnos/${editDraft._id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+      const res = await fetch(`${API_BASE}/alumnos/${editDraft._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
       if (!res.ok) throw new Error("Error al guardar cambios");
       const updated = await res.json();
 
@@ -103,7 +100,7 @@ export default function PanelProfesor() {
     if (!window.confirm("¿Eliminar alumno?")) return;
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:5000/api/alumnos/${id}`, {
+      const res = await fetch(`${API_BASE}/alumnos/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -204,11 +201,9 @@ export default function PanelProfesor() {
       <aside className="admin-sidebar">
         <h2>Panel Profesor</h2>
         <ul>
-          {/* Acceso directo a la página de chatbots (iframe) */}
           <li className={liClass("inicio")} onClick={() => setVistaActiva("inicio")}>
             Página Chatbots
           </li>
-
           <li className={liClass("datos")} onClick={() => setVistaActiva("datos")}>
             Datos del alumno
           </li>
@@ -349,7 +344,7 @@ function EditAlumnoModal({ draft, setDraft, onClose, onSave }) {
     <div className="modal" onMouseDown={onClose} aria-modal="true" role="dialog">
       <div
         className="modal-contenido"
-        onMouseDown={(e) => e.stopPropagation() }
+        onMouseDown={(e) => e.stopPropagation()}
         style={{ maxWidth: 720 }}
       >
         <h3>Editar alumno</h3>
