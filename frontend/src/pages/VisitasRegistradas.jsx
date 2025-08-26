@@ -1,14 +1,18 @@
+// src/components/VisitasRegistradas.jsx
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import '../styles/VisitasRegistradas.css';
 
+const API_BASE = 'https://chatbots-educativos3.onrender.com';
+
 function VisitasRegistradas() {
   const [visitas, setVisitas] = useState([]);
+  const [descargando, setDescargando] = useState(false);
 
   useEffect(() => {
     const fetchVisitas = async () => {
       try {
-        const res = await axios.get('https://chatbots-educativos3.onrender.com/api/visitas');
+        const res = await axios.get(`${API_BASE}/api/visitas`);
         setVisitas(res.data);
       } catch (err) {
         console.error('Error al obtener visitas:', err);
@@ -17,14 +21,77 @@ function VisitasRegistradas() {
     fetchVisitas();
   }, []);
 
-  const descargarExcel = () => {
-    window.open('https://chatbots-educativos3.onrender.com/api/visitas/exportar', '_blank');
+  const descargarExcel = async () => {
+    try {
+      setDescargando(true);
+
+      const res = await axios.get(`${API_BASE}/api/visitas/exportar`, {
+        responseType: 'blob',
+        // Si tu endpoint requiere auth, descomenta y agrega el token:
+        // headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+      });
+
+      // Verifica si el blob es un ZIP (XLSX) mirando los primeros bytes "PK"
+      const blob = res.data;
+      const head = await blob.slice(0, 4).arrayBuffer();
+      const bytes = new Uint8Array(head);
+      const isZip = bytes[0] === 0x50 && bytes[1] === 0x4B; // 'P' 'K'
+
+      // Nombre sugerido desde Content-Disposition (si viene)
+      const dispo = res.headers['content-disposition'] || '';
+      const match = dispo.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i);
+      const suggested = match ? decodeURIComponent(match[1]) : null;
+
+      if (isZip) {
+        const filename = suggested?.endsWith('.xlsx') ? suggested : (suggested || 'visitas.xlsx');
+        const xlsxBlob = new Blob([blob], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+        const url = URL.createObjectURL(xlsxBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      // Si no es ZIP: puede ser CSV o un error (HTML/JSON)
+      const text = await new Response(blob).text();
+      const looksLikeCSV = /[,;\t]/.test(text) && /\r?\n/.test(text);
+
+      if (looksLikeCSV) {
+        const filename = suggested?.endsWith('.csv') ? suggested : (suggested || 'visitas.csv');
+        const csvBlob = new Blob([text], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(csvBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } else {
+        console.error('Respuesta no-XLSX:', text.slice(0, 300));
+        alert('El servidor no devolvió un XLSX válido.\n\nDetalle (primeros caracteres):\n' + text.slice(0, 300));
+      }
+    } catch (err) {
+      console.error('Error al descargar Excel:', err);
+      alert('No se pudo descargar el archivo.');
+    } finally {
+      setDescargando(false);
+    }
   };
 
   return (
     <div className="visitas-container">
       <h2>Visitas Registradas</h2>
-      <button className="descargar-btn" onClick={descargarExcel}>Descargar Excel</button>
+
+      <button className="descargar-btn" onClick={descargarExcel} disabled={descargando}>
+        {descargando ? 'Descargando…' : 'Descargar Excel'}
+      </button>
 
       <div className="tabla-scroll">
         <table className="tabla-visitas">
@@ -42,9 +109,16 @@ function VisitasRegistradas() {
                 <td>{v.nombre}</td>
                 <td>{v.correo}</td>
                 <td>{v.whatsapp}</td>
-                <td>{new Date(v.fechaHora).toLocaleString()}</td>
+                <td>{v.fechaHora ? new Date(v.fechaHora).toLocaleString('es-CL') : '-'}</td>
               </tr>
             ))}
+            {!visitas.length && (
+              <tr>
+                <td colSpan={4} style={{ textAlign: 'center', color: '#6e7a86' }}>
+                  Sin visitas registradas.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
