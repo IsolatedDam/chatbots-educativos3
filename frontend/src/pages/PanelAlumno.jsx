@@ -29,8 +29,21 @@ function PanelAlumno() {
   const { riesgo, riesgoMsg } = useMemo(() => {
     if (!usuario) return { riesgo: '', riesgoMsg: '' };
 
+    // 0) Si el alumno está deshabilitado, forzamos ROJO
+    if (usuario.habilitado === false) {
+      return {
+        riesgo: 'rojo',
+        riesgoMsg: 'ROJO = suspendido, por favor pasar por secretaría'
+      };
+    }
+
     // 1) toma 'riesgo' (nuevo backend) o 'color_riesgo' (compat)
-    let r = String(usuario.riesgo || usuario.color_riesgo || '').toLowerCase();
+    let r = String(
+      usuario.riesgo ||
+      usuario.color_riesgo ||
+      usuario.riesgo_color || // por si el login usa otro nombre
+      ''
+    ).toLowerCase();
 
     // 2) si no hay, intenta derivar por fecha de vencimiento
     if (!r && usuario.suscripcionVenceEl) {
