@@ -33,11 +33,11 @@ function PanelAlumno() {
     if (usuario.habilitado === false) {
       return {
         riesgo: 'rojo',
-        riesgoMsg: 'ROJO = suspendido, por favor pasar por secretaría'
+        riesgoMsg: 'Cuenta suspendida, por favor, pasar por secretaría',
       };
     }
 
-    // 1) toma 'riesgo' (nuevo backend) o 'color_riesgo' (compat)
+    // 1) Toma 'riesgo' explícito (backend) o 'color_riesgo' (compat)
     let r = String(
       usuario.riesgo ||
       usuario.color_riesgo ||
@@ -45,7 +45,7 @@ function PanelAlumno() {
       ''
     ).toLowerCase();
 
-    // 2) si no hay, intenta derivar por fecha de vencimiento
+    // 2) Si no hay color explícito, intenta derivarlo por fecha de vencimiento
     if (!r && usuario.suscripcionVenceEl) {
       const hoy = new Date(); hoy.setHours(0,0,0,0);
       const end = new Date(usuario.suscripcionVenceEl); end.setHours(0,0,0,0);
@@ -62,9 +62,9 @@ function PanelAlumno() {
 
     const msg =
       r === 'amarillo'
-        ? 'AMARILLO = suspensión en 10 días'
+        ? 'Suspensión en 10 días'
         : r === 'rojo'
-        ? 'ROJO = suspendido, por favor pasar por secretaría'
+        ? 'Cuenta suspendida, por favor, pasar por secretaría'
         : 'Suscripción activa';
 
     return { riesgo: r, riesgoMsg: msg };
@@ -79,7 +79,14 @@ function PanelAlumno() {
       : 'Habilitado';
 
   const riesgoBg =
-    riesgo === 'verde' ? '#27ae60' : riesgo === 'amarillo' ? '#f1c40f' : riesgo === 'rojo' ? '#c0392b' : '#9aa4b2';
+    riesgo === 'verde'
+      ? '#27ae60'
+      : riesgo === 'amarillo'
+      ? '#f1c40f'
+      : riesgo === 'rojo'
+      ? '#c0392b'
+      : '#9aa4b2';
+
   const riesgoTextColor = riesgo === 'amarillo' ? '#1f2937' : '#fff'; // amarillo se lee mejor oscuro
 
   return (
@@ -87,7 +94,7 @@ function PanelAlumno() {
       <aside className="panel-menu">
         <div className="panel-user">
           <img src="/avatar.png" alt="Perfil" />
-          <p>{usuario?.nombre} {usuario?.apellido}</p>
+        <p>{usuario?.nombre} {usuario?.apellido}</p>
         </div>
         <nav>
           <ul>
