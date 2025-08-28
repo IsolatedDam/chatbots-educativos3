@@ -10,20 +10,21 @@ const Admin    = require('./models/Admin');
 const app = express();
 app.disable('x-powered-by');
 
-// ===================== CORS =====================
-// Dominios permitidos de forma explícita
+/* ===================== CORS ===================== */
+
+// Dominios permitidos explícitamente
 const STATIC_ALLOWED = [
   'http://localhost:3000',
   'http://localhost:5173',
   'https://chatbots-educativos3.vercel.app',
-  'https://chatbots-educativos3-bsm7swjd7-alejandros-projects-bb949aab.vercel.app', // preview actual
+  'https://chatbots-educativos3-bsm7swjd7-alejandros-projects-bb949aab.vercel.app', // tu preview actual
 ];
 
-// Si quieres permitir cualquier preview de Vercel (.vercel.app), define:
-// CORS_ALLOW_VERCEL_WILDCARD=1 en las variables de entorno de Render
+// Si quieres permitir cualquier *.vercel.app, setea en Render:
+// CORS_ALLOW_VERCEL_WILDCARD=1
 const allowVercelWildcard = process.env.CORS_ALLOW_VERCEL_WILDCARD === '1';
 
-app.use(cors({
+const corsOptions = {
   origin(origin, cb) {
     // Permite herramientas sin Origin (curl/Postman) y SSR
     if (!origin) return cb(null, true);
@@ -40,12 +41,14 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
   maxAge: 86400,
-}));
+};
 
-// Responder preflights explícitamente
-app.options('*', cors());
+app.use(cors(corsOptions));
 
-// (Opcional) log de preflights para depurar CORS
+// ⭐️ FIX: en algunos entornos `'*'` rompe path-to-regexp, usa RegExp:
+app.options(/.*/, cors(corsOptions));
+
+/* (Opcional) log de preflights para depurar CORS */
 app.use((req, _res, next) => {
   if (req.method === 'OPTIONS') {
     console.log('CORS preflight from:', req.headers.origin, 'to', req.originalUrl);
@@ -53,19 +56,20 @@ app.use((req, _res, next) => {
   next();
 });
 
-// ================== Parsers ==================
+/* ================== Parsers ================== */
 app.use(express.json({ limit: '2mb' }));
 
-// ================== MongoDB ==================
-mongoose.connect(process.env.MONGO_URI, {
-  // con Mongoose >=6 estos flags ya son default, igual no molestan
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+/* ================== MongoDB ================== */
+mongoose
+  .connect(process.env.MONGO_URI, {
+    // En Mongoose >=6 estos flags ya son default, no molestan
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then(() => console.log('✅ Conectado a MongoDB Atlas'))
-  .catch(err => console.error('❌ Error de conexión a MongoDB:', err));
+  .catch((err) => console.error('❌ Error de conexión a MongoDB:', err));
 
-// ============== Auth helper (debug/_whoami) ==============
+/* ============== Auth helper (debug/_whoami) ============== */
 async function auth(req, res, next) {
   const h = req.headers.authorization || '';
   const token = h.startsWith('Bearer ') ? h.slice(7) : h;
@@ -92,8 +96,8 @@ app.get('/api/_whoami', auth, (req, res) => {
   res.json(req.user); // { id, rol, permisos }
 });
 
-// ================== Rutas reales ==================
-app.use('/api',        require('./routes/auth'));    // Login/registro alumnos (y lo que tengas ahí)
+/* ================== Rutas reales ================== */
+app.use('/api',        require('./routes/auth'));    // Login/registro alumnos
 app.use('/api/upload', require('./routes/upload'));  // Carga masiva desde Excel
 app.use('/api/admin',  require('./routes/admin'));   // Admin y profesores
 app.use('/api/visitas',require('./routes/visita'));  // Invitados y exportación de visitas
@@ -104,7 +108,7 @@ app.get('/', (_req, res) => {
   res.send('🚀 API funcionando correctamente en Render');
 });
 
-// ================== Server ==================
+/* ================== Server ================== */
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Backend corriendo en puerto ${PORT}`);
