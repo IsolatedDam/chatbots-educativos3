@@ -62,64 +62,45 @@ router.get('/', auth, requireRole('profesor', 'admin', 'superadmin'), async (req
 });
 
 /* ===== PUT /api/alumnos/:id =====
-   - superadmin/admin: pueden editar campos generales, estado y fecha.
-   - profesor: SOLO puede editar 'riesgo' si tiene permiso 'alertas:editar_riesgo'.
-               y se deriva 'habilitado' según el color.
+   - superadmin/admin/profesor (profe actúa como admin).
+   - Soporta alias color_riesgo desde el front.
 */
 router.put('/:id', auth, requireRole('profesor', 'admin', 'superadmin'), async (req, res) => {
   try {
-    const role = String(req.user.rol);
-    const perms = req.user.permisos || [];
+    const role  = String(req.user.rol || '').toLowerCase();
+    const perms = Array.isArray(req.user.permisos) ? req.user.permisos : [];
 
-    // Campos que superadmin/admin pueden tocar libremente
-    let allowedKeys = [
+    // Alias por compatibilidad: si llega color_riesgo y no riesgo
+    if ('color_riesgo' in req.body && !('riesgo' in req.body)) {
+      req.body.riesgo = req.body.color_riesgo;
+    }
+
+    // === ELEVACIÓN ===
+    // Opción A: TODOS los profesores actúan como admin:
+    const isElevated = role === 'admin' || role === 'superadmin' || role === 'profesor';
+    // Opción B (alternativa): solo profes con permiso elevador:
+    // const isElevated = role === 'admin' || role === 'superadmin' || (role === 'profesor' && perms.includes('profesor:admin_equiv'));
+
+    // Campos que pueden tocar admin/elevados
+    const allowedKeys = [
       'rut','nombre','apellido','anio','fechaIngreso',
       'semestre','jornada','curso','telefono',
       'riesgo','habilitado','suscripcionVenceEl'
     ];
 
-    if (role === 'profesor') {
-      // Mapa de permisos finos para profesor
-      const map = {
-        'alumnos:editar_doc':        'rut',
-        'alumnos:editar_nombre':     'nombre',
-        'alumnos:editar_apellido':   'apellido',
-        'alumnos:editar_ano':        'anio',
-        'alumnos:editar_semestre':   'semestre',
-        'alumnos:editar_jornada':    'jornada',
-        'alumnos:editar_fecha_ingreso': 'fechaIngreso',
-        'alumnos:editar_telefono':   'telefono',
-
-        // === NUEVO: permiso para riesgo ===
-        'alertas:editar_riesgo':     'riesgo',
-      };
-
-      const permitidos = new Set();
-      perms.forEach(k => { if (map[k]) permitidos.add(map[k]); });
-
-      if (!permitidos.size)
-        return res.status(403).json({ msg: 'No tienes permisos para editar' });
-
-      // Profesor NO puede tocar habilitado/fecha directamente
-      permitidos.delete('habilitado');
-      permitidos.delete('suscripcionVenceEl');
-
-      allowedKeys = [...permitidos];
-    }
-
-    // Filtra payload según allowedKeys
+    // Filtra body a los campos permitidos
     const body = {};
     for (const k of allowedKeys) {
       if (k in req.body) body[k] = req.body[k];
     }
-    if (!Object.keys(body).length)
+    if (!Object.keys(body).length) {
       return res.status(400).json({ msg: 'Sin cambios válidos para actualizar' });
+    }
 
-    // Normalizaciones comunes
+    // Normalizaciones
     if ('anio' in body && body.anio !== '') body.anio = Number(body.anio);
     if ('semestre' in body && body.semestre !== '') body.semestre = Number(body.semestre);
 
-    // Normaliza riesgo a lower y valida
     if ('riesgo' in body && body.riesgo != null) {
       const r = String(body.riesgo).toLowerCase();
       const valid = ['verde','amarillo','rojo',''];
@@ -127,30 +108,27 @@ router.put('/:id', auth, requireRole('profesor', 'admin', 'superadmin'), async (
       body.riesgo = r;
     }
 
-    // Solo admin/superadmin pueden setear fecha/estado manualmente
-    if (role !== 'profesor') {
-      if ('suscripcionVenceEl' in body && body.suscripcionVenceEl) {
-        const f = new Date(body.suscripcionVenceEl);
-        if (isNaN(f.getTime())) return res.status(400).json({ msg: 'Fecha de vencimiento inválida' });
-        body.suscripcionVenceEl = f;
-      }
-      if ('habilitado' in body) {
-        body.habilitado = !!body.habilitado;
-      }
+    if ('suscripcionVenceEl' in body && body.suscripcionVenceEl) {
+      const f = new Date(body.suscripcionVenceEl);
+      if (isNaN(f.getTime())) return res.status(400).json({ msg: 'Fecha de vencimiento inválida' });
+      body.suscripcionVenceEl = f;
+    }
+    if ('habilitado' in body) {
+      body.habilitado = !!body.habilitado;
     }
 
-    // Si es PROFESOR y está cambiando RIESGO: derivar habilitado automáticamente
-    if (role === 'profesor' && 'riesgo' in body) {
+    // Si NO fuera elevated y es prof cambiando riesgo, derivar estado (queda por compat)
+    if (!isElevated && role === 'profesor' && 'riesgo' in body) {
       body.habilitado = body.riesgo === 'rojo' ? false : true;
     }
 
     const alumno = await Alumno.findByIdAndUpdate(
       req.params.id,
       body,
-      { new: true, runValidators: true } // valida enums/tipos en el schema
+      { new: true, runValidators: true }
     );
-
     if (!alumno) return res.status(404).json({ msg: 'Alumno no encontrado' });
+
     res.json(alumno);
   } catch (err) {
     if (err?.code === 11000) {
