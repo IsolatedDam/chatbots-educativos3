@@ -8,7 +8,8 @@ import '../styles/PanelAdmin.css';
 // Páginas internas
 import RegistroAlumno from './RegistroAlumno';
 import RegistroAdmin from './RegistroAdmin';
-import RegistroProfesor from './RegistroProfesor';
+// 👇 Eliminado RegistroProfesor
+// import RegistroProfesor from './RegistroProfesor';
 import CargarAlumnos from './CargarAlumnos';
 import GestionarUsuarios from './GestionarUsuarios';
 import VisitasRegistradas from './VisitasRegistradas';
@@ -53,7 +54,7 @@ function PanelAdmin() {
       <aside className="admin-sidebar">
         <h2>Panel Administrador</h2>
         <ul>
-          {/* NUEVO: acceso directo al iframe */}
+          {/* Acceso directo al iframe */}
           <li className={liClass('inicio')} onClick={() => setVistaActiva('inicio')}>
             Página Chatbots
           </li>
@@ -62,19 +63,19 @@ function PanelAdmin() {
             Registrar Alumno
           </li>
 
-          {/* Solo superadmin puede crear administradores */}
-          {esSuper && (
-            <li className={liClass('registroAdmin')} onClick={() => setVistaActiva('registroAdmin')}>
-              Registrar Admin
-            </li>
-          )}
-
-          {/* Superadmin y Admin pueden crear profesores */}
+          {/* Unificado: ahora “RegistroAdmin” crea usuarios (profesores) también */}
           {(esSuper || esAdmin) && (
-            <li className={liClass('registroProfesor')} onClick={() => setVistaActiva('registroProfesor')}>
+            <li className={liClass('registroAdmin')} onClick={() => setVistaActiva('registroAdmin')}>
               Registrar Profesor
             </li>
           )}
+
+          {/* Eliminado: Registrar Profesor */}
+          {/* (esSuper || esAdmin) && (
+            <li className={liClass('registroProfesor')} onClick={() => setVistaActiva('registroProfesor')}>
+              Registrar Profesor
+            </li>
+          ) */}
 
           <li className={liClass('usuarios')} onClick={() => setVistaActiva('usuarios')}>
             Gestionar Usuarios
@@ -111,8 +112,13 @@ function PanelAdmin() {
         )}
 
         {vistaActiva === 'registroAlumno' && <RegistroAlumno />}
-        {vistaActiva === 'registroAdmin' && esSuper && <RegistroAdmin />}
-        {vistaActiva === 'registroProfesor' && (esSuper || esAdmin) && <RegistroProfesor />}
+
+        {/* Ahora RegistroAdmin está disponible para superadmin y admin */}
+        {vistaActiva === 'registroAdmin' && (esSuper || esAdmin) && <RegistroAdmin />}
+
+        {/* Eliminado: vista de registroProfesor */}
+        {/* {vistaActiva === 'registroProfesor' && (esSuper || esAdmin) && <RegistroProfesor />} */}
+
         {vistaActiva === 'usuarios' && <GestionarUsuarios />}
         {vistaActiva === 'asignarChatbots' && <p>Aquí irá la asignación de chatbots.</p>}
         {vistaActiva === 'cargarAlumnos' && <CargarAlumnos />}

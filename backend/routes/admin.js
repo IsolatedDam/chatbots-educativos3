@@ -1,7 +1,8 @@
+// routes/admin.js
 const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const Admin = require('../models/Admin');
+const bcrypt  = require('bcryptjs');
+const jwt     = require('jsonwebtoken');
+const Admin   = require('../models/Admin');
 
 const router = express.Router();
 
@@ -33,7 +34,9 @@ function auth(req, res, next) {
 }
 function requireRole(...roles) {
   return (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.rol)) {
+    const rol = String(req.user?.rol || '').toLowerCase();
+    const allow = roles.map(r => String(r).toLowerCase());
+    if (!rol || !allow.includes(rol)) {
       return res.status(403).json({ msg: 'No autorizado' });
     }
     next();
@@ -115,7 +118,7 @@ router.post('/registro', auth, requireRole('superadmin'), async (req, res) => {
   }
 });
 
-/* ===== Crear PROFESOR ===== */
+/* ===== Crear PROFESOR (rol almacenado en colección Admin) ===== */
 router.post('/profesores', auth, requireRole('superadmin', 'admin'), async (req, res) => {
   try {
     const {
@@ -148,7 +151,6 @@ router.post('/profesores', auth, requireRole('superadmin', 'admin'), async (req,
       return res.status(400).json({ msg: 'Teléfono no válido (8–12 dígitos, opcional +)' });
     }
 
-    // fechaCreacion opcional: si no viene, usamos ahora
     const fecha = fechaCreacion ? new Date(fechaCreacion) : new Date();
     if (isNaN(fecha.getTime())) {
       return res.status(400).json({ msg: 'Fecha de creación no válida' });
@@ -170,11 +172,11 @@ router.post('/profesores', auth, requireRole('superadmin', 'admin'), async (req,
 
     const hash = await bcrypt.hash(password, 10);
 
-    const ap = (apellido || '').trim(); // normaliza
+    const ap = (apellido || '').trim();
     const prof = await Admin.create({
       nombre,
       apellido: ap,
-      apellidos: ap, // 👈 compat: siempre guardamos ambos
+      apellidos: ap, // compat
       rut: rutN || undefined,
       correo: correoN,
       cargo,
@@ -206,40 +208,40 @@ router.post('/profesores', auth, requireRole('superadmin', 'admin'), async (req,
   }
 });
 
-/* ===== Listar profesores ===== */
+/* ===== Listar "profesores" (incluye admin y profesor) ===== */
 router.get('/profesores', auth, requireRole('superadmin', 'admin'), async (_req, res) => {
   try {
-    const profs = await Admin.find({ rol: 'profesor' })
+    const users = await Admin.find({ rol: { $in: ['profesor', 'admin'] } })
       .select('-contrasena')
       .sort({ createdAt: -1 });
-    res.json(profs);
+    res.json(users);
   } catch (err) {
-    console.error('listar profesores error:', err);
-    res.status(500).json({ msg: 'Error al listar profesores' });
+    console.error('listar profesores/admin error:', err);
+    res.status(500).json({ msg: 'Error al listar usuarios' });
   }
 });
 
-/* Compat con front actual: GET /api/admin -> lista profesores */
+/* Compat con front actual: GET /api/admin -> misma lista */
 router.get('/', auth, requireRole('superadmin', 'admin'), async (_req, res) => {
   try {
-    const profs = await Admin.find({ rol: 'profesor' })
+    const users = await Admin.find({ rol: { $in: ['profesor', 'admin'] } })
       .select('-contrasena')
       .sort({ createdAt: -1 });
-    res.json(profs);
+    res.json(users);
   } catch (err) {
-    console.error('listar profesores (compat) error:', err);
-    res.status(500).json({ msg: 'Error al listar profesores' });
+    console.error('listar profesores/admin (compat) error:', err);
+    res.status(500).json({ msg: 'Error al listar usuarios' });
   }
 });
 
-/* ===== Editar profesor ===== */
+/* ===== Editar ===== */
 router.put('/profesores/:id', auth, requireRole('superadmin', 'admin'), async (req, res) => {
   try {
     const { id } = req.params;
     const body = { ...req.body };
 
     delete body.contrasena;
-    delete body.anio; // el año de creación no se edita
+    delete body.anio;
 
     if (body.correo) body.correo = normEmail(body.correo);
 
@@ -263,7 +265,6 @@ router.put('/profesores/:id', auth, requireRole('superadmin', 'admin'), async (r
       body.anio = f.getUTCFullYear();
     }
 
-    // 👇 Normaliza apellido/apellidos: si llega uno, replica en el otro
     if (typeof body.apellido === 'string' && body.apellido.trim()) {
       body.apellido  = body.apellido.trim();
       body.apellidos = body.apellido;
@@ -273,12 +274,12 @@ router.put('/profesores/:id', auth, requireRole('superadmin', 'admin'), async (r
     }
 
     const prof = await Admin.findOneAndUpdate(
-      { _id: id, rol: 'profesor' },
+      { _id: id, rol: { $in: ['profesor', 'admin'] } },
       body,
       { new: true, runValidators: true }
     ).select('-contrasena');
 
-    if (!prof) return res.status(404).json({ msg: 'Profesor no encontrado' });
+    if (!prof) return res.status(404).json({ msg: 'Usuario no encontrado' });
     res.json(prof);
   } catch (err) {
     if (err?.code === 11000) {
@@ -289,15 +290,52 @@ router.put('/profesores/:id', auth, requireRole('superadmin', 'admin'), async (r
       }
       return res.status(409).json({ msg: 'Registro duplicado' });
     }
-    console.error('editar profesor error:', err);
-    res.status(500).json({ msg: 'Error al actualizar profesor' });
+    console.error('editar usuario error:', err);
+    res.status(500).json({ msg: 'Error al actualizar usuario' });
   }
 });
 
-/* ===== Editar profesor (compat) ===== */
-router.put('/:id', auth, requireRole('superadmin', 'admin'), async (req, res) => {
-  req.url = `/profesores/${req.params.id}`; // redirige internamente
+/* ===== Editar (compat) ===== */
+router.put('/:id', auth, requireRole('superadmin', 'admin'), (req, res) => {
+  req.url = `/profesores/${req.params.id}`;
   return router.handle(req, res);
 });
+
+/* ====== HANDLER ÚNICO PARA ELIMINAR (profesor/admin) ====== */
+async function deleteAdminOrProfesor(req, res) {
+  try {
+    const { id } = req.params;
+
+    const target = await Admin.findById(id).select('_id rol');
+    if (!target) return res.status(404).json({ msg: 'Usuario no encontrado (id inválido)' });
+
+    const targetRol = String(target.rol || '').toLowerCase();
+    const meRol     = String(req.user?.rol || '').toLowerCase();
+
+    if (targetRol === 'superadmin') {
+      return res.status(403).json({ msg: 'No puedes eliminar a un superadmin' });
+    }
+    if (targetRol === 'admin' && meRol !== 'superadmin') {
+      return res.status(403).json({ msg: 'Solo un superadmin puede eliminar a un admin' });
+    }
+    if (!['profesor', 'admin'].includes(targetRol)) {
+      return res.status(409).json({ msg: 'El usuario no es profesor/admin' });
+    }
+
+    await Admin.deleteOne({ _id: id });
+    return res.json({ msg: `Usuario (${targetRol}) eliminado` });
+  } catch (err) {
+    console.error('eliminar admin/profesor error:', err);
+    return res.status(500).json({ msg: 'Error al eliminar usuario' });
+  }
+}
+
+/* ====== ELIMINAR (RUTA OFICIAL) ====== */
+// DELETE /api/admin/profesores/:id
+router.delete('/profesores/:id', auth, requireRole('superadmin', 'admin'), deleteAdminOrProfesor);
+
+/* ====== ELIMINAR (RUTA COMPAT) ====== */
+// DELETE /api/admin/:id
+router.delete('/:id', auth, requireRole('superadmin', 'admin'), deleteAdminOrProfesor);
 
 module.exports = router;

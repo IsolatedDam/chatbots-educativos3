@@ -1,5 +1,7 @@
+// src/components/GestionarUsuarios.jsx
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import '../styles/GestionarUsuarios.css';
 
 const API_BASE = 'https://chatbots-educativos3.onrender.com/api';
@@ -150,8 +152,8 @@ function GestionarUsuarios() {
         u.numero_documento,
         u.rut,
         u.cargo,
-        u.telefono,   // que también matchee por teléfono si escribe números
-        u.riesgo      // y por riesgo si escribe "rojo", "verde", etc.
+        u.telefono,
+        u.riesgo
       ].filter(Boolean).join(' ').toLowerCase();
 
       if (texto && !base.includes(texto)) return false;
@@ -230,7 +232,6 @@ function GestionarUsuarios() {
         if (payload.anio !== undefined && payload.anio !== '') {
           payload.anio = Number(payload.anio);
         }
-        // riesgo se envía tal cual (string: 'verde'|'amarillo'|'rojo')
       }
 
       await axios.put(`${API_BASE}${endpointPath}/${formulario._id}`, payload,
@@ -244,6 +245,51 @@ function GestionarUsuarios() {
         err?.response?.data || err.message
       );
       alert(err?.response?.data?.msg || 'No se pudo actualizar.');
+    }
+  };
+
+  /* === ELIMINAR (con fallback para compat) === */
+  const eliminarUsuario = async (u) => {
+    const tipo = tipoUsuario === 'alumnos' ? 'alumno' : 'profesor';
+    const { isConfirmed } = await Swal.fire({
+      title: `Eliminar ${tipo}`,
+      html: `¿Seguro que quieres eliminar a <b>${u.nombre || ''} ${getApellido(u) || ''}</b>?<br/>Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+    });
+    if (!isConfirmed) return;
+
+    try {
+      // 1) Endpoint “oficial”
+      const endpointPath = tipoUsuario === 'alumnos' ? '/alumnos' : '/admin/profesores';
+      await axios.delete(`${API_BASE}${endpointPath}/${u._id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      await Swal.fire('Eliminado', `${tipo.charAt(0).toUpperCase() + tipo.slice(1)} eliminado correctamente.`, 'success');
+      obtenerUsuarios();
+    } catch (err1) {
+      // 2) Fallback de compatibilidad: /api/admin/:id (solo para profesores)
+      const status = err1?.response?.status;
+      const notFoundish = status === 404 || status === 405 || status === 400;
+      if (tipoUsuario === 'profesores' && notFoundish) {
+        try {
+          await axios.delete(`${API_BASE}/admin/${u._id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          await Swal.fire('Eliminado', 'Profesor eliminado correctamente (compat).', 'success');
+          obtenerUsuarios();
+          return;
+        } catch (err2) {
+          console.error('❌ Error fallback eliminar profesor:', err2?.response?.status, err2?.response?.data || err2.message);
+          Swal.fire('Error', err2?.response?.data?.msg || 'No se pudo eliminar (compat).', 'error');
+          return;
+        }
+      }
+
+      console.error('❌ Error al eliminar:', err1?.response?.status, err1?.response?.data || err1.message);
+      Swal.fire('Error', err1?.response?.data?.msg || 'No se pudo eliminar.', 'error');
     }
   };
 
@@ -403,8 +449,8 @@ function GestionarUsuarios() {
                       <th>Semestre</th>
                       <th>Jornada</th>
                       <th>Año</th>
-                      <th>Teléfono</th> {/* NUEVO */}
-                      <th>Riesgo</th>    {/* NUEVO */}
+                      <th>Teléfono</th>
+                      <th>Riesgo</th>
                     </>
                   )}
                   <th>Acciones</th>
@@ -428,13 +474,20 @@ function GestionarUsuarios() {
                         <td>{u.semestre ?? '-'}</td>
                         <td>{u.jornada || '-'}</td>
                         <td>{getAnio(u) || '-'}</td>
-                        <td>{u.telefono || '-'}</td>             {/* NUEVO */}
-                        <td><RiesgoBadge value={u.riesgo} /></td> {/* NUEVO */}
+                        <td>{u.telefono || '-'}</td>
+                        <td><RiesgoBadge value={u.riesgo} /></td>
                       </>
                     )}
                     <td>
                       <button className="btn-edit" onClick={() => handleEditar(u)}>
                         Editar
+                      </button>
+                      <button
+                        className="btn-del"
+                        onClick={() => eliminarUsuario(u)}
+                        style={{ marginLeft: 8 }}
+                      >
+                        Eliminar
                       </button>
                     </td>
                   </tr>
@@ -517,7 +570,7 @@ function GestionarUsuarios() {
                 </select>
                 <input name="telefono" value={formulario.telefono || ''} onChange={handleFormularioChange} placeholder="Teléfono" />
 
-                {/* NUEVO: Riesgo (solo editable si tiene permiso) */}
+                {/* Riesgo (si tiene permiso) */}
                 <select
                   name="riesgo"
                   value={formulario.riesgo || ''}
