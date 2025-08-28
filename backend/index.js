@@ -1,29 +1,51 @@
+// server.js / app.js
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const jwt = require('jsonwebtoken');              // <-- añadido
-const Admin = require('./models/Admin');          // <-- añadido
+const jwt = require('jsonwebtoken');
+const Admin = require('./models/Admin');
 require('dotenv').config();
 
 const app = express();
 
-// ✅ CORS
+/* ===== CORS ===== */
+const ALLOW_LIST = [
+  'http://localhost:3000',
+  'http://localhost:5173', // vite dev (por si acaso)
+  'https://chatbots-educativos3.vercel.app', // tu “bonito”
+  'https://inquisitive-concha-7da15f.netlify.app', // el iframe que usas en PanelAdmin
+  // agrega aquí otros dominios "bonitos" si tienes más
+];
+
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://chatbots-educativos3.vercel.app'],
-  credentials: true
+  origin(origin, cb) {
+    if (!origin) return cb(null, true); // curl/postman
+    const ok =
+      ALLOW_LIST.includes(origin) ||
+      origin.endsWith('.vercel.app') ||
+      origin.endsWith('.netlify.app');
+    if (ok) return cb(null, true);
+    return cb(new Error('CORS bloqueado: ' + origin));
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false, // usa Bearer; pon true solo si vas a usar cookies/sesión
 }));
+
+// preflight universal (por si alguna ruta no pasa por cors)
+app.options('*', cors());
 
 app.use(express.json());
 
-// ✅ MongoDB
+/* ===== Mongo ===== */
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
-  .then(() => console.log('✅ Conectado a MongoDB Atlas'))
-  .catch(err => console.error('❌ Error de conexión a MongoDB:', err));
+.then(() => console.log('✅ Conectado a MongoDB Atlas'))
+.catch(err => console.error('❌ Error de conexión a MongoDB:', err));
 
-/* ============= AUTH de apoyo para debug y rutas que lo necesiten ============= */
+/* ===== Auth helper (debug/whoami) ===== */
 async function auth(req, res, next) {
   const h = req.headers.authorization || '';
   const token = h.startsWith('Bearer ') ? h.slice(7) : h;
@@ -47,24 +69,16 @@ app.get('/api/_whoami', auth, (req, res) => {
   res.json(req.user);
 });
 
-/* ===================== RUTA DE DIAGNÓSTICO ===================== */
-// GET https://tu-backend/api/_whoami (enviar Authorization: Bearer <token>)
-app.get('/api/_whoami', auth, (req, res) => {
-  res.json(req.user); // { id, rol, permisos }
-});
+/* ===== Rutas ===== */
+app.use('/api', require('./routes/auth'));           // alumnos login/registro (si aplica)
+app.use('/api/upload', require('./routes/upload'));  // carga masiva
+app.use('/api/admin', require('./routes/admin'));    // admin + profesores
+app.use('/api/visitas', require('./routes/visita')); // invitados
+app.use('/api/alumnos', require('./routes/alumno')); // alumnos
 
-/* ========================= Rutas reales ========================= */
-app.use('/api', require('./routes/auth'));              // Login y registro para alumnos
-app.use('/api/upload', require('./routes/upload'));     // Carga masiva desde Excel
-app.use('/api/admin', require('./routes/admin'));       // Admin y profesores
-app.use('/api/visitas', require('./routes/visita'));    // Invitados y exportación de visitas
-app.use('/api/alumnos', require('./routes/alumno'));    // Funciones de alumnos
-
-// ✅ Root
 app.get('/', (_req, res) => {
   res.send('🚀 API funcionando correctamente en Render');
 });
 
-// ✅ Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Backend corriendo en puerto ${PORT}`));
