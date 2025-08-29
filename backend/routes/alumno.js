@@ -62,39 +62,28 @@ router.get('/', auth, requireRole('profesor', 'admin', 'superadmin'), async (req
 });
 
 /* ===== PUT /api/alumnos/:id =====
-   - superadmin/admin/profesor (profe actúa como admin).
-   - Soporta alias color_riesgo desde el front.
+   - superadmin/admin/profesor.
+   - Guarda riesgo con ambos nombres: `riesgo` y `color_riesgo`.
 */
 router.put('/:id', auth, requireRole('profesor', 'admin', 'superadmin'), async (req, res) => {
   try {
-    const role  = String(req.user.rol || '').toLowerCase();
-    const perms = Array.isArray(req.user.permisos) ? req.user.permisos : [];
-
-    // Alias por compatibilidad: si llega color_riesgo y no riesgo
-    if ('color_riesgo' in req.body && !('riesgo' in req.body)) {
-      req.body.riesgo = req.body.color_riesgo;
-    }
-
-    // === ELEVACIÓN ===
-    // Opción A: TODOS los profesores actúan como admin:
-    const isElevated = role === 'admin' || role === 'superadmin' || role === 'profesor';
-    // Opción B (alternativa): solo profes con permiso elevador:
-    // const isElevated = role === 'admin' || role === 'superadmin' || (role === 'profesor' && perms.includes('profesor:admin_equiv'));
-
-    // Campos que pueden tocar admin/elevados
+    // Campos permitidos (incluye ambos nombres de riesgo)
     const allowedKeys = [
       'rut','nombre','apellido','anio','fechaIngreso',
       'semestre','jornada','curso','telefono',
-      'riesgo','habilitado','suscripcionVenceEl'
+      'riesgo','color_riesgo','habilitado','suscripcionVenceEl'
     ];
 
-    // Filtra body a los campos permitidos
+    // Toma solo claves permitidas
     const body = {};
-    for (const k of allowedKeys) {
-      if (k in req.body) body[k] = req.body[k];
-    }
+    for (const k of allowedKeys) if (k in req.body) body[k] = req.body[k];
     if (!Object.keys(body).length) {
       return res.status(400).json({ msg: 'Sin cambios válidos para actualizar' });
+    }
+
+    // Si vino solo color_riesgo, normaliza a riesgo
+    if ('color_riesgo' in body && !('riesgo' in body)) {
+      body.riesgo = body.color_riesgo;
     }
 
     // Normalizaciones
@@ -106,6 +95,7 @@ router.put('/:id', auth, requireRole('profesor', 'admin', 'superadmin'), async (
       const valid = ['verde','amarillo','rojo',''];
       if (!valid.includes(r)) return res.status(400).json({ msg: 'Riesgo inválido' });
       body.riesgo = r;
+      body.color_riesgo = r; // <-- escribe ambos por compat con colecciones antiguas
     }
 
     if ('suscripcionVenceEl' in body && body.suscripcionVenceEl) {
@@ -113,13 +103,9 @@ router.put('/:id', auth, requireRole('profesor', 'admin', 'superadmin'), async (
       if (isNaN(f.getTime())) return res.status(400).json({ msg: 'Fecha de vencimiento inválida' });
       body.suscripcionVenceEl = f;
     }
+
     if ('habilitado' in body) {
       body.habilitado = !!body.habilitado;
-    }
-
-    // Si NO fuera elevated y es prof cambiando riesgo, derivar estado (queda por compat)
-    if (!isElevated && role === 'profesor' && 'riesgo' in body) {
-      body.habilitado = body.riesgo === 'rojo' ? false : true;
     }
 
     const alumno = await Alumno.findByIdAndUpdate(

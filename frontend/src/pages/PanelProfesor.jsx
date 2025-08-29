@@ -29,6 +29,22 @@ function RiesgoPill({ riesgo }) {
   );
 }
 
+/* === Texto para la columna de Riesgo === */
+function riesgoTextoTabla(a) {
+  const r = String(
+    a?.riesgo ??
+    a?.color_riesgo ??
+    a?.riesgo_color ??                       // por si quedó otra variante
+    calcRiesgoFE(a?.suscripcionVenceEl) ??
+    ""
+  ).toLowerCase();
+
+  if (a?.habilitado === false || r === "rojo") return "Suspendido";
+  if (r === "amarillo") return "Suspensión en 10 días";
+  if (r === "verde") return "Habilitado";
+  return "—";
+}
+
 export default function PanelProfesor() {
   // === Estado principal ===
   const [vistaActiva, setVistaActiva] = useState("datos"); // 'inicio' | 'datos' | 'chatbots'
@@ -84,12 +100,18 @@ export default function PanelProfesor() {
 
   // === Abrir / cerrar modal ===
   const openEdit = (alumno) => {
+    const riesgoInit =
+      alumno.riesgo ??
+      alumno.color_riesgo ??
+      alumno.riesgo_color ??
+      calcRiesgoFE(alumno.suscripcionVenceEl) ??
+      "";
     setEditDraft({
       ...alumno,
       documento: alumno.numero_documento ?? alumno.rut ?? "",
       habilitado: alumno.habilitado ?? true,
       suscripcionVenceEl: alumno.suscripcionVenceEl || "", // ISO o 'YYYY-MM-DD'
-      riesgo: alumno.riesgo ?? calcRiesgoFE(alumno.suscripcionVenceEl) ?? "",
+      riesgo: riesgoInit,
     });
     setEditOpen(true);
   };
@@ -105,10 +127,14 @@ export default function PanelProfesor() {
     try {
       const token = localStorage.getItem("token");
 
-      // Si el profe no puede tocar Estado, lo derivamos desde el color de riesgo
+      // Normaliza riesgo
+      const riesgoLC = String(editDraft.riesgo || "").toLowerCase();
+      const riesgoValido = ["verde", "amarillo", "rojo"].includes(riesgoLC) ? riesgoLC : "";
+
+      // Si el profe no puede tocar Estado, se deriva desde el color de riesgo
       let nextHabilitado = !!editDraft.habilitado;
       if (!canEditEstado && canEditRiesgo) {
-        nextHabilitado = editDraft.riesgo === "rojo" ? false : true;
+        nextHabilitado = riesgoValido === "rojo" ? false : true;
       }
 
       const payload = {
@@ -127,7 +153,9 @@ export default function PanelProfesor() {
                 : editDraft.suscripcionVenceEl)
             : undefined,
 
-        riesgo: editDraft.riesgo || undefined, // ← se envía al back
+        // Enviamos ambos nombres por compatibilidad
+        riesgo: riesgoValido || undefined,
+        color_riesgo: riesgoValido || undefined,
 
         // Documento (normaliza en ambas):
         numero_documento: editDraft.documento ?? editDraft.numero_documento ?? editDraft.rut,
@@ -220,8 +248,13 @@ export default function PanelProfesor() {
               <tr><td colSpan="99">Cargando…</td></tr>
             ) : rows.length ? (
               rows.map((a) => {
-                const riesgo = (a.riesgo ?? calcRiesgoFE(a.suscripcionVenceEl)) || null;
-                const msg = riesgoMensajeFE(riesgo);
+                const riesgoBase = (
+                  a.riesgo ??
+                  a.color_riesgo ??
+                  a.riesgo_color ??
+                  calcRiesgoFE(a.suscripcionVenceEl) ??
+                  ""
+                );
                 const venceStr = a.suscripcionVenceEl ? String(a.suscripcionVenceEl).slice(0, 10) : "—";
                 return (
                   <tr key={a._id}>
@@ -232,7 +265,12 @@ export default function PanelProfesor() {
                     <td>{a.semestre ?? "-"}</td>
                     <td>{a.jornada ?? "-"}</td>
                     <td>{a.habilitado === false ? "Suspendido" : "Activo"}</td>
-                    <td title={msg}><RiesgoPill riesgo={riesgo} /></td>
+
+                    {/* === Columna de Riesgo con el texto solicitado === */}
+                    <td title={riesgoMensajeFE(String(riesgoBase).toLowerCase())}>
+                      {riesgoTextoTabla(a)}
+                    </td>
+
                     <td>{venceStr}</td>
                     <td className="cell-actions">
                       <button className="btn btn-primary" onClick={() => openEdit(a)}>Editar</button>
@@ -268,6 +306,9 @@ export default function PanelProfesor() {
           <li>Carga masiva</li>
         </ul>
         <div style={{ marginTop: "auto", padding: "1rem" }}>
+          <div className="kicker" style={{ marginBottom: 8, opacity: 0.8 }}>
+            Rol: <b>{role || "—"}</b>
+          </div>
           <button className="btn btn-danger" onClick={handleLogout}>Cerrar sesión</button>
         </div>
       </aside>
@@ -357,7 +398,7 @@ function EditAlumnoModal({ draft, setDraft, onClose, onSave, canEditEstado, canE
   });
 
   // Vista previa del riesgo (usa lo que eligió el profe; si vacío, deriva por fecha)
-  const riesgo = draft.riesgo || calcRiesgoFE(draft.suscripcionVenceEl);
+  const riesgo = (draft.riesgo || calcRiesgoFE(draft.suscripcionVenceEl) || "").toLowerCase();
   const riesgoMsg = riesgoMensajeFE(riesgo);
   const riesgoBg = riesgo === "verde" ? "#27ae60" : riesgo === "amarillo" ? "#f1c40f" : riesgo === "rojo" ? "#c0392b" : "#95a5a6";
 
@@ -392,21 +433,26 @@ function EditAlumnoModal({ draft, setDraft, onClose, onSave, canEditEstado, canE
             <input {...bind("jornada")} placeholder="Vespertino" />
           </label>
 
-          {/* Estado de cuenta (bloqueado para profesor) */}
+          {/* Estado de cuenta (bloqueado para profesor; admin/superadmin lo editan directo) */}
           <label className="field">
             <span>Estado de cuenta</span>
             <select
               value={String(draft.habilitado !== false)}
               onChange={(e) => setDraft({ ...draft, habilitado: e.target.value === "true" })}
               disabled={!canEditEstado}
-              title={!canEditEstado ? "Solo admin puede modificar" : undefined}
+              title={!canEditEstado ? "El profesor modifica el estado cambiando el color de riesgo" : undefined}
             >
               <option value="true">Activo</option>
               <option value="false">Suspendido</option>
             </select>
+            {!canEditEstado && (
+              <small className="kicker">
+                Para cambiar el estado, selecciona el <b>Color de riesgo</b>.
+              </small>
+            )}
           </label>
 
-          {/* Vencimiento de suscripción (bloqueado para profesor) */}
+          {/* Vencimiento de suscripción (solo admin/superadmin) */}
           <label className="field">
             <span>Vence el</span>
             <input
@@ -414,7 +460,7 @@ function EditAlumnoModal({ draft, setDraft, onClose, onSave, canEditEstado, canE
               value={(draft.suscripcionVenceEl || "").slice(0, 10)}
               onChange={(e) => setDraft({ ...draft, suscripcionVenceEl: e.target.value })}
               disabled={!canEditEstado}
-              title={!canEditEstado ? "Solo admin puede modificar" : undefined}
+              title={!canEditEstado ? "Solo admin/superadmin puede modificar" : undefined}
             />
           </label>
 
@@ -433,7 +479,7 @@ function EditAlumnoModal({ draft, setDraft, onClose, onSave, canEditEstado, canE
               <option value="rojo">Rojo</option>
             </select>
             <small className="kicker">
-              Cambiar a <b>ROJO</b> suspenderá la cuenta al guardar; <b>VERDE</b>/<b>AMARILLO</b> la dejan activa.
+              <b>ROJO</b> suspende la cuenta al guardar. <b>VERDE/AMARILLO</b> la dejan activa.
             </small>
           </label>
 
@@ -451,7 +497,7 @@ function EditAlumnoModal({ draft, setDraft, onClose, onSave, canEditEstado, canE
                 marginRight: 8,
               }}
             >
-              {(riesgo ?? "—").toString().toUpperCase()}
+              {(riesgo || "—").toString().toUpperCase()}
             </div>
             <small style={{ opacity: 0.8 }}>{riesgoMsg}</small>
           </div>
