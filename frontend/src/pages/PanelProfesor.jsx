@@ -34,7 +34,7 @@ function riesgoTextoTabla(a) {
   const r = String(
     a?.riesgo ??
     a?.color_riesgo ??
-    a?.riesgo_color ??                       // por si quedó otra variante
+    a?.riesgo_color ??
     calcRiesgoFE(a?.suscripcionVenceEl) ??
     ""
   ).toLowerCase();
@@ -45,9 +45,54 @@ function riesgoTextoTabla(a) {
   return "—";
 }
 
+/* ================== CIFRADO LOCAL (opcional) ==================
+   - Si en el login guardas localStorage.password_enc (cadena base64),
+     aquí se desencripta para mostrarla con el ojito.
+   - Clave derivada con PBKDF2 desde una passphrase fija + userId.
+   - Ojo: es para *comodidad de usuario*, NO reemplaza seguridad de servidor. */
+const LOCAL_PASSPHRASE = "APP_LOCAL_VAULT_v1"; // cambia esta cadena en tu proyecto
+
+function b64toArr(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
+function arrToB64(a) { return btoa(String.fromCharCode(...new Uint8Array(a))); }
+
+async function deriveKey(passphrase, saltStr) {
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: enc.encode(saltStr), iterations: 100000, hash: "SHA-256" },
+    baseKey,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+export async function encryptLocalPassword(plain, userId) {
+  const key = await deriveKey(LOCAL_PASSPHRASE, userId || "anon");
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(plain));
+  return `v1.${arrToB64(iv)}.${arrToB64(ct)}`;
+}
+
+async function decryptLocalPassword(packed, userId) {
+  try {
+    const [v, ivb64, ctb64] = String(packed).split(".");
+    if (v !== "v1") return "";
+    const key = await deriveKey(LOCAL_PASSPHRASE, userId || "anon");
+    const pt = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: b64toArr(ivb64) },
+      key,
+      b64toArr(ctb64)
+    );
+    return new TextDecoder().decode(pt);
+  } catch {
+    return "";
+  }
+}
+
 export default function PanelProfesor() {
   // === Estado principal ===
-  const [vistaActiva, setVistaActiva] = useState("datos"); // 'inicio' | 'datos' | 'chatbots'
+  const [vistaActiva, setVistaActiva] = useState("cuenta"); // ← Mi cuenta por defecto
   const [alumnos, setAlumnos] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -56,20 +101,38 @@ export default function PanelProfesor() {
   const [editOpen, setEditOpen] = useState(false);
   const [editDraft, setEditDraft] = useState(null);
 
-  // === Permisos del usuario logueado ===
+  // === Usuario logueado / permisos ===
   const me = JSON.parse(localStorage.getItem("usuario") || "{}");
   const role = String(me?.rol || "").toLowerCase();
   const permisos = Array.isArray(me?.permisos) ? me.permisos : [];
 
-  // Estado/Vence: SOLO admin/superadmin
   const canEditEstado = role === "superadmin" || role === "admin";
-  // Riesgo: admin/superadmin/profesor
   const canEditRiesgo = ["superadmin", "admin", "profesor"].includes(role);
-  // Borrar alumno (opcional)
   const canDeleteAlumno =
     role === "superadmin" ||
     role === "admin" ||
     (role === "profesor" && permisos.includes("alumnos:eliminar"));
+
+  // ====== “Mi cuenta”: contraseña con ojito (local + descifrado opcional) ======
+  const [pwdVisible, setPwdVisible] = useState(false);
+  const [storedPwd, setStoredPwd] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      // Prioridad: encrypted -> plain fallbacks
+      const encPwd = localStorage.getItem("password_enc");
+      if (encPwd) {
+        const dec = await decryptLocalPassword(encPwd, me?._id || me?.id || me?.correo || "");
+        if (dec) { setStoredPwd(dec); return; }
+      }
+      const candidate =
+        localStorage.getItem("password") ||
+        localStorage.getItem("pwd") ||
+        localStorage.getItem("pass") ||
+        "";
+      setStoredPwd(candidate || "");
+    })();
+  }, [me?._id, me?.correo]);
 
   // === Cerrar sesión ===
   const handleLogout = () => {
@@ -110,7 +173,7 @@ export default function PanelProfesor() {
       ...alumno,
       documento: alumno.numero_documento ?? alumno.rut ?? "",
       habilitado: alumno.habilitado ?? true,
-      suscripcionVenceEl: alumno.suscripcionVenceEl || "", // ISO o 'YYYY-MM-DD'
+      suscripcionVenceEl: alumno.suscripcionVenceEl || "",
       riesgo: riesgoInit,
     });
     setEditOpen(true);
@@ -121,17 +184,14 @@ export default function PanelProfesor() {
     setEditDraft(null);
   };
 
-  // === Guardar cambios alumno (incluye riesgo y lógica de estado) ===
+  // === Guardar cambios alumno ===
   async function handleSave() {
     if (!editDraft?._id) return;
     try {
       const token = localStorage.getItem("token");
-
-      // Normaliza riesgo
       const riesgoLC = String(editDraft.riesgo || "").toLowerCase();
       const riesgoValido = ["verde", "amarillo", "rojo"].includes(riesgoLC) ? riesgoLC : "";
 
-      // Si el profe no puede tocar Estado, se deriva desde el color de riesgo
       let nextHabilitado = !!editDraft.habilitado;
       if (!canEditEstado && canEditRiesgo) {
         nextHabilitado = riesgoValido === "rojo" ? false : true;
@@ -143,21 +203,15 @@ export default function PanelProfesor() {
         anio: editDraft.anio !== "" ? Number(editDraft.anio) : undefined,
         semestre: editDraft.semestre !== "" ? Number(editDraft.semestre) : undefined,
         jornada: editDraft.jornada,
-
-        habilitado: nextHabilitado, // ← deriva desde riesgo si el profe no puede tocar estado
-
+        habilitado: nextHabilitado,
         suscripcionVenceEl:
           editDraft.suscripcionVenceEl
             ? (editDraft.suscripcionVenceEl.length === 10
                 ? `${editDraft.suscripcionVenceEl}T00:00:00.000Z`
                 : editDraft.suscripcionVenceEl)
             : undefined,
-
-        // Enviamos ambos nombres por compatibilidad
         riesgo: riesgoValido || undefined,
         color_riesgo: riesgoValido || undefined,
-
-        // Documento (normaliza en ambas):
         numero_documento: editDraft.documento ?? editDraft.numero_documento ?? editDraft.rut,
         rut: editDraft.documento ?? editDraft.numero_documento ?? editDraft.rut,
       };
@@ -194,13 +248,11 @@ export default function PanelProfesor() {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
-
       if (!res.ok) {
         let msg = "Error al eliminar";
         try { const j = await res.json(); if (j?.msg) msg = j.msg; } catch {}
         throw new Error(`${msg} (HTTP ${res.status})`);
       }
-
       setAlumnos((prev) => prev.filter((a) => a._id !== id));
     } catch (err) {
       alert(err.message);
@@ -265,12 +317,9 @@ export default function PanelProfesor() {
                     <td>{a.semestre ?? "-"}</td>
                     <td>{a.jornada ?? "-"}</td>
                     <td>{a.habilitado === false ? "Suspendido" : "Activo"}</td>
-
-                    {/* === Columna de Riesgo con el texto solicitado === */}
                     <td title={riesgoMensajeFE(String(riesgoBase).toLowerCase())}>
                       {riesgoTextoTabla(a)}
                     </td>
-
                     <td>{venceStr}</td>
                     <td className="cell-actions">
                       <button className="btn btn-primary" onClick={() => openEdit(a)}>Editar</button>
@@ -300,6 +349,8 @@ export default function PanelProfesor() {
       <aside className="admin-sidebar">
         <h2>Panel Profesor</h2>
         <ul>
+          {/* Mi cuenta primero */}
+          <li className={liClass("cuenta")} onClick={() => setVistaActiva("cuenta")}>Mi cuenta</li>
           <li className={liClass("inicio")} onClick={() => setVistaActiva("inicio")}>Página Chatbots</li>
           <li className={liClass("datos")} onClick={() => setVistaActiva("datos")}>Datos del alumno</li>
           <li className={liClass("chatbots")} onClick={() => setVistaActiva("chatbots")}>Acceso a chatbots</li>
@@ -316,14 +367,16 @@ export default function PanelProfesor() {
       {/* Main */}
       <main className="admin-main">
         {vistaActiva === "inicio" && (
-          <div className="iframe-wrapper" style={{ width: "100%", height: "80vh" }}>
-            <iframe
-              src="https://inquisitive-concha-7da15f.netlify.app/"
-              style={{ width: "100%", height: "100%", border: "none", borderRadius: 12 }}
-              allowFullScreen
-              title="IframePanelProfesor"
-            />
-          </div>
+          <section className="section">
+            <div className="iframe-wrapper" style={{ width: "100%", height: "80vh" }}>
+              <iframe
+                src="https://inquisitive-concha-7da15f.netlify.app/"
+                style={{ width: "100%", height: "100%", border: "none", borderRadius: 12 }}
+                allowFullScreen
+                title="IframePanelProfesor"
+              />
+            </div>
+          </section>
         )}
 
         {vistaActiva === "datos" && (
@@ -353,6 +406,61 @@ export default function PanelProfesor() {
               <button className="btn btn-ghost">Desautorizar</button>
             </div>
             <p className="kicker">Cada chatbot puede tener N° o letra.</p>
+          </section>
+        )}
+
+        {vistaActiva === "cuenta" && (
+          <section className="section">
+            <h3 style={{ textAlign: "center" }}>Mi cuenta</h3>
+
+            {/* Tarjeta centrada */}
+            <div className="account-card">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <label className="field">
+                  <span>Nombre</span>
+                  <input value={me?.nombre || ""} readOnly />
+                </label>
+                <label className="field">
+                  <span>Apellido</span>
+                  <input value={me?.apellido || ""} readOnly />
+                </label>
+                <label className="field">
+                  <span>Correo</span>
+                  <input value={me?.correo || me?.email || ""} readOnly />
+                </label>
+                <label className="field">
+                  <span>Rol</span>
+                  <input value={role || ""} readOnly />
+                </label>
+              </div>
+
+              <div className="field" style={{ marginTop: 16 }}>
+                <span>Contraseña</span>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input
+                    type={pwdVisible ? "text" : "password"}
+                    value={storedPwd}
+                    onChange={(e) => setStoredPwd(e.target.value)}
+                    placeholder="No disponible (no se guarda en el servidor)"
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    className="btn btn-ghost"
+                    type="button"
+                    onClick={() => setPwdVisible((v) => !v)}
+                    title={pwdVisible ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    aria-label={pwdVisible ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    style={{ minWidth: 44 }}
+                  >
+                    {pwdVisible ? "🙈" : "👁️"}
+                  </button>
+                </div>
+                <small className="kicker">
+                  Por seguridad, el servidor no devuelve contraseñas. Puedes guardar la tuya cifrada en
+                  <code> localStorage.password_enc </code> al iniciar sesión para verla aquí con el ojito.
+                </small>
+              </div>
+            </div>
           </section>
         )}
       </main>
@@ -397,7 +505,6 @@ function EditAlumnoModal({ draft, setDraft, onClose, onSave, canEditEstado, canE
       }),
   });
 
-  // Vista previa del riesgo (usa lo que eligió el profe; si vacío, deriva por fecha)
   const riesgo = (draft.riesgo || calcRiesgoFE(draft.suscripcionVenceEl) || "").toLowerCase();
   const riesgoMsg = riesgoMensajeFE(riesgo);
   const riesgoBg = riesgo === "verde" ? "#27ae60" : riesgo === "amarillo" ? "#f1c40f" : riesgo === "rojo" ? "#c0392b" : "#95a5a6";
@@ -433,7 +540,6 @@ function EditAlumnoModal({ draft, setDraft, onClose, onSave, canEditEstado, canE
             <input {...bind("jornada")} placeholder="Vespertino" />
           </label>
 
-          {/* Estado de cuenta (bloqueado para profesor; admin/superadmin lo editan directo) */}
           <label className="field">
             <span>Estado de cuenta</span>
             <select
@@ -452,7 +558,6 @@ function EditAlumnoModal({ draft, setDraft, onClose, onSave, canEditEstado, canE
             )}
           </label>
 
-          {/* Vencimiento de suscripción (solo admin/superadmin) */}
           <label className="field">
             <span>Vence el</span>
             <input
@@ -464,7 +569,6 @@ function EditAlumnoModal({ draft, setDraft, onClose, onSave, canEditEstado, canE
             />
           </label>
 
-          {/* === Color de riesgo (editable por profesor) === */}
           <label className="field">
             <span>Color de riesgo</span>
             <select
@@ -483,7 +587,6 @@ function EditAlumnoModal({ draft, setDraft, onClose, onSave, canEditEstado, canE
             </small>
           </label>
 
-          {/* Vista previa + mensaje */}
           <div className="field" style={{ gridColumn: "1 / -1" }}>
             <span>Vista previa de riesgo</span>
             <div
