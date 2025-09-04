@@ -3,6 +3,7 @@ const express = require('express');
 const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 const Admin   = require('../models/Admin');
+const { verificarToken, autorizarRoles } = require('../middlewares/auth');
 
 const router = express.Router();
 
@@ -19,31 +20,7 @@ function normNumDoc(tipo = '', numero = '') {
 }
 const TEL_RE = /^\+?\d{8,12}$/;
 
-/* ===== Auth ===== */
-function auth(req, res, next) {
-  const h = req.headers.authorization || '';
-  const token = h.startsWith('Bearer ') ? h.slice(7) : null;
-  if (!token) return res.status(401).json({ msg: 'Token requerido' });
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // { id, rol }
-    next();
-  } catch {
-    return res.status(401).json({ msg: 'Token inválido' });
-  }
-}
-function requireRole(...roles) {
-  return (req, res, next) => {
-    const rol = String(req.user?.rol || '').toLowerCase();
-    const allow = roles.map(r => String(r).toLowerCase());
-    if (!rol || !allow.includes(rol)) {
-      return res.status(403).json({ msg: 'No autorizado' });
-    }
-    next();
-  };
-}
-
-/* ===== Login Admin ===== */
+/* ===== Login ===== */
 router.post('/login', async (req, res) => {
   const { rut = '', contrasena = '' } = req.body;
   const key = rut.trim();
@@ -75,8 +52,8 @@ router.post('/login', async (req, res) => {
   }
 });
 
-/* ===== Crear Admin (superadmin) ===== */
-router.post('/registro', auth, requireRole('superadmin'), async (req, res) => {
+/* ===== Crear Admin (solo superadmin) ===== */
+router.post('/registro', verificarToken, autorizarRoles('superadmin'), async (req, res) => {
   try {
     const { nombre, apellido = '', rut = '', correo, cargo = '', rol } = req.body;
     let { contrasena } = req.body;
@@ -118,8 +95,8 @@ router.post('/registro', auth, requireRole('superadmin'), async (req, res) => {
   }
 });
 
-/* ===== Crear PROFESOR (rol almacenado en colección Admin) ===== */
-router.post('/profesores', auth, requireRole('superadmin', 'admin'), async (req, res) => {
+/* ===== Crear PROFESOR (admin/superadmin; profesor pasa como admin según auth.js) ===== */
+router.post('/profesores', verificarToken, autorizarRoles('admin', 'superadmin'), async (req, res) => {
   try {
     const {
       nombre,
@@ -131,7 +108,7 @@ router.post('/profesores', auth, requireRole('superadmin', 'admin'), async (req,
       tipo_documento,
       numero_documento,
       telefono,
-      fechaCreacion,          // opcional
+      fechaCreacion, // opcional
       rut = ''
     } = req.body;
 
@@ -152,9 +129,7 @@ router.post('/profesores', auth, requireRole('superadmin', 'admin'), async (req,
     }
 
     const fecha = fechaCreacion ? new Date(fechaCreacion) : new Date();
-    if (isNaN(fecha.getTime())) {
-      return res.status(400).json({ msg: 'Fecha de creación no válida' });
-    }
+    if (isNaN(fecha.getTime())) return res.status(400).json({ msg: 'Fecha de creación no válida' });
     const anio = fecha.getUTCFullYear();
 
     const rutN = tipoN === 'RUT' ? numDocN : (rut ? normRut(rut) : '');
@@ -208,8 +183,8 @@ router.post('/profesores', auth, requireRole('superadmin', 'admin'), async (req,
   }
 });
 
-/* ===== Listar "profesores" (incluye admin y profesor) ===== */
-router.get('/profesores', auth, requireRole('superadmin', 'admin'), async (_req, res) => {
+/* ===== Listar profesores (admin/superadmin) ===== */
+router.get('/profesores', verificarToken, autorizarRoles('admin', 'superadmin'), async (_req, res) => {
   try {
     const users = await Admin.find({ rol: { $in: ['profesor', 'admin'] } })
       .select('-contrasena')
@@ -222,7 +197,7 @@ router.get('/profesores', auth, requireRole('superadmin', 'admin'), async (_req,
 });
 
 /* Compat con front actual: GET /api/admin -> misma lista */
-router.get('/', auth, requireRole('superadmin', 'admin'), async (_req, res) => {
+router.get('/', verificarToken, autorizarRoles('admin', 'superadmin'), async (_req, res) => {
   try {
     const users = await Admin.find({ rol: { $in: ['profesor', 'admin'] } })
       .select('-contrasena')
@@ -234,8 +209,8 @@ router.get('/', auth, requireRole('superadmin', 'admin'), async (_req, res) => {
   }
 });
 
-/* ===== Editar ===== */
-router.put('/profesores/:id', auth, requireRole('superadmin', 'admin'), async (req, res) => {
+/* ===== Editar profesor/admin (admin/superadmin) ===== */
+router.put('/profesores/:id', verificarToken, autorizarRoles('admin', 'superadmin'), async (req, res) => {
   try {
     const { id } = req.params;
     const body = { ...req.body };
@@ -296,12 +271,12 @@ router.put('/profesores/:id', auth, requireRole('superadmin', 'admin'), async (r
 });
 
 /* ===== Editar (compat) ===== */
-router.put('/:id', auth, requireRole('superadmin', 'admin'), (req, res) => {
+router.put('/:id', verificarToken, autorizarRoles('admin', 'superadmin'), (req, res) => {
   req.url = `/profesores/${req.params.id}`;
   return router.handle(req, res);
 });
 
-/* ====== HANDLER ÚNICO PARA ELIMINAR (profesor/admin) ====== */
+/* ====== HANDLER ÚNICO PARA ELIMINAR (admin/superadmin; profesor pasa como admin) ====== */
 async function deleteAdminOrProfesor(req, res) {
   try {
     const { id } = req.params;
@@ -310,7 +285,7 @@ async function deleteAdminOrProfesor(req, res) {
     if (!target) return res.status(404).json({ msg: 'Usuario no encontrado (id inválido)' });
 
     const targetRol = String(target.rol || '').toLowerCase();
-    const meRol     = String(req.user?.rol || '').toLowerCase();
+    const meRol     = String(req.usuario?.rol || '').toLowerCase();
 
     if (targetRol === 'superadmin') {
       return res.status(403).json({ msg: 'No puedes eliminar a un superadmin' });
@@ -332,10 +307,10 @@ async function deleteAdminOrProfesor(req, res) {
 
 /* ====== ELIMINAR (RUTA OFICIAL) ====== */
 // DELETE /api/admin/profesores/:id
-router.delete('/profesores/:id', auth, requireRole('superadmin', 'admin'), deleteAdminOrProfesor);
+router.delete('/profesores/:id', verificarToken, autorizarRoles('admin', 'superadmin'), deleteAdminOrProfesor);
 
 /* ====== ELIMINAR (RUTA COMPAT) ====== */
 // DELETE /api/admin/:id
-router.delete('/:id', auth, requireRole('superadmin', 'admin'), deleteAdminOrProfesor);
+router.delete('/:id', verificarToken, autorizarRoles('admin', 'superadmin'), deleteAdminOrProfesor);
 
 module.exports = router;

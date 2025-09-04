@@ -215,7 +215,7 @@ export default function PanelProfesor() {
     }
   }
 
-  // === Eliminación MASIVA ===
+  // === Eliminación MASIVA (robusta con fallback) ===
   async function handleBulkDelete() {
     if (!canDeleteAlumno) {
       alert("No tienes permiso para eliminar alumnos.");
@@ -228,25 +228,75 @@ export default function PanelProfesor() {
     }
     if (!window.confirm(`¿Eliminar ${ids.length} alumno(s)? Esta acción no se puede deshacer.`)) return;
 
-    try {
-      const token = localStorage.getItem("token");
-      // Secuencial para evitar saturar el backend (seguro y simple)
-      for (const id of ids) {
-        const res = await fetch(`${API_BASE}/alumnos/${id}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) {
-          let msg = "Error al eliminar";
-          try { const j = await res.json(); if (j?.msg) msg = j.msg; } catch {}
-          throw new Error(`${msg} (id: ${id})`);
-        }
-      }
-      setAlumnos(prev => prev.filter(a => !selected.has(a._id)));
+    const token = localStorage.getItem("token");
+
+    // Fallback: borrar uno a uno y devolver los que realmente se eliminaron
+    const borrarUnoAUno = async () => {
+      const headers = { Authorization: `Bearer ${token}` };
+      const calls = ids.map(id =>
+        fetch(`${API_BASE}/alumnos/${id}`, { method: "DELETE", headers })
+          .then(async (r) => {
+            if (!r.ok) {
+              let reason = `HTTP ${r.status}`;
+              try { const jj = await r.json(); if (jj?.msg) reason = jj.msg; } catch {}
+              throw new Error(reason);
+            }
+            return id;
+          })
+      );
+      const results = await Promise.allSettled(calls);
+      const okIds = results
+        .map((r, i) => (r.status === "fulfilled" ? ids[i] : null))
+        .filter(Boolean);
+      const fail = results.length - okIds.length;
+
+      setAlumnos(prev => prev.filter(a => !okIds.includes(a._id)));
       setSelected(new Set());
-      alert(`Se eliminaron ${ids.length} alumno(s).`);
+      alert(`Eliminados: ${okIds.length}${fail ? ` — Fallidos: ${fail} (ver consola)` : ""}`);
+      results.forEach((r, i) => {
+        if (r.status === "rejected") {
+          console.error(`❌ Falló eliminar ID=${ids[i]} →`, r.reason);
+        }
+      });
+    };
+
+    try {
+      // Intento 1: endpoint masivo
+      const res = await fetch(`${API_BASE}/alumnos/bulk-delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ids }),
+      });
+
+      const raw = await res.text();
+      let data; try { data = JSON.parse(raw); } catch { data = { raw }; }
+
+      if (res.ok) {
+        // Si el backend devuelve ids, usamos esos; si no, asumimos que fueron todos
+        const deletedIds = Array.isArray(data?.ids) ? data.ids : ids;
+        setAlumnos(prev => prev.filter(a => !deletedIds.includes(a._id)));
+        setSelected(new Set());
+        alert(`Se eliminaron ${Number(data?.deleted ?? deletedIds.length)} alumno(s).`);
+        return;
+      }
+
+      // Si la ruta no existe o el método no está permitido → fallback
+      if (res.status === 404 || res.status === 405) {
+        console.warn("bulk-delete no disponible:", res.status, data);
+        await borrarUnoAUno();
+        return;
+      }
+
+      // Otros errores con mensaje del server si lo hay
+      throw new Error(data?.msg || `Error en eliminación masiva (HTTP ${res.status})`);
     } catch (err) {
-      alert(err.message || "Error al eliminar en lote.");
+      console.error("Bulk delete error:", err);
+      // Error de red/CORS → fallback
+      if (String(err.message || "").toLowerCase().includes("failed to fetch")) {
+        await borrarUnoAUno();
+      } else {
+        alert(err.message || "Error en eliminación masiva");
+      }
     }
   }
 
