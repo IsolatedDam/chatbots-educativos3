@@ -39,9 +39,9 @@ const getApellido = (u) =>
 const RiesgoBadge = ({ value }) => {
   const v = String(value || '').toLowerCase();
   const map = {
-    verde: { bg: '#e8f7e8', color: '#137a2a', label: 'Verde' },
+    verde:    { bg: '#e8f7e8', color: '#137a2a', label: 'Verde' },
     amarillo: { bg: '#fff7cc', color: '#8a6d00', label: 'Amarillo' },
-    rojo: { bg: '#ffe1dd', color: '#9b1c1c', label: 'Rojo' },
+    rojo:     { bg: '#ffe1dd', color: '#9b1c1c', label: 'Rojo' },
   };
   const sty = map[v] || { bg: '#eef2f7', color: '#334155', label: v || '-' };
   return (
@@ -71,11 +71,30 @@ function GestionarUsuarios() {
 
   const token = localStorage.getItem('token') || '';
 
-  // Permisos del usuario actual (para poder editar riesgo)
+  // Permisos del usuario actual
   const usuarioActual = JSON.parse(localStorage.getItem('usuario') || '{}');
-  const esSuper = usuarioActual?.rol === 'superadmin';
+  const esSuper = String(usuarioActual?.rol || '').toLowerCase() === 'superadmin';
+  const esAdmin = String(usuarioActual?.rol || '').toLowerCase() === 'admin';
   const permisosActual = Array.isArray(usuarioActual?.permisos) ? usuarioActual.permisos : [];
   const puedeEditarRiesgo = esSuper || permisosActual.includes('alertas:editar_riesgo');
+  const puedeEliminarAlumnos = esSuper || esAdmin || permisosActual.includes('alumnos:eliminar');
+
+  // ====== Selección múltiple (ALUMNOS) ======
+  const [seleccion, setSeleccion] = useState([]); // array de IDs
+  const [eliminandoMasivo, setEliminandoMasivo] = useState(false);
+
+  const toggleSelect = (id) => {
+    setSeleccion(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const clearSelection = () => setSeleccion([]);
+
+  // --- helpers de año (usa anio || fechaIngreso || createdAt)
+  const getAnio = (u) => {
+    if (u?.anio != null) return u.anio;
+    const d = u?.fechaIngreso ? new Date(u.fechaIngreso) : (u?.createdAt ? new Date(u.createdAt) : null);
+    return d && !Number.isNaN(d.getTime()) ? d.getFullYear() : '';
+  };
 
   const obtenerUsuarios = useCallback(async () => {
     try {
@@ -89,6 +108,7 @@ function GestionarUsuarios() {
 
       const lista = Array.isArray(data) ? data : (data?.items || []);
       setUsuarios(lista);
+      setSeleccion([]); // reset selección al recargar
     } catch (err) {
       console.error('Error al obtener usuarios',
         err?.response?.status,
@@ -107,14 +127,8 @@ function GestionarUsuarios() {
     setFiltroJornada('');
     setFiltroSemestre('');
     setFiltroAnio('');
+    setSeleccion([]); // limpia selección al cambiar tipo
   }, [obtenerUsuarios]);
-
-  // --- helpers de año (usa anio || fechaIngreso || createdAt)
-  const getAnio = (u) => {
-    if (u?.anio != null) return u.anio;
-    const d = u?.fechaIngreso ? new Date(u.fechaIngreso) : (u?.createdAt ? new Date(u.createdAt) : null);
-    return d && !Number.isNaN(d.getTime()) ? d.getFullYear() : '';
-  };
 
   // Opciones de semestre detectadas (solo alumnos)
   const opcionesSemestre = useMemo(() => {
@@ -177,9 +191,29 @@ function GestionarUsuarios() {
     });
   }, [usuarios, tipoUsuario, filtroTexto, filtroJornada, filtroSemestre, filtroAnio]);
 
+  // Checkbox maestro (seleccionar todos los filtrados — solo alumnos)
+  const allFilteredIds = useMemo(() => (
+    tipoUsuario === 'alumnos'
+      ? usuariosFiltrados.map(u => u._id)
+      : []
+  ), [usuariosFiltrados, tipoUsuario]);
+
+  const allFilteredSelected = useMemo(() => (
+    allFilteredIds.length > 0 && allFilteredIds.every(id => seleccion.includes(id))
+  ), [allFilteredIds, seleccion]);
+
+  const toggleSelectAllFiltered = () => {
+    if (allFilteredSelected) {
+      // quitar todos los filtrados
+      setSeleccion(prev => prev.filter(id => !allFilteredIds.includes(id)));
+    } else {
+      // agregar todos los filtrados (sin duplicar)
+      setSeleccion(prev => Array.from(new Set([...prev, ...allFilteredIds])));
+    }
+  };
+
   const handleEditar = (usuario) => {
     setUsuarioEditando(usuario);
-    // Normaliza en el formulario; asegura arreglo de permisos en profesores
     const ap = getApellido(usuario);
     setFormulario({
       ...usuario,
@@ -192,7 +226,6 @@ function GestionarUsuarios() {
   const handleFormularioChange = (e) => {
     const { name, value } = e.target;
     const next = { ...formulario, [name]: value };
-    // Mantén sincronizados apellido/apellidos para el PUT
     if (name === 'apellido' || name === 'apellidos') {
       next.apellido = value;
       next.apellidos = value;
@@ -225,7 +258,6 @@ function GestionarUsuarios() {
       const payload = { ...formulario };
 
       if (tipoUsuario === 'alumnos') {
-        // normaliza tipos numéricos
         if (payload.semestre !== undefined && payload.semestre !== '') {
           payload.semestre = Number(payload.semestre);
         }
@@ -248,7 +280,7 @@ function GestionarUsuarios() {
     }
   };
 
-  /* === ELIMINAR (con fallback para compat) === */
+  /* === ELIMINAR individual (ya existente) === */
   const eliminarUsuario = async (u) => {
     const tipo = tipoUsuario === 'alumnos' ? 'alumno' : 'profesor';
     const { isConfirmed } = await Swal.fire({
@@ -262,7 +294,6 @@ function GestionarUsuarios() {
     if (!isConfirmed) return;
 
     try {
-      // 1) Endpoint “oficial”
       const endpointPath = tipoUsuario === 'alumnos' ? '/alumnos' : '/admin/profesores';
       await axios.delete(`${API_BASE}${endpointPath}/${u._id}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -270,7 +301,6 @@ function GestionarUsuarios() {
       await Swal.fire('Eliminado', `${tipo.charAt(0).toUpperCase() + tipo.slice(1)} eliminado correctamente.`, 'success');
       obtenerUsuarios();
     } catch (err1) {
-      // 2) Fallback de compatibilidad: /api/admin/:id (solo para profesores)
       const status = err1?.response?.status;
       const notFoundish = status === 404 || status === 405 || status === 400;
       if (tipoUsuario === 'profesores' && notFoundish) {
@@ -290,6 +320,63 @@ function GestionarUsuarios() {
 
       console.error('❌ Error al eliminar:', err1?.response?.status, err1?.response?.data || err1.message);
       Swal.fire('Error', err1?.response?.data?.msg || 'No se pudo eliminar.', 'error');
+    }
+  };
+
+  /* === ELIMINACIÓN MASIVA DE ALUMNOS === */
+  const eliminarAlumnosSeleccionados = async () => {
+    if (tipoUsuario !== 'alumnos') return;
+    if (!puedeEliminarAlumnos) {
+      Swal.fire('Permiso insuficiente', 'No tienes permiso para eliminar alumnos.', 'warning');
+      return;
+    }
+    if (!seleccion.length) return;
+
+    const count = seleccion.length;
+    const { isConfirmed } = await Swal.fire({
+      title: `Eliminar ${count} alumno${count > 1 ? 's' : ''}`,
+      html: `¿Seguro que deseas eliminar <b>${count}</b> alumno${count > 1 ? 's' : ''}?<br/>Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+    });
+    if (!isConfirmed) return;
+
+    try {
+      setEliminandoMasivo(true);
+      const headers = { Authorization: `Bearer ${token}` };
+      const promises = seleccion.map(id =>
+        axios.delete(`${API_BASE}/alumnos/${id}`, { headers })
+      );
+      const results = await Promise.allSettled(promises);
+
+      const ok = results.filter(r => r.status === 'fulfilled').length;
+      const fail = results.length - ok;
+
+      if (fail === 0) {
+        await Swal.fire('Listo', `Se eliminaron ${ok} alumno${ok > 1 ? 's' : ''}.`, 'success');
+      } else {
+        await Swal.fire({
+          title: 'Proceso finalizado',
+          html: `Eliminados: <b>${ok}</b><br/>Fallidos: <b>${fail}</b><br/><small>Revisa consola para detalles.</small>`,
+          icon: 'info'
+        });
+        // Log de fallos en consola
+        results.forEach((r, i) => {
+          if (r.status === 'rejected') {
+            console.error(`❌ Falló eliminar ID=${seleccion[i]}`, r.reason?.response?.status, r.reason?.response?.data || r.reason?.message);
+          }
+        });
+      }
+
+      clearSelection();
+      obtenerUsuarios();
+    } catch (e) {
+      console.error('❌ Error en eliminación masiva:', e);
+      Swal.fire('Error', 'No se pudo completar la eliminación masiva.', 'error');
+    } finally {
+      setEliminandoMasivo(false);
     }
   };
 
@@ -346,9 +433,11 @@ function GestionarUsuarios() {
     setFiltroJornada('');
     setFiltroSemestre('');
     setFiltroAnio('');
+    setSeleccion([]);
   };
 
   const isProf = tipoUsuario === 'profesores';
+  const isAlum = tipoUsuario === 'alumnos';
 
   return (
     <div className="gestionar-usuarios">
@@ -386,7 +475,7 @@ function GestionarUsuarios() {
           className="filtro-input"
         />
 
-        {tipoUsuario === 'alumnos' && (
+        {isAlum && (
           <>
             <select
               value={filtroJornada}
@@ -424,6 +513,23 @@ function GestionarUsuarios() {
 
         <button className="btn-sec" onClick={limpiarFiltros}>Limpiar</button>
         <button className="btn-prim" onClick={exportarExcel}>Descargar Excel (filtrado)</button>
+
+        {/* === Acciones masivas (solo alumnos) === */}
+        {isAlum && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 'auto' }}>
+            <span style={{ fontSize: 12, opacity: .8 }}>
+              Seleccionados: <b>{seleccion.length}</b>
+            </span>
+            <button
+              className="btn-del"
+              onClick={eliminarAlumnosSeleccionados}
+              disabled={!puedeEliminarAlumnos || !seleccion.length || eliminandoMasivo}
+              title={!puedeEliminarAlumnos ? 'No tienes permiso para eliminar alumnos' : undefined}
+            >
+              {eliminandoMasivo ? 'Eliminando…' : 'Eliminar seleccionados'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="tabla-contenedor">
@@ -434,6 +540,17 @@ function GestionarUsuarios() {
             <table className="tabla">
               <thead>
                 <tr>
+                  {/* Checkbox maestro solo en alumnos */}
+                  {isAlum && (
+                    <th style={{ width: 32, textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={allFilteredSelected && allFilteredIds.length > 0}
+                        onChange={toggleSelectAllFiltered}
+                        title="Seleccionar todos (filtrados)"
+                      />
+                    </th>
+                  )}
                   <th>Correo</th>
                   <th>Nombre</th>
                   <th>Apellido</th>
@@ -459,6 +576,16 @@ function GestionarUsuarios() {
               <tbody>
                 {usuariosFiltrados.map((u) => (
                   <tr key={u._id}>
+                    {/* Checkbox por fila (solo alumnos) */}
+                    {isAlum && (
+                      <td style={{ textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={seleccion.includes(u._id)}
+                          onChange={() => toggleSelect(u._id)}
+                        />
+                      </td>
+                    )}
                     <td>{u.correo}</td>
                     <td>{u.nombre}</td>
                     <td>{getApellido(u) || '-'}</td>
@@ -494,7 +621,7 @@ function GestionarUsuarios() {
                 ))}
                 {!usuariosFiltrados.length && (
                   <tr>
-                    <td colSpan={isProf ? 7 : 10}>
+                    <td colSpan={isProf ? 7 : 11 /* +1 por checkbox en alumnos */}>
                       Sin resultados.
                     </td>
                   </tr>

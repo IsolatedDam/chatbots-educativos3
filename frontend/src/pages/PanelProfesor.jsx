@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { decryptLocalPassword } from "../utils/localVault"; // ⬅️ si no lo usas, puedes quitar esta línea
 import "../styles/PanelProfesor.css";
 
 const API_BASE = "https://chatbots-educativos3.onrender.com/api";
@@ -18,18 +19,7 @@ function riesgoMensajeFE(r) {
   if (r === "rojo") return "ROJO = suspendido, por favor pasar por secretaría";
   return "Suscripción activa";
 }
-function RiesgoPill({ riesgo }) {
-  const r = (riesgo || "").toLowerCase();
-  const bg = r === "verde" ? "#27ae60" : r === "amarillo" ? "#f1c40f" : r === "rojo" ? "#c0392b" : "#95a5a6";
-  const label = r ? r.toUpperCase() : "—";
-  return (
-    <span style={{ background: bg, color: "#fff", padding: "4px 10px", borderRadius: 999, fontWeight: 700 }}>
-      {label}
-    </span>
-  );
-}
-
-/* === Texto para la columna de Riesgo === */
+/* Texto para la columna de Riesgo */
 function riesgoTextoTabla(a) {
   const r = String(
     a?.riesgo ??
@@ -45,57 +35,15 @@ function riesgoTextoTabla(a) {
   return "—";
 }
 
-/* ================== CIFRADO LOCAL (opcional) ==================
-   - Si en el login guardas localStorage.password_enc (cadena base64),
-     aquí se desencripta para mostrarla con el ojito.
-   - Clave derivada con PBKDF2 desde una passphrase fija + userId.
-   - Ojo: es para *comodidad de usuario*, NO reemplaza seguridad de servidor. */
-const LOCAL_PASSPHRASE = "APP_LOCAL_VAULT_v1"; // cambia esta cadena en tu proyecto
-
-function b64toArr(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
-function arrToB64(a) { return btoa(String.fromCharCode(...new Uint8Array(a))); }
-
-async function deriveKey(passphrase, saltStr) {
-  const enc = new TextEncoder();
-  const baseKey = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-  return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: enc.encode(saltStr), iterations: 100000, hash: "SHA-256" },
-    baseKey,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"]
-  );
-}
-
-export async function encryptLocalPassword(plain, userId) {
-  const key = await deriveKey(LOCAL_PASSPHRASE, userId || "anon");
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(plain));
-  return `v1.${arrToB64(iv)}.${arrToB64(ct)}`;
-}
-
-async function decryptLocalPassword(packed, userId) {
-  try {
-    const [v, ivb64, ctb64] = String(packed).split(".");
-    if (v !== "v1") return "";
-    const key = await deriveKey(LOCAL_PASSPHRASE, userId || "anon");
-    const pt = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: b64toArr(ivb64) },
-      key,
-      b64toArr(ctb64)
-    );
-    return new TextDecoder().decode(pt);
-  } catch {
-    return "";
-  }
-}
-
 export default function PanelProfesor() {
   // === Estado principal ===
   const [vistaActiva, setVistaActiva] = useState("cuenta"); // ← Mi cuenta por defecto
   const [alumnos, setAlumnos] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Selección múltiple
+  const [selected, setSelected] = useState(new Set());
 
   // Modal de edición
   const [editOpen, setEditOpen] = useState(false);
@@ -113,26 +61,29 @@ export default function PanelProfesor() {
     role === "admin" ||
     (role === "profesor" && permisos.includes("alumnos:eliminar"));
 
-  // ====== “Mi cuenta”: contraseña con ojito (local + descifrado opcional) ======
+  // ====== “Mi cuenta”: contraseña con ojito (lee y DESCIFRA localStorage.password_enc) ======
   const [pwdVisible, setPwdVisible] = useState(false);
   const [storedPwd, setStoredPwd] = useState("");
 
   useEffect(() => {
     (async () => {
-      // Prioridad: encrypted -> plain fallbacks
-      const encPwd = localStorage.getItem("password_enc");
-      if (encPwd) {
-        const dec = await decryptLocalPassword(encPwd, me?._id || me?.id || me?.correo || "");
-        if (dec) { setStoredPwd(dec); return; }
+      const enc = localStorage.getItem("password_enc");
+      const salt = me?._id || me?.correo || me?.id || "anon";
+      if (enc && decryptLocalPassword) {
+        try {
+          const dec = await decryptLocalPassword(enc, salt);
+          setStoredPwd(dec || "");
+        } catch { setStoredPwd(""); }
+      } else {
+        const plain =
+          localStorage.getItem("password") ||
+          localStorage.getItem("pwd") ||
+          localStorage.getItem("pass") ||
+          "";
+        setStoredPwd(plain);
       }
-      const candidate =
-        localStorage.getItem("password") ||
-        localStorage.getItem("pwd") ||
-        localStorage.getItem("pass") ||
-        "";
-      setStoredPwd(candidate || "");
     })();
-  }, [me?._id, me?.correo]);
+  }, [me?._id, me?.correo, me?.id]);
 
   // === Cerrar sesión ===
   const handleLogout = () => {
@@ -150,6 +101,7 @@ export default function PanelProfesor() {
       if (!res.ok) throw new Error("No autorizado");
       const data = await res.json();
       setAlumnos(Array.isArray(data) ? data : []);
+      setSelected(new Set()); // limpia selección al refrescar
     } catch (err) {
       alert(err.message || "No se pudieron cargar alumnos");
     } finally {
@@ -173,7 +125,7 @@ export default function PanelProfesor() {
       ...alumno,
       documento: alumno.numero_documento ?? alumno.rut ?? "",
       habilitado: alumno.habilitado ?? true,
-      suscripcionVenceEl: alumno.suscripcionVenceEl || "",
+      suscripcionVenceEl: alumno.suscripcionVenceEl || "", // ISO o 'YYYY-MM-DD'
       riesgo: riesgoInit,
     });
     setEditOpen(true);
@@ -210,6 +162,7 @@ export default function PanelProfesor() {
                 ? `${editDraft.suscripcionVenceEl}T00:00:00.000Z`
                 : editDraft.suscripcionVenceEl)
             : undefined,
+        // compat para tu backend
         riesgo: riesgoValido || undefined,
         color_riesgo: riesgoValido || undefined,
         numero_documento: editDraft.documento ?? editDraft.numero_documento ?? editDraft.rut,
@@ -235,7 +188,7 @@ export default function PanelProfesor() {
     }
   }
 
-  // === Eliminar alumno ===
+  // === Eliminar alumno (individual) ===
   async function handleDelete(id) {
     if (!canDeleteAlumno) {
       alert("No tienes permiso para eliminar alumnos.");
@@ -254,10 +207,64 @@ export default function PanelProfesor() {
         throw new Error(`${msg} (HTTP ${res.status})`);
       }
       setAlumnos((prev) => prev.filter((a) => a._id !== id));
+      setSelected(prev => {
+        const n = new Set(prev); n.delete(id); return n;
+      });
     } catch (err) {
       alert(err.message);
     }
   }
+
+  // === Eliminación MASIVA ===
+  async function handleBulkDelete() {
+    if (!canDeleteAlumno) {
+      alert("No tienes permiso para eliminar alumnos.");
+      return;
+    }
+    const ids = Array.from(selected);
+    if (!ids.length) {
+      alert("No hay alumnos seleccionados.");
+      return;
+    }
+    if (!window.confirm(`¿Eliminar ${ids.length} alumno(s)? Esta acción no se puede deshacer.`)) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      // Secuencial para evitar saturar el backend (seguro y simple)
+      for (const id of ids) {
+        const res = await fetch(`${API_BASE}/alumnos/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          let msg = "Error al eliminar";
+          try { const j = await res.json(); if (j?.msg) msg = j.msg; } catch {}
+          throw new Error(`${msg} (id: ${id})`);
+        }
+      }
+      setAlumnos(prev => prev.filter(a => !selected.has(a._id)));
+      setSelected(new Set());
+      alert(`Se eliminaron ${ids.length} alumno(s).`);
+    } catch (err) {
+      alert(err.message || "Error al eliminar en lote.");
+    }
+  }
+
+  // Toggle selección
+  const toggleRow = (id) => {
+    setSelected(prev => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  };
+  const selectAllCurrent = () => {
+    setSelected(prev => {
+      const allIds = alumnos.map(a => a._id);
+      const allSelected = alumnos.length > 0 && alumnos.every(a => prev.has(a._id));
+      return allSelected ? new Set() : new Set(allIds);
+    });
+  };
 
   // === UI helpers para "datos" ===
   function BarraBusqueda({ onBuscar, onRefrescar }) {
@@ -272,17 +279,54 @@ export default function PanelProfesor() {
         <div className="spacer" />
         <button className="btn btn-ghost" onClick={() => onBuscar(search)}>Buscar</button>
         <button className="btn btn-ghost" onClick={() => { setSearch(""); onRefrescar(); }}>Refrescar</button>
+
+        {/* Barra de acciones masivas */}
+        {canDeleteAlumno && (
+          <div style={{ marginLeft: 12, display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ opacity: 0.8 }}>
+              Seleccionados: <b>{selected.size}</b>
+            </span>
+            <button
+              className="btn btn-danger"
+              disabled={selected.size === 0}
+              onClick={handleBulkDelete}
+              title="Eliminar alumnos seleccionados"
+            >
+              Eliminar seleccionados
+            </button>
+          </div>
+        )}
       </div>
     );
   }
 
   function TablaListado() {
     const rows = alumnos;
+    const hdrChkRef = useRef(null);
+
+    const allSelected = rows.length > 0 && rows.every(a => selected.has(a._id));
+    const noneSelected = rows.every(a => !selected.has(a._id));
+    const someSelected = !allSelected && !noneSelected;
+
+    useEffect(() => {
+      if (hdrChkRef.current) hdrChkRef.current.indeterminate = someSelected;
+    }, [someSelected, rows, selected]);
+
     return (
       <div className="table-wrap datos-table-wrap">
         <table className="table">
           <thead>
             <tr>
+              {/* columna selección */}
+              <th style={{ width: 36, textAlign: "center" }}>
+                <input
+                  ref={hdrChkRef}
+                  type="checkbox"
+                  checked={allSelected && !someSelected}
+                  onChange={selectAllCurrent}
+                  title={allSelected ? "Quitar selección" : "Seleccionar todos"}
+                />
+              </th>
               <th>RUT/DNI</th>
               <th>Nombre</th>
               <th>Apellido</th>
@@ -308,8 +352,18 @@ export default function PanelProfesor() {
                   ""
                 );
                 const venceStr = a.suscripcionVenceEl ? String(a.suscripcionVenceEl).slice(0, 10) : "—";
+                const checked = selected.has(a._id);
                 return (
                   <tr key={a._id}>
+                    {/* checkbox fila */}
+                    <td style={{ textAlign: "center" }}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleRow(a._id)}
+                        title={checked ? "Quitar selección" : "Seleccionar fila"}
+                      />
+                    </td>
                     <td>{a.numero_documento ?? a.rut ?? "-"}</td>
                     <td>{a.nombre ?? "-"}</td>
                     <td>{a.apellido ?? "-"}</td>
@@ -412,7 +466,6 @@ export default function PanelProfesor() {
         {vistaActiva === "cuenta" && (
           <section className="section">
             <h3 style={{ textAlign: "center" }}>Mi cuenta</h3>
-
             {/* Tarjeta centrada */}
             <div className="account-card">
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -440,7 +493,7 @@ export default function PanelProfesor() {
                   <input
                     type={pwdVisible ? "text" : "password"}
                     value={storedPwd}
-                    onChange={(e) => setStoredPwd(e.target.value)}
+                    readOnly
                     placeholder="No disponible (no se guarda en el servidor)"
                     style={{ flex: 1 }}
                   />
@@ -455,10 +508,6 @@ export default function PanelProfesor() {
                     {pwdVisible ? "🙈" : "👁️"}
                   </button>
                 </div>
-                <small className="kicker">
-                  Por seguridad, el servidor no devuelve contraseñas. Puedes guardar la tuya cifrada en
-                  <code> localStorage.password_enc </code> al iniciar sesión para verla aquí con el ojito.
-                </small>
               </div>
             </div>
           </section>

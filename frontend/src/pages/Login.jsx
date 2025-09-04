@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { encryptLocalPassword } from '../utils/localVault'; // ← cifrado local
 import '../styles/Login.css';
 
 function Login() {
@@ -49,16 +50,40 @@ function Login() {
       const usuario = res.data.alumno || res.data.admin;
       const token = res.data.token;
 
+      // Guarda sesión
       localStorage.setItem('token', token);
       localStorage.setItem('usuario', JSON.stringify(usuario));
 
+      // 🔐 Guarda contraseña CIFRADA solo para profesor/admin
+      if (rol !== 'alumno') {
+        try {
+          const salt =
+            usuario?._id || usuario?.correo || usuario?.rut || rutLimpio || 'anon';
+          const enc = await encryptLocalPassword(contrasenaLimpia, salt);
+          if (enc) localStorage.setItem('password_enc', enc);
+        } catch {
+          // Si el navegador no soporta WebCrypto, simplemente no guardamos nada
+        }
+        // Limpia cualquier copia en claro (por si existía de antes)
+        localStorage.removeItem('password');
+        localStorage.removeItem('pwd');
+        localStorage.removeItem('pass');
+      } else {
+        // Alumno: no guardamos contraseña cifrada
+        localStorage.removeItem('password_enc');
+      }
+
+      // Redirección según rol
       if (rol === 'alumno') {
         navigate('/panel-alumno');
       } else {
         const tipo = usuario.rol;
         if (tipo === 'superadmin') navigate('/panel-admin');
         else if (tipo === 'profesor' || tipo === 'admin') navigate('/panel-profesor');
-        else setMensaje('Rol no reconocido');
+        else {
+          setMensaje('Rol no reconocido');
+          setTimeout(() => setMensaje(''), 3000);
+        }
       }
     } catch (err) {
       const errorMsg = err.response?.data?.msg || 'Error al iniciar sesión';

@@ -1,10 +1,10 @@
 // src/components/RegistroAdmin.jsx
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import '../styles/RegistroProfesor.css';     // estilos del form
-import '../styles/GestionarUsuarios.css';    // reutilizamos estilos de tabla
+import '../styles/RegistroProfesor.css';
+import '../styles/GestionarUsuarios.css';
 
-/* === Catálogo de permisos (igual que en RegistroProfesor / GestionarUsuarios) === */
+/* === Catálogo de permisos (SIN "chatbots:crear" ni "chatbots:subir_material") === */
 const PERMISOS = [
   { grupo: 'Datos del alumno', items: [
     { key: 'alumnos:editar_doc',       label: 'Rut / DNI / Pasaporte' },
@@ -19,13 +19,17 @@ const PERMISOS = [
     { key: 'alertas:editar_riesgo',     label: 'Edición de alertas de riesgo' },
   ]},
   { grupo: 'Acciones administrativas', items: [
-    { key: 'alumnos:eliminar',           label: 'Eliminar alumno individual' },
-    { key: 'chatbots:crear',             label: 'Crear nuevos chatbots' },
-    { key: 'chatbots:subir_material',    label: 'Subir material a cada chatbot' },
-    { key: 'alumnos:carga_masiva',       label: 'Subir Excel con listado de alumnos' },
-    { key: 'profesores:crear_editar',    label: 'Crear / Editar profesores' },
+    { key: 'alumnos:eliminar',        label: 'Eliminar alumno individual' },
+    { key: 'alumnos:carga_masiva',    label: 'Subir Excel con listado de alumnos' },
+    { key: 'profesores:crear_editar', label: 'Crear / Editar profesores' },
   ]}
 ];
+
+/* Bloqueo extra por si en el futuro alguien agrega esos permisos por error */
+const PERMISOS_BLOQUEADOS = new Set([
+  'chatbots:crear',
+  'chatbots:subir_material',
+]);
 
 const API_BASE   = 'https://chatbots-educativos3.onrender.com/api';
 const EP_CREATE  = `${API_BASE}/admin/profesores`;
@@ -48,7 +52,7 @@ export default function RegistroAdmin() {
   const ALL_KEYS = useMemo(() => PERMISOS.flatMap(g => g.items.map(i => i.key)), []);
   const hoyISO   = new Date().toISOString().slice(0,10);
 
-  /* ===== Formulario (migrado de RegistroProfesor) ===== */
+  /* ===== Formulario ===== */
   const [form, setForm] = useState({
     nombre: '', apellido: '', correo: '', password: '',
     tipo_documento: 'RUT', numero_documento: '', telefono: '',
@@ -88,6 +92,9 @@ export default function RegistroAdmin() {
       alert('Fecha de creación no válida (usa YYYY-MM-DD).'); return;
     }
 
+    // 🔒 Filtro defensivo: quita permisos bloqueados antes de enviar
+    const permisosFiltrados = (permisos || []).filter(k => !PERMISOS_BLOQUEADOS.has(k));
+
     const rut = tipo_documento === 'RUT' ? numero_documento : '';
     setEnviando(true);
     try {
@@ -97,7 +104,7 @@ export default function RegistroAdmin() {
         apellidos: apellido, // compat backend
         correo: correo.trim(),
         password,
-        permisos,
+        permisos: permisosFiltrados, // ← usamos los filtrados
         rol: 'profesor',
         tipo_documento,
         numero_documento,
@@ -115,7 +122,7 @@ export default function RegistroAdmin() {
     } finally { setEnviando(false); }
   };
 
-  /* ===== Tabla (misma lógica de GestionarUsuarios para PROFESORES) ===== */
+  /* ===== Tabla de PROFESORES ===== */
   const [profesores, setProfesores] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [filtroTexto, setFiltroTexto] = useState('');
@@ -258,7 +265,11 @@ export default function RegistroAdmin() {
                 <div className="perm-grid">
                   {grupo.items.map(p => (
                     <label key={p.key} className="perm-item">
-                      <input type="checkbox" checked={permisos.includes(p.key)} onChange={() => togglePerm(p.key)} />
+                      <input
+                        type="checkbox"
+                        checked={permisos.includes(p.key)}
+                        onChange={() => togglePerm(p.key)}
+                      />
                       <span>{p.label}</span>
                     </label>
                   ))}
@@ -274,7 +285,7 @@ export default function RegistroAdmin() {
           </div>
         </form>
 
-        {/* ===== Tabla de PROFESORES (misma lógica de GestionarUsuarios) ===== */}
+        {/* ===== Tabla de PROFESORES ===== */}
         <section className="card" style={{ marginTop: 24 }}>
           <div className="card__head card__head--row">
             <h3>Profesores registrados</h3>
