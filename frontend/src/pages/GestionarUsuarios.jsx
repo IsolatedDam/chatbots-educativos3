@@ -31,11 +31,36 @@ const PERMISOS = [
 ];
 const ALL_KEYS = PERMISOS.flatMap(g => g.items.map(i => i.key));
 
+/* ========= NUEVO: helpers de riesgo (mismo criterio que PanelProfesor) ========= */
+function calcRiesgoFE(vence) {
+  if (!vence) return '';
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const end = new Date(vence); end.setHours(0,0,0,0);
+  if (Number.isNaN(end.getTime())) return '';
+  const diff = Math.floor((end - hoy) / 86400000);
+  if (diff < 0) return 'rojo';
+  if (diff <= 10) return 'amarillo';
+  return 'verde';
+}
+function deriveRiesgo(a) {
+  const r =
+    (a?.riesgo ?? a?.color_riesgo ?? a?.riesgo_color ?? calcRiesgoFE(a?.suscripcionVenceEl) ?? '').toString().toLowerCase();
+  let rr = ['verde','amarillo','rojo'].includes(r) ? r : '';
+  if (a?.habilitado === false) rr = 'rojo';
+  return rr;
+}
+function riesgoMensajeFE(r) {
+  if (r === 'amarillo') return 'AMARILLO = suspensión en 10 días';
+  if (r === 'rojo') return 'ROJO = suspendido, por favor pasar por secretaría';
+  if (r === 'verde') return 'Suscripción activa';
+  return '—';
+}
+
 /* Helper: apellido con fallbacks */
 const getApellido = (u) =>
   u?.apellido ?? u?.apellidos ?? u?.lastName ?? u?.lastname ?? '';
 
-/* Badge de riesgo (simple) */
+/* Badge de riesgo (usa value ya normalizado) */
 const RiesgoBadge = ({ value }) => {
   const v = String(value || '').toLowerCase();
   const map = {
@@ -76,7 +101,9 @@ function GestionarUsuarios() {
   const esSuper = String(usuarioActual?.rol || '').toLowerCase() === 'superadmin';
   const esAdmin = String(usuarioActual?.rol || '').toLowerCase() === 'admin';
   const permisosActual = Array.isArray(usuarioActual?.permisos) ? usuarioActual.permisos : [];
-  const puedeEditarRiesgo = esSuper || permisosActual.includes('alertas:editar_riesgo');
+
+  /* ========= NUEVO: admin también puede editar riesgo ========= */
+  const puedeEditarRiesgo = esSuper || esAdmin || permisosActual.includes('alertas:editar_riesgo');
   const puedeEliminarAlumnos = esSuper || esAdmin || permisosActual.includes('alumnos:eliminar');
 
   // ====== Selección múltiple (ALUMNOS) ======
@@ -167,7 +194,7 @@ function GestionarUsuarios() {
         u.rut,
         u.cargo,
         u.telefono,
-        u.riesgo
+        deriveRiesgo(u) /* NUEVO: permite buscar por texto "rojo"/"amarillo"/"verde" */
       ].filter(Boolean).join(' ').toLowerCase();
 
       if (texto && !base.includes(texto)) return false;
@@ -215,11 +242,14 @@ function GestionarUsuarios() {
   const handleEditar = (usuario) => {
     setUsuarioEditando(usuario);
     const ap = getApellido(usuario);
+    /* ========= NUEVO: riesgo derivado como valor inicial ========= */
+    const riesgoInit = deriveRiesgo(usuario);
     setFormulario({
       ...usuario,
       apellido: ap,
       apellidos: ap,
-      permisos: Array.isArray(usuario.permisos) ? usuario.permisos : []
+      permisos: Array.isArray(usuario.permisos) ? usuario.permisos : [],
+      riesgo: riesgoInit
     });
   };
 
@@ -263,6 +293,22 @@ function GestionarUsuarios() {
         }
         if (payload.anio !== undefined && payload.anio !== '') {
           payload.anio = Number(payload.anio);
+        }
+
+        /* ========= NUEVO: normalizar riesgo + habilitado ========= */
+        if (typeof payload.riesgo === 'string') {
+          const r = payload.riesgo.toLowerCase();
+          if (['verde','amarillo','rojo'].includes(r)) {
+            payload.riesgo = r;
+            payload.color_riesgo = r; // compat con back/colecciones antiguas
+            // regla de negocio: rojo => suspendido, otros => activo (si no viene habilitado explícito)
+            if (payload.habilitado === undefined) {
+              payload.habilitado = r === 'rojo' ? false : true;
+            }
+          } else {
+            delete payload.riesgo;
+            delete payload.color_riesgo;
+          }
         }
       }
 
@@ -397,7 +443,7 @@ function GestionarUsuarios() {
             Jornada: u.jornada ?? '',
             Año: anio || '',
             Teléfono: u.telefono || '',
-            Riesgo: (u.riesgo || '').toString() || ''
+            Riesgo: deriveRiesgo(u).toUpperCase() || ''
           };
         } else {
           return {
@@ -574,51 +620,56 @@ function GestionarUsuarios() {
                 </tr>
               </thead>
               <tbody>
-                {usuariosFiltrados.map((u) => (
-                  <tr key={u._id}>
-                    {/* Checkbox por fila (solo alumnos) */}
-                    {isAlum && (
-                      <td style={{ textAlign: 'center' }}>
-                        <input
-                          type="checkbox"
-                          checked={seleccion.includes(u._id)}
-                          onChange={() => toggleSelect(u._id)}
-                        />
+                {usuariosFiltrados.map((u) => {
+                  const r = deriveRiesgo(u); // NUEVO
+                  return (
+                    <tr key={u._id}>
+                      {/* Checkbox por fila (solo alumnos) */}
+                      {isAlum && (
+                        <td style={{ textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={seleccion.includes(u._id)}
+                            onChange={() => toggleSelect(u._id)}
+                          />
+                        </td>
+                      )}
+                      <td>{u.correo}</td>
+                      <td>{u.nombre}</td>
+                      <td>{getApellido(u) || '-'}</td>
+                      {isProf ? (
+                        <>
+                          <td>{u.rut}</td>
+                          <td>{u.cargo || '-'}</td>
+                          <td>{getAnio(u) || '-'}</td>
+                        </>
+                      ) : (
+                        <>
+                          <td>{u.numero_documento}</td>
+                          <td>{u.semestre ?? '-'}</td>
+                          <td>{u.jornada || '-'}</td>
+                          <td>{getAnio(u) || '-'}</td>
+                          <td>{u.telefono || '-'}</td>
+                          <td title={riesgoMensajeFE(r)}>
+                            <RiesgoBadge value={r} />
+                          </td>
+                        </>
+                      )}
+                      <td>
+                        <button className="btn-edit" onClick={() => handleEditar(u)}>
+                          Editar
+                        </button>
+                        <button
+                          className="btn-del"
+                          onClick={() => eliminarUsuario(u)}
+                          style={{ marginLeft: 8 }}
+                        >
+                          Eliminar
+                        </button>
                       </td>
-                    )}
-                    <td>{u.correo}</td>
-                    <td>{u.nombre}</td>
-                    <td>{getApellido(u) || '-'}</td>
-                    {isProf ? (
-                      <>
-                        <td>{u.rut}</td>
-                        <td>{u.cargo || '-'}</td>
-                        <td>{getAnio(u) || '-'}</td>
-                      </>
-                    ) : (
-                      <>
-                        <td>{u.numero_documento}</td>
-                        <td>{u.semestre ?? '-'}</td>
-                        <td>{u.jornada || '-'}</td>
-                        <td>{getAnio(u) || '-'}</td>
-                        <td>{u.telefono || '-'}</td>
-                        <td><RiesgoBadge value={u.riesgo} /></td>
-                      </>
-                    )}
-                    <td>
-                      <button className="btn-edit" onClick={() => handleEditar(u)}>
-                        Editar
-                      </button>
-                      <button
-                        className="btn-del"
-                        onClick={() => eliminarUsuario(u)}
-                        style={{ marginLeft: 8 }}
-                      >
-                        Eliminar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                    </tr>
+                  );
+                })}
                 {!usuariosFiltrados.length && (
                   <tr>
                     <td colSpan={isProf ? 7 : 11 /* +1 por checkbox en alumnos */}>
@@ -697,19 +748,48 @@ function GestionarUsuarios() {
                 </select>
                 <input name="telefono" value={formulario.telefono || ''} onChange={handleFormularioChange} placeholder="Teléfono" />
 
-                {/* Riesgo (si tiene permiso) */}
-                <select
-                  name="riesgo"
-                  value={formulario.riesgo || ''}
-                  onChange={handleFormularioChange}
-                  disabled={!puedeEditarRiesgo}
-                  title={!puedeEditarRiesgo ? 'No tienes permiso para editar riesgo' : undefined}
-                >
-                  <option value="">Riesgo (sin definir)</option>
-                  <option value="verde">Verde</option>
-                  <option value="amarillo">Amarillo</option>
-                  <option value="rojo">Rojo</option>
-                </select>
+                {/* ========= NUEVO: Riesgo con preview (si tiene permiso) ========= */}
+                <label style={{ display: 'block', marginTop: 8 }}>
+                  <span style={{ display: 'block', fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Color de riesgo</span>
+                  <select
+                    name="riesgo"
+                    value={formulario.riesgo || ''}
+                    onChange={handleFormularioChange}
+                    disabled={!puedeEditarRiesgo}
+                    title={!puedeEditarRiesgo ? 'No tienes permiso para editar riesgo' : undefined}
+                  >
+                    <option value="">Riesgo (sin definir)</option>
+                    <option value="verde">Verde</option>
+                    <option value="amarillo">Amarillo</option>
+                    <option value="rojo">Rojo</option>
+                  </select>
+                </label>
+
+                {/* Vista previa y mensaje */}
+                <div style={{ marginTop: 8 }}>
+                  {(() => {
+                    const r = (formulario.riesgo || deriveRiesgo(formulario) || '').toLowerCase();
+                    const bg = r === 'verde' ? '#27ae60' : r === 'amarillo' ? '#f1c40f' : r === 'rojo' ? '#c0392b' : '#95a5a6';
+                    return (
+                      <>
+                        <div
+                          style={{
+                            display: 'inline-block',
+                            padding: '4px 10px',
+                            borderRadius: 999,
+                            background: bg,
+                            color: '#fff',
+                            fontWeight: 700,
+                            marginRight: 8
+                          }}
+                        >
+                          {(r || '—').toString().toUpperCase()}
+                        </div>
+                        <small style={{ opacity: 0.8 }}>{riesgoMensajeFE(r)}</small>
+                      </>
+                    );
+                  })()}
+                </div>
               </>
             )}
 

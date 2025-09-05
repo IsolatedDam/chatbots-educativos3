@@ -17,7 +17,7 @@ const STATIC_ALLOWED = [
   'http://localhost:3000',
   'http://localhost:5173',
   'https://chatbots-educativos3.vercel.app',
-  'https://chatbots-educativos3-bsm7swjd7-alejandros-projects-bb949aab.vercel.app', // tu preview actual
+  'https://chatbots-educativos3-bsm7swjd7-alejandros-projects-bb949aab.vercel.app',
 ];
 
 // Si quieres permitir cualquier *.vercel.app, setea en Render:
@@ -48,7 +48,7 @@ app.use(cors(corsOptions));
 // ⭐️ FIX: en algunos entornos `'*'` rompe path-to-regexp, usa RegExp:
 app.options(/.*/, cors(corsOptions));
 
-/* (Opcional) log de preflights para depurar CORS */
+/* log de preflights para depurar CORS */
 app.use((req, _res, next) => {
   if (req.method === 'OPTIONS') {
     console.log('CORS preflight from:', req.headers.origin, 'to', req.originalUrl);
