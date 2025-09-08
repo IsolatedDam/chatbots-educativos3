@@ -2,6 +2,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import { decryptLocalPassword } from '../utils/localVault'; // 👈 NECESARIO para descifrar claves locales
 import '../styles/GestionarUsuarios.css';
 
 const API_BASE = 'https://chatbots-educativos3.onrender.com/api';
@@ -31,7 +32,7 @@ const PERMISOS = [
 ];
 const ALL_KEYS = PERMISOS.flatMap(g => g.items.map(i => i.key));
 
-/* ========= NUEVO: helpers de riesgo (mismo criterio que PanelProfesor) ========= */
+/* ========= Helpers de riesgo (mismo criterio que PanelProfesor) ========= */
 function calcRiesgoFE(vence) {
   if (!vence) return '';
   const hoy = new Date(); hoy.setHours(0,0,0,0);
@@ -79,6 +80,41 @@ const RiesgoBadge = ({ value }) => {
   );
 };
 
+/* ============ NUEVO: util para obtener clave local de un profesor ============ */
+async function getLocalProfPassword(prof) {
+  const salt = prof?._id || prof?.correo || 'salt';
+  // Candidatos cifrados
+  const candidatesEnc = [
+    `prof_pwd_enc::${prof?._id}`,
+    `prof_pwd_enc::${prof?.correo}`,
+    `password_enc::${prof?._id}`,
+    `password_enc::${prof?.correo}`,
+    `prof_${prof?._id}_pwd_enc`,
+    `prof_${prof?.correo}_pwd_enc`,
+  ];
+  for (const k of candidatesEnc) {
+    const enc = localStorage.getItem(k);
+    if (enc && decryptLocalPassword) {
+      try {
+        const dec = await decryptLocalPassword(enc, salt);
+        if (dec) return dec;
+      } catch {}
+    }
+  }
+  // Candidatos en claro (fallback)
+  const candidatesPlain = [
+    `prof_pwd::${prof?._id}`,
+    `prof_pwd::${prof?.correo}`,
+    `prof_${prof?._id}_pwd`,
+    `prof_${prof?.correo}_pwd`,
+  ];
+  for (const k of candidatesPlain) {
+    const v = localStorage.getItem(k);
+    if (v) return v;
+  }
+  return '';
+}
+
 function GestionarUsuarios() {
   const [usuarios, setUsuarios] = useState([]);
   const [tipoUsuario, setTipoUsuario] = useState('alumnos'); // 'alumnos' | 'profesores'
@@ -102,9 +138,13 @@ function GestionarUsuarios() {
   const esAdmin = String(usuarioActual?.rol || '').toLowerCase() === 'admin';
   const permisosActual = Array.isArray(usuarioActual?.permisos) ? usuarioActual.permisos : [];
 
-  /* ========= NUEVO: admin también puede editar riesgo ========= */
+  // admin también puede editar riesgo
   const puedeEditarRiesgo = esSuper || esAdmin || permisosActual.includes('alertas:editar_riesgo');
   const puedeEliminarAlumnos = esSuper || esAdmin || permisosActual.includes('alumnos:eliminar');
+
+  // ====== NUEVO: visibilidad y cache de claves por profesor ======
+  const [pwdCache, setPwdCache] = useState({});   // { [profId]: 'clave' }
+  const [pwdVisible, setPwdVisible] = useState({}); // { [profId]: boolean }
 
   // ====== Selección múltiple (ALUMNOS) ======
   const [seleccion, setSeleccion] = useState([]); // array de IDs
@@ -194,7 +234,7 @@ function GestionarUsuarios() {
         u.rut,
         u.cargo,
         u.telefono,
-        deriveRiesgo(u) /* NUEVO: permite buscar por texto "rojo"/"amarillo"/"verde" */
+        deriveRiesgo(u) /* permite buscar por "rojo"/"amarillo"/"verde" */
       ].filter(Boolean).join(' ').toLowerCase();
 
       if (texto && !base.includes(texto)) return false;
@@ -242,7 +282,6 @@ function GestionarUsuarios() {
   const handleEditar = (usuario) => {
     setUsuarioEditando(usuario);
     const ap = getApellido(usuario);
-    /* ========= NUEVO: riesgo derivado como valor inicial ========= */
     const riesgoInit = deriveRiesgo(usuario);
     setFormulario({
       ...usuario,
@@ -294,14 +333,12 @@ function GestionarUsuarios() {
         if (payload.anio !== undefined && payload.anio !== '') {
           payload.anio = Number(payload.anio);
         }
-
-        /* ========= NUEVO: normalizar riesgo + habilitado ========= */
+        // normalizar riesgo + habilitado
         if (typeof payload.riesgo === 'string') {
           const r = payload.riesgo.toLowerCase();
           if (['verde','amarillo','rojo'].includes(r)) {
             payload.riesgo = r;
-            payload.color_riesgo = r; // compat con back/colecciones antiguas
-            // regla de negocio: rojo => suspendido, otros => activo (si no viene habilitado explícito)
+            payload.color_riesgo = r; // compat
             if (payload.habilitado === undefined) {
               payload.habilitado = r === 'rojo' ? false : true;
             }
@@ -326,7 +363,7 @@ function GestionarUsuarios() {
     }
   };
 
-  /* === ELIMINAR individual (ya existente) === */
+  /* === ELIMINAR individual === */
   const eliminarUsuario = async (u) => {
     const tipo = tipoUsuario === 'alumnos' ? 'alumno' : 'profesor';
     const { isConfirmed } = await Swal.fire({
@@ -605,6 +642,8 @@ function GestionarUsuarios() {
                       <th>RUT</th>
                       <th>Cargo</th>
                       <th>Año</th>
+                      {/* ===== NUEVO: Columna Clave para profesores ===== */}
+                      <th>Clave</th>
                     </>
                   ) : (
                     <>
@@ -621,7 +660,7 @@ function GestionarUsuarios() {
               </thead>
               <tbody>
                 {usuariosFiltrados.map((u) => {
-                  const r = deriveRiesgo(u); // NUEVO
+                  const r = deriveRiesgo(u);
                   return (
                     <tr key={u._id}>
                       {/* Checkbox por fila (solo alumnos) */}
@@ -642,6 +681,39 @@ function GestionarUsuarios() {
                           <td>{u.rut}</td>
                           <td>{u.cargo || '-'}</td>
                           <td>{getAnio(u) || '-'}</td>
+
+                          {/* ===== NUEVO: celda Clave con "ojito" ===== */}
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <input
+                                type={pwdVisible[u._id] ? 'text' : 'password'}
+                                value={pwdCache[u._id] || ''}
+                                readOnly
+                                placeholder={pwdCache[u._id] ? '' : '—'}
+                                style={{ width: 140 }}
+                                title={pwdCache[u._id] ? 'Contraseña guardada localmente' : 'No disponible en este navegador'}
+                              />
+                              <button
+                                className="btn btn-ghost"
+                                onClick={async () => {
+                                  if (!pwdCache[u._id]) {
+                                    const found = await getLocalProfPassword(u);
+                                    setPwdCache(prev => ({ ...prev, [u._id]: found || '' }));
+                                    if (!found) {
+                                      alert('No hay clave guardada localmente para este profesor en este navegador.');
+                                      return;
+                                    }
+                                  }
+                                  setPwdVisible(prev => ({ ...prev, [u._id]: !prev[u._id] }));
+                                }}
+                                title={pwdVisible[u._id] ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                aria-label={pwdVisible[u._id] ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                style={{ minWidth: 44 }}
+                              >
+                                {pwdVisible[u._id] ? '🙈' : '👁️'}
+                              </button>
+                            </div>
+                          </td>
                         </>
                       ) : (
                         <>
@@ -672,7 +744,8 @@ function GestionarUsuarios() {
                 })}
                 {!usuariosFiltrados.length && (
                   <tr>
-                    <td colSpan={isProf ? 7 : 11 /* +1 por checkbox en alumnos */}>
+                    {/* colSpan: alumnos 11 / profesores 8 */}
+                    <td colSpan={isProf ? 8 : 11 /* +1 por checkbox en alumnos */}>
                       Sin resultados.
                     </td>
                   </tr>
@@ -748,7 +821,7 @@ function GestionarUsuarios() {
                 </select>
                 <input name="telefono" value={formulario.telefono || ''} onChange={handleFormularioChange} placeholder="Teléfono" />
 
-                {/* ========= NUEVO: Riesgo con preview (si tiene permiso) ========= */}
+                {/* Riesgo con preview (si tiene permiso) */}
                 <label style={{ display: 'block', marginTop: 8 }}>
                   <span style={{ display: 'block', fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Color de riesgo</span>
                   <select
