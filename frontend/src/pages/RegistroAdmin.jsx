@@ -3,6 +3,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import '../styles/RegistroProfesor.css';
 import '../styles/GestionarUsuarios.css';
+import '../styles/RegistroAdmin.css'; // 👈 agrega este import para los estilos del ojo
 
 /* === Catálogo de permisos (SIN "chatbots:crear" ni "chatbots:subir_material") === */
 const PERMISOS = [
@@ -60,6 +61,7 @@ export default function RegistroAdmin() {
   });
   const [permisos, setPermisos] = useState([]);
   const [enviando, setEnviando] = useState(false);
+  const [verPwd, setVerPwd] = useState(false); // 👁️ mostrar/ocultar contraseña
 
   const onChange = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
   const togglePerm = key =>
@@ -75,6 +77,7 @@ export default function RegistroAdmin() {
       fechaCreacion: hoyISO
     });
     setPermisos([]);
+    setVerPwd(false);
   };
 
   const submit = async (e) => {
@@ -104,7 +107,7 @@ export default function RegistroAdmin() {
         apellidos: apellido, // compat backend
         correo: correo.trim(),
         password,
-        permisos: permisosFiltrados, // ← usamos los filtrados
+        permisos: permisosFiltrados,
         rol: 'profesor',
         tipo_documento,
         numero_documento,
@@ -210,9 +213,45 @@ export default function RegistroAdmin() {
                 <label htmlFor="correo">Correo</label>
                 <input id="correo" name="correo" type="email" value={form.correo} onChange={onChange} placeholder="correo@ejemplo.com" required />
               </div>
+
+              {/* 👁️ Contraseña con ojo */}
               <div className="field">
                 <label htmlFor="password">Contraseña</label>
-                <input id="password" name="password" type="password" value={form.password} onChange={onChange} placeholder="••••••••" required />
+                <div className="pwd-field">
+                  <input
+                    id="password"
+                    name="password"
+                    type={verPwd ? 'text' : 'password'}
+                    value={form.password}
+                    onChange={onChange}
+                    placeholder="••••••••"
+                    required
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    className="toggle-pwd"
+                    aria-label={verPwd ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    title={verPwd ? 'Ocultar' : 'Mostrar'}
+                    onClick={() => setVerPwd(v => !v)}
+                  >
+                    {verPwd ? (
+                      /* ojo tachado */
+                      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <path d="M3 3l18 18" />
+                        <path d="M10.58 10.58A3 3 0 0 0 12 15a3 3 0 0 0 2.12-.88" />
+                        <path d="M9.9 4.24A11.5 11.5 0 0 1 12 4c7 0 11 8 11 8a18.3 18.3 0 0 1-5.05 5.95" />
+                        <path d="M6.11 6.11A18.3 18.3 0 0 0 1 12s4 8 11 8c1.4 0 2.7-.23 3.9-.64" />
+                      </svg>
+                    ) : (
+                      /* ojo abierto */
+                      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </section>

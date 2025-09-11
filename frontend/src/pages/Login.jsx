@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { encryptLocalPassword } from '../utils/localVault'; // ← cifrado local
+import { encryptLocalPassword } from '../utils/localVault';
 import '../styles/Login.css';
 
 function Login() {
@@ -9,13 +9,13 @@ function Login() {
   const [contrasena, setContrasena] = useState('');
   const [rol, setRol] = useState('alumno');
   const [mensaje, setMensaje] = useState('');
+  const [verPwd, setVerPwd] = useState(false);
 
   const navigate = useNavigate();
   const API_BASE = 'https://chatbots-educativos3.onrender.com/api';
+  const SESSION_MS = 30 * 60 * 1000; // 30 min
 
-  // Normaliza RUT: quita puntos, deja guión, y usa k/K consistente
-  const normalizarRut = (v) =>
-    v.replace(/\./g, '').replace(/\s+/g, '').toUpperCase();
+  const normalizarRut = (v) => v.replace(/\./g, '').replace(/\s+/g, '').toUpperCase();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,7 +27,6 @@ function Login() {
       let res;
 
       if (rol === 'alumno') {
-        // ✅ Alumno: solo RUT
         if (!rutLimpio) {
           setMensaje('Ingresa tu RUT.');
           setTimeout(() => setMensaje(''), 2500);
@@ -35,7 +34,6 @@ function Login() {
         }
         res = await axios.post(`${API_BASE}/login`, { rut: rutLimpio });
       } else {
-        // ✅ Profesor/Admin: requieren contraseña
         if (!rutLimpio || !contrasenaLimpia) {
           setMensaje('Completa usuario/RUT y contraseña.');
           setTimeout(() => setMensaje(''), 2500);
@@ -53,23 +51,20 @@ function Login() {
       // Guarda sesión
       localStorage.setItem('token', token);
       localStorage.setItem('usuario', JSON.stringify(usuario));
+      // ⏲️ expira en 30 min desde ahora
+      localStorage.setItem('sessionExpiresAt', String(Date.now() + SESSION_MS));
 
-      // 🔐 Guarda contraseña CIFRADA solo para profesor/admin
+      // Guarda contraseña cifrada (solo profesor/admin)
       if (rol !== 'alumno') {
         try {
-          const salt =
-            usuario?._id || usuario?.correo || usuario?.rut || rutLimpio || 'anon';
+          const salt = usuario?._id || usuario?.correo || usuario?.rut || rutLimpio || 'anon';
           const enc = await encryptLocalPassword(contrasenaLimpia, salt);
           if (enc) localStorage.setItem('password_enc', enc);
-        } catch {
-          // Si el navegador no soporta WebCrypto, simplemente no guardamos nada
-        }
-        // Limpia cualquier copia en claro (por si existía de antes)
+        } catch {}
         localStorage.removeItem('password');
         localStorage.removeItem('pwd');
         localStorage.removeItem('pass');
       } else {
-        // Alumno: no guardamos contraseña cifrada
         localStorage.removeItem('password_enc');
       }
 
@@ -111,7 +106,8 @@ function Login() {
               value="alumno"
               checked={rol === 'alumno'}
               onChange={() => setRol('alumno')}
-            /> Alumno
+            />{' '}
+            Alumno
           </label>
           <label>
             <input
@@ -120,7 +116,8 @@ function Login() {
               value="profesor"
               checked={rol === 'profesor'}
               onChange={() => setRol('profesor')}
-            /> Profesor/Admin
+            />{' '}
+            Profesor/Admin
           </label>
         </div>
 
@@ -130,16 +127,41 @@ function Login() {
             placeholder={rol === 'alumno' ? 'RUT (Ej: 12345678-9)' : 'Usuario o RUT/Correo'}
             value={rut}
             onChange={(e) => setRut(e.target.value)}
+            autoComplete="username"
           />
 
-          {/* 🔒 Campo contraseña solo para profesor/admin */}
           {rol !== 'alumno' && (
-            <input
-              type="password"
-              placeholder="Contraseña"
-              value={contrasena}
-              onChange={(e) => setContrasena(e.target.value)}
-            />
+            <div className="pwd-field">
+              <input
+                type={verPwd ? 'text' : 'password'}
+                placeholder="Contraseña"
+                value={contrasena}
+                onChange={(e) => setContrasena(e.target.value)}
+                autoComplete="current-password"
+                name="password"
+              />
+              <button
+                type="button"
+                className="toggle-pwd"
+                aria-label={verPwd ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                onClick={() => setVerPwd(v => !v)}
+                title={verPwd ? 'Ocultar' : 'Mostrar'}
+              >
+                {verPwd ? (
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M3 3l18 18" />
+                    <path d="M10.58 10.58A3 3 0 0 0 12 15a3 3 0 0 0 2.12-.88" />
+                    <path d="M9.9 4.24A11.5 11.5 0 0 1 12 4c7 0 11 8 11 8a18.3 18.3 0 0 1-5.05 5.95" />
+                    <path d="M6.11 6.11A18.3 18.3 0 0 0 1 12s4 8 11 8c1.4 0 2.7-.23 3.9-.64" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
+            </div>
           )}
 
           <button type="submit">Ingresar</button>

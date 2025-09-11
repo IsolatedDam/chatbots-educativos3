@@ -2,13 +2,12 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
-import { decryptLocalPassword } from '../utils/localVault'; // 👈 NECESARIO para descifrar claves locales
 import '../styles/GestionarUsuarios.css';
 
 const API_BASE = 'https://chatbots-educativos3.onrender.com/api';
 const JORNADAS = ['Mañana', 'Tarde', 'Vespertino', 'Viernes', 'Sábados'];
 
-/* === Catálogo de permisos para PROFESORES (mismo que en RegistroProfesor) === */
+/* === Catálogo de permisos para PROFESORES (para el editor) === */
 const PERMISOS = [
   { grupo: 'Datos del alumno', items: [
     { key: 'alumnos:editar_doc',       label: 'Rut / DNI / Pasaporte' },
@@ -32,7 +31,7 @@ const PERMISOS = [
 ];
 const ALL_KEYS = PERMISOS.flatMap(g => g.items.map(i => i.key));
 
-/* ========= Helpers de riesgo (mismo criterio que PanelProfesor) ========= */
+/* ========= Helpers de riesgo (para alumnos) ========= */
 function calcRiesgoFE(vence) {
   if (!vence) return '';
   const hoy = new Date(); hoy.setHours(0,0,0,0);
@@ -57,11 +56,21 @@ function riesgoMensajeFE(r) {
   return '—';
 }
 
-/* Helper: apellido con fallbacks */
+/* Helpers varios */
 const getApellido = (u) =>
   u?.apellido ?? u?.apellidos ?? u?.lastName ?? u?.lastname ?? '';
 
-/* Badge de riesgo (usa value ya normalizado) */
+const formatDate = (v) => {
+  if (!v) return '';
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toISOString().slice(0,10);
+};
+// ⏱️ Fecha de creación (con fallbacks)
+const getFechaCreacion = (u) =>
+  formatDate(u?.fechaCreacion || u?.createdAt || u?.fecha_creacion);
+
+/* Badge de riesgo (tabla alumnos) */
 const RiesgoBadge = ({ value }) => {
   const v = String(value || '').toLowerCase();
   const map = {
@@ -79,41 +88,6 @@ const RiesgoBadge = ({ value }) => {
     </span>
   );
 };
-
-/* ============ NUEVO: util para obtener clave local de un profesor ============ */
-async function getLocalProfPassword(prof) {
-  const salt = prof?._id || prof?.correo || 'salt';
-  // Candidatos cifrados
-  const candidatesEnc = [
-    `prof_pwd_enc::${prof?._id}`,
-    `prof_pwd_enc::${prof?.correo}`,
-    `password_enc::${prof?._id}`,
-    `password_enc::${prof?.correo}`,
-    `prof_${prof?._id}_pwd_enc`,
-    `prof_${prof?.correo}_pwd_enc`,
-  ];
-  for (const k of candidatesEnc) {
-    const enc = localStorage.getItem(k);
-    if (enc && decryptLocalPassword) {
-      try {
-        const dec = await decryptLocalPassword(enc, salt);
-        if (dec) return dec;
-      } catch {}
-    }
-  }
-  // Candidatos en claro (fallback)
-  const candidatesPlain = [
-    `prof_pwd::${prof?._id}`,
-    `prof_pwd::${prof?.correo}`,
-    `prof_${prof?._id}_pwd`,
-    `prof_${prof?.correo}_pwd`,
-  ];
-  for (const k of candidatesPlain) {
-    const v = localStorage.getItem(k);
-    if (v) return v;
-  }
-  return '';
-}
 
 function GestionarUsuarios() {
   const [usuarios, setUsuarios] = useState([]);
@@ -138,28 +112,24 @@ function GestionarUsuarios() {
   const esAdmin = String(usuarioActual?.rol || '').toLowerCase() === 'admin';
   const permisosActual = Array.isArray(usuarioActual?.permisos) ? usuarioActual.permisos : [];
 
-  // admin también puede editar riesgo
   const puedeEditarRiesgo = esSuper || esAdmin || permisosActual.includes('alertas:editar_riesgo');
   const puedeEliminarAlumnos = esSuper || esAdmin || permisosActual.includes('alumnos:eliminar');
 
-  // ====== NUEVO: visibilidad y cache de claves por profesor ======
-  const [pwdCache, setPwdCache] = useState({});   // { [profId]: 'clave' }
-  const [pwdVisible, setPwdVisible] = useState({}); // { [profId]: boolean }
-
-  // ====== Selección múltiple (ALUMNOS) ======
+  // Selección múltiple (ALUMNOS)
   const [seleccion, setSeleccion] = useState([]); // array de IDs
   const [eliminandoMasivo, setEliminandoMasivo] = useState(false);
 
   const toggleSelect = (id) => {
     setSeleccion(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
-
   const clearSelection = () => setSeleccion([]);
 
-  // --- helpers de año (usa anio || fechaIngreso || createdAt)
+  // helpers de año (usa anio || fechaIngreso || fechaCreacion || createdAt)
   const getAnio = (u) => {
     if (u?.anio != null) return u.anio;
-    const d = u?.fechaIngreso ? new Date(u.fechaIngreso) : (u?.createdAt ? new Date(u.createdAt) : null);
+    const d = u?.fechaIngreso ? new Date(u.fechaIngreso)
+          : u?.fechaCreacion ? new Date(u.fechaCreacion)
+          : u?.createdAt ? new Date(u.createdAt) : null;
     return d && !Number.isNaN(d.getTime()) ? d.getFullYear() : '';
   };
 
@@ -233,8 +203,7 @@ function GestionarUsuarios() {
         u.numero_documento,
         u.rut,
         u.cargo,
-        u.telefono,
-        deriveRiesgo(u) /* permite buscar por "rojo"/"amarillo"/"verde" */
+        u.telefono
       ].filter(Boolean).join(' ').toLowerCase();
 
       if (texto && !base.includes(texto)) return false;
@@ -271,10 +240,8 @@ function GestionarUsuarios() {
 
   const toggleSelectAllFiltered = () => {
     if (allFilteredSelected) {
-      // quitar todos los filtrados
       setSeleccion(prev => prev.filter(id => !allFilteredIds.includes(id)));
     } else {
-      // agregar todos los filtrados (sin duplicar)
       setSeleccion(prev => Array.from(new Set([...prev, ...allFilteredIds])));
     }
   };
@@ -282,13 +249,11 @@ function GestionarUsuarios() {
   const handleEditar = (usuario) => {
     setUsuarioEditando(usuario);
     const ap = getApellido(usuario);
-    const riesgoInit = deriveRiesgo(usuario);
     setFormulario({
       ...usuario,
       apellido: ap,
       apellidos: ap,
-      permisos: Array.isArray(usuario.permisos) ? usuario.permisos : [],
-      riesgo: riesgoInit
+      permisos: Array.isArray(usuario.permisos) ? usuario.permisos : []
     });
   };
 
@@ -332,20 +297,6 @@ function GestionarUsuarios() {
         }
         if (payload.anio !== undefined && payload.anio !== '') {
           payload.anio = Number(payload.anio);
-        }
-        // normalizar riesgo + habilitado
-        if (typeof payload.riesgo === 'string') {
-          const r = payload.riesgo.toLowerCase();
-          if (['verde','amarillo','rojo'].includes(r)) {
-            payload.riesgo = r;
-            payload.color_riesgo = r; // compat
-            if (payload.habilitado === undefined) {
-              payload.habilitado = r === 'rojo' ? false : true;
-            }
-          } else {
-            delete payload.riesgo;
-            delete payload.color_riesgo;
-          }
         }
       }
 
@@ -445,7 +396,6 @@ function GestionarUsuarios() {
           html: `Eliminados: <b>${ok}</b><br/>Fallidos: <b>${fail}</b><br/><small>Revisa consola para detalles.</small>`,
           icon: 'info'
         });
-        // Log de fallos en consola
         results.forEach((r, i) => {
           if (r.status === 'rejected') {
             console.error(`❌ Falló eliminar ID=${seleccion[i]}`, r.reason?.response?.status, r.reason?.response?.data || r.reason?.message);
@@ -487,9 +437,13 @@ function GestionarUsuarios() {
             Correo: u.correo || '',
             Nombre: u.nombre || '',
             Apellido: getApellido(u) || '',
+            'Tipo doc': u.tipo_documento || '',
+            'N° documento': u.numero_documento || '',
             RUT: u.rut || '',
-            Cargo: u.cargo || '',
+            Teléfono: u.telefono || '',
+            'Fecha creación': getFechaCreacion(u) || '',
             Año: anio || '',
+            Cargo: u.cargo || '',
             Rol: u.rol || ''
           };
         }
@@ -521,6 +475,10 @@ function GestionarUsuarios() {
 
   const isProf = tipoUsuario === 'profesores';
   const isAlum = tipoUsuario === 'alumnos';
+
+  // columnas para fila “sin resultados”
+  const colSpanProf = 11; // Correo, Nombre, Apellido, TipoDoc, NºDoc, RUT, Teléfono, FechaCreación, Año, Cargo, Acciones
+  const colSpanAlum = 12; // +1 por checkbox maestro
 
   return (
     <div className="gestionar-usuarios">
@@ -639,11 +597,13 @@ function GestionarUsuarios() {
                   <th>Apellido</th>
                   {isProf ? (
                     <>
+                      <th>Tipo doc</th>
+                      <th>N° documento</th>
                       <th>RUT</th>
-                      <th>Cargo</th>
+                      <th>Teléfono</th>
+                      <th>Fecha creación</th>
                       <th>Año</th>
-                      {/* ===== NUEVO: Columna Clave para profesores ===== */}
-                      <th>Clave</th>
+                      <th>Cargo</th>
                     </>
                   ) : (
                     <>
@@ -673,51 +633,22 @@ function GestionarUsuarios() {
                           />
                         </td>
                       )}
-                      <td>{u.correo}</td>
-                      <td>{u.nombre}</td>
+                      <td>{u.correo || '-'}</td>
+                      <td>{u.nombre || '-'}</td>
                       <td>{getApellido(u) || '-'}</td>
                       {isProf ? (
                         <>
-                          <td>{u.rut}</td>
-                          <td>{u.cargo || '-'}</td>
+                          <td>{u.tipo_documento || '-'}</td>
+                          <td>{u.numero_documento || '-'}</td>
+                          <td>{u.rut || '-'}</td>
+                          <td>{u.telefono || '-'}</td>
+                          <td>{getFechaCreacion(u) || '-'}</td>
                           <td>{getAnio(u) || '-'}</td>
-
-                          {/* ===== NUEVO: celda Clave con "ojito" ===== */}
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <input
-                                type={pwdVisible[u._id] ? 'text' : 'password'}
-                                value={pwdCache[u._id] || ''}
-                                readOnly
-                                placeholder={pwdCache[u._id] ? '' : '—'}
-                                style={{ width: 140 }}
-                                title={pwdCache[u._id] ? 'Contraseña guardada localmente' : 'No disponible en este navegador'}
-                              />
-                              <button
-                                className="btn btn-ghost"
-                                onClick={async () => {
-                                  if (!pwdCache[u._id]) {
-                                    const found = await getLocalProfPassword(u);
-                                    setPwdCache(prev => ({ ...prev, [u._id]: found || '' }));
-                                    if (!found) {
-                                      alert('No hay clave guardada localmente para este profesor en este navegador.');
-                                      return;
-                                    }
-                                  }
-                                  setPwdVisible(prev => ({ ...prev, [u._id]: !prev[u._id] }));
-                                }}
-                                title={pwdVisible[u._id] ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                                aria-label={pwdVisible[u._id] ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                                style={{ minWidth: 44 }}
-                              >
-                                {pwdVisible[u._id] ? '🙈' : '👁️'}
-                              </button>
-                            </div>
-                          </td>
+                          <td>{u.cargo || '-'}</td>
                         </>
                       ) : (
                         <>
-                          <td>{u.numero_documento}</td>
+                          <td>{u.numero_documento || '-'}</td>
                           <td>{u.semestre ?? '-'}</td>
                           <td>{u.jornada || '-'}</td>
                           <td>{getAnio(u) || '-'}</td>
@@ -744,8 +675,7 @@ function GestionarUsuarios() {
                 })}
                 {!usuariosFiltrados.length && (
                   <tr>
-                    {/* colSpan: alumnos 11 / profesores 8 */}
-                    <td colSpan={isProf ? 8 : 11 /* +1 por checkbox en alumnos */}>
+                    <td colSpan={isProf ? colSpanProf : colSpanAlum}>
                       Sin resultados.
                     </td>
                   </tr>
@@ -766,13 +696,28 @@ function GestionarUsuarios() {
             <input name="nombre" value={formulario.nombre || ''} onChange={handleFormularioChange} />
             <input name="apellido" value={formulario.apellido || ''} onChange={handleFormularioChange} />
 
-            {isProf ? (
+            {tipoUsuario === 'profesores' ? (
               <>
-                {/* Profesores: RUT/Cargo */}
-                <input name="rut" value={formulario.rut || ''} onChange={handleFormularioChange} />
-                <input name="cargo" value={formulario.cargo || ''} onChange={handleFormularioChange} />
+                {/* Profesores: datos personales */}
+                <select name="tipo_documento" value={formulario.tipo_documento || ''} onChange={handleFormularioChange}>
+                  <option value="">Tipo de documento</option>
+                  <option value="RUT">RUT</option>
+                  <option value="DNI">DNI</option>
+                  <option value="Pasaporte">Pasaporte</option>
+                </select>
+                <input name="numero_documento" value={formulario.numero_documento || ''} onChange={handleFormularioChange} placeholder="N° documento" />
+                <input name="rut" value={formulario.rut || ''} onChange={handleFormularioChange} placeholder="RUT" />
+                <input name="telefono" value={formulario.telefono || ''} onChange={handleFormularioChange} placeholder="Teléfono" />
+                <input
+                  type="date"
+                  name="fechaCreacion"
+                  value={formatDate(formulario.fechaCreacion || formulario.createdAt) || ''}
+                  onChange={handleFormularioChange}
+                  placeholder="Fecha de creación"
+                />
+                <input name="cargo" value={formulario.cargo || ''} onChange={handleFormularioChange} placeholder="Cargo" />
 
-                {/* === Permisos (PROFESORES) === */}
+                {/* Permisos profesor */}
                 <div style={{ marginTop: 12, padding: 12, border: '1px solid #e8eef5', borderRadius: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                     <strong>Permisos</strong>
@@ -821,48 +766,51 @@ function GestionarUsuarios() {
                 </select>
                 <input name="telefono" value={formulario.telefono || ''} onChange={handleFormularioChange} placeholder="Teléfono" />
 
-                {/* Riesgo con preview (si tiene permiso) */}
-                <label style={{ display: 'block', marginTop: 8 }}>
-                  <span style={{ display: 'block', fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Color de riesgo</span>
-                  <select
-                    name="riesgo"
-                    value={formulario.riesgo || ''}
-                    onChange={handleFormularioChange}
-                    disabled={!puedeEditarRiesgo}
-                    title={!puedeEditarRiesgo ? 'No tienes permiso para editar riesgo' : undefined}
-                  >
-                    <option value="">Riesgo (sin definir)</option>
-                    <option value="verde">Verde</option>
-                    <option value="amarillo">Amarillo</option>
-                    <option value="rojo">Rojo</option>
-                  </select>
-                </label>
-
-                {/* Vista previa y mensaje */}
-                <div style={{ marginTop: 8 }}>
-                  {(() => {
-                    const r = (formulario.riesgo || deriveRiesgo(formulario) || '').toLowerCase();
-                    const bg = r === 'verde' ? '#27ae60' : r === 'amarillo' ? '#f1c40f' : r === 'rojo' ? '#c0392b' : '#95a5a6';
-                    return (
-                      <>
-                        <div
-                          style={{
-                            display: 'inline-block',
-                            padding: '4px 10px',
-                            borderRadius: 999,
-                            background: bg,
-                            color: '#fff',
-                            fontWeight: 700,
-                            marginRight: 8
-                          }}
+                {/* Preview de riesgo si tiene permiso */}
+                {(() => {
+                  if (!puedeEditarRiesgo) return null;
+                  return (
+                    <>
+                      <label style={{ display: 'block', marginTop: 8 }}>
+                        <span style={{ display: 'block', fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Color de riesgo</span>
+                        <select
+                          name="riesgo"
+                          value={formulario.riesgo || ''}
+                          onChange={handleFormularioChange}
                         >
-                          {(r || '—').toString().toUpperCase()}
-                        </div>
-                        <small style={{ opacity: 0.8 }}>{riesgoMensajeFE(r)}</small>
-                      </>
-                    );
-                  })()}
-                </div>
+                          <option value="">Riesgo (sin definir)</option>
+                          <option value="verde">Verde</option>
+                          <option value="amarillo">Amarillo</option>
+                          <option value="rojo">Rojo</option>
+                        </select>
+                      </label>
+                      <div style={{ marginTop: 8 }}>
+                        {(() => {
+                          const r = (formulario.riesgo || deriveRiesgo(formulario) || '').toLowerCase();
+                          const bg = r === 'verde' ? '#27ae60' : r === 'amarillo' ? '#f1c40f' : r === 'rojo' ? '#c0392b' : '#95a5a6';
+                          return (
+                            <>
+                              <div
+                                style={{
+                                  display: 'inline-block',
+                                  padding: '4px 10px',
+                                  borderRadius: 999,
+                                  background: bg,
+                                  color: '#fff',
+                                  fontWeight: 700,
+                                  marginRight: 8
+                                }}
+                              >
+                                {(r || '—').toString().toUpperCase()}
+                              </div>
+                              <small style={{ opacity: 0.8 }}>{riesgoMensajeFE(r)}</small>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </>
+                  );
+                })()}
               </>
             )}
 

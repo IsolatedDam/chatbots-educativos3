@@ -100,6 +100,56 @@ export default function PanelProfesor() {
     window.location.href = "/login";
   };
 
+  /* ⏲️ Auto-logout por inactividad (30 min) */
+  useEffect(() => {
+    const TIMEOUT = 30 * 60 * 1000; // 30 min
+    const KEY = "sessionExpiresAt";
+
+    const refresh = () => {
+      if (!localStorage.getItem("token")) return;
+      localStorage.setItem(KEY, String(Date.now() + TIMEOUT));
+    };
+
+    const check = () => {
+      const exp = Number(localStorage.getItem(KEY) || 0);
+      if (!exp) {
+        if (localStorage.getItem("token")) refresh();
+        return;
+      }
+      if (Date.now() > exp) {
+        alert("Sesión expirada por inactividad.");
+        handleLogout();
+      }
+    };
+
+    if (!localStorage.getItem("token")) {
+      handleLogout();
+      return;
+    }
+
+    refresh();
+    const id = setInterval(check, 15000);
+
+    const onActivity = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    const onStorage = (e) => {
+      if (e.key === KEY) check();
+    };
+
+    const evs = ["click", "keydown", "mousemove", "scroll", "touchstart", "focus"];
+    evs.forEach((ev) => window.addEventListener(ev, onActivity, { passive: true }));
+    window.addEventListener("visibilitychange", onActivity);
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      clearInterval(id);
+      evs.forEach((ev) => window.removeEventListener(ev, onActivity));
+      window.removeEventListener("visibilitychange", onActivity);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []); // solo una vez al montar
+
   // === Cargar alumnos desde backend ===
   async function fetchAlumnos(q = "") {
     setLoading(true);
@@ -335,7 +385,7 @@ export default function PanelProfesor() {
 
     useEffect(() => {
       if (hdrChkRef.current) hdrChkRef.current.indeterminate = someSelected;
-    }, [someSelected, rows, selected]);
+    }, [someSelected]); // ← quitamos 'selected' para evitar la advertencia
 
     return (
       <div className="table-wrap datos-table-wrap">
@@ -431,7 +481,7 @@ export default function PanelProfesor() {
           <li className={liClass("datos")} onClick={() => setVistaActiva("datos")}>Datos del alumno</li>
           <li className={liClass("chatbots")} onClick={() => setVistaActiva("chatbots")}>Acceso a chatbots</li>
 
-          {/* SIEMPRE visible (como pediste) */}
+          {/* SIEMPRE visible */}
           <li className={liClass("registro")} onClick={() => setVistaActiva("registro")}>Registrar alumno</li>
 
           {/* Carga masiva (respetando permiso) */}
