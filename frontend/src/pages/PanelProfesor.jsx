@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+// src/pages/PanelProfesor.jsx
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { decryptLocalPassword } from "../utils/localVault";
 import "../styles/PanelProfesor.css";
+import EditAlumnoModal from "./EditAlumnoModal.jsx"; // ← modal separado
 
 // páginas existentes
 import RegistroAlumno from "./RegistroAlumno";
@@ -8,6 +10,7 @@ import CargarAlumnos from "./CargarAlumnos";
 
 const API_ROOT = "https://chatbots-educativos3.onrender.com";
 const API_BASE = `${API_ROOT}/api`;
+const JORNADAS = ["Mañana", "Tarde", "Vespertino", "Viernes", "Sábados"];
 
 /* ===== Helpers de riesgo (fallback si el back no lo deriva) ===== */
 function calcRiesgoFE(vence) {
@@ -27,10 +30,10 @@ function riesgoMensajeFE(r) {
 function riesgoTextoTabla(a) {
   const r = String(
     a?.riesgo ??
-    a?.color_riesgo ??
-    a?.riesgo_color ??
-    calcRiesgoFE(a?.suscripcionVenceEl) ??
-    ""
+      a?.color_riesgo ??
+      a?.riesgo_color ??
+      calcRiesgoFE(a?.suscripcionVenceEl) ??
+      ""
   ).toLowerCase();
 
   if (a?.habilitado === false || r === "rojo") return "Suspendido";
@@ -39,12 +42,28 @@ function riesgoTextoTabla(a) {
   return "—";
 }
 
+/* === Helpers de fecha/año (para filtros) === */
+function getAnio(u) {
+  if (u?.anio != null) return u.anio;
+  const d = u?.fechaIngreso
+    ? new Date(u.fechaIngreso)
+    : u?.createdAt
+    ? new Date(u.createdAt)
+    : null;
+  return d && !Number.isNaN(d.getTime()) ? d.getFullYear() : "";
+}
+
 export default function PanelProfesor() {
   // === Estado principal ===
   const [vistaActiva, setVistaActiva] = useState("cuenta");
   const [alumnos, setAlumnos] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Filtros (como en GestionarUsuarios)
+  const [filtroJornada, setFiltroJornada] = useState("");
+  const [filtroSemestre, setFiltroSemestre] = useState("");
+  const [filtroAnio, setFiltroAnio] = useState("");
 
   // Selección múltiple
   const [selected, setSelected] = useState(new Set());
@@ -69,7 +88,9 @@ export default function PanelProfesor() {
   const canLoadMassive =
     role === "superadmin" ||
     role === "admin" ||
-    (role === "profesor" && (permisos.includes("alumnos:carga_masiva") || permisos.includes("alumnos:registrar_masivo")));
+    (role === "profesor" &&
+      (permisos.includes("alumnos:carga_masiva") ||
+        permisos.includes("alumnos:registrar_masivo")));
 
   const [pwdVisible, setPwdVisible] = useState(false);
   const [storedPwd, setStoredPwd] = useState("");
@@ -82,7 +103,9 @@ export default function PanelProfesor() {
         try {
           const dec = await decryptLocalPassword(enc, salt);
           setStoredPwd(dec || "");
-        } catch { setStoredPwd(""); }
+        } catch {
+          setStoredPwd("");
+        }
       } else {
         const plain =
           localStorage.getItem("password") ||
@@ -156,7 +179,9 @@ export default function PanelProfesor() {
     try {
       const token = localStorage.getItem("token");
       const url = `${API_BASE}/alumnos${q ? `?q=${encodeURIComponent(q)}` : ""}`;
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) throw new Error("No autorizado");
       const data = await res.json();
       setAlumnos(Array.isArray(data) ? data : []);
@@ -190,7 +215,10 @@ export default function PanelProfesor() {
     setEditOpen(true);
   };
 
-  const closeEdit = () => { setEditOpen(false); setEditDraft(null); };
+  const closeEdit = () => {
+    setEditOpen(false);
+    setEditDraft(null);
+  };
 
   // === Guardar cambios alumno ===
   async function handleSave() {
@@ -198,7 +226,9 @@ export default function PanelProfesor() {
     try {
       const token = localStorage.getItem("token");
       const riesgoLC = String(editDraft.riesgo || "").toLowerCase();
-      const riesgoValido = ["verde", "amarillo", "rojo"].includes(riesgoLC) ? riesgoLC : "";
+      const riesgoValido = ["verde", "amarillo", "rojo"].includes(riesgoLC)
+        ? riesgoLC
+        : "";
 
       let nextHabilitado = !!editDraft.habilitado;
       if (!canEditEstado && canEditRiesgo) {
@@ -212,26 +242,32 @@ export default function PanelProfesor() {
         semestre: editDraft.semestre !== "" ? Number(editDraft.semestre) : undefined,
         jornada: editDraft.jornada,
         habilitado: nextHabilitado,
-        suscripcionVenceEl:
-          editDraft.suscripcionVenceEl
-            ? (editDraft.suscripcionVenceEl.length === 10
-                ? `${editDraft.suscripcionVenceEl}T00:00:00.000Z`
-                : editDraft.suscripcionVenceEl)
-            : undefined,
+        suscripcionVenceEl: editDraft.suscripcionVenceEl
+          ? editDraft.suscripcionVenceEl.length === 10
+            ? `${editDraft.suscripcionVenceEl}T00:00:00.000Z`
+            : editDraft.suscripcionVenceEl
+          : undefined,
         riesgo: riesgoValido || undefined,
         color_riesgo: riesgoValido || undefined,
-        numero_documento: editDraft.documento ?? editDraft.numero_documento ?? editDraft.rut,
+        numero_documento:
+          editDraft.documento ?? editDraft.numero_documento ?? editDraft.rut,
         rut: editDraft.documento ?? editDraft.numero_documento ?? editDraft.rut,
       };
 
       const res = await fetch(`${API_BASE}/alumnos/${editDraft._id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
         let msg = "Error al guardar cambios";
-        try { const j = await res.json(); if (j?.msg) msg = j.msg; } catch {}
+        try {
+          const j = await res.json();
+          if (j?.msg) msg = j.msg;
+        } catch {}
         throw new Error(msg);
       }
 
@@ -245,7 +281,10 @@ export default function PanelProfesor() {
 
   // === Eliminar alumno (individual) ===
   async function handleDelete(id) {
-    if (!canDeleteAlumno) { alert("No tienes permiso para eliminar alumnos."); return; }
+    if (!canDeleteAlumno) {
+      alert("No tienes permiso para eliminar alumnos.");
+      return;
+    }
     if (!window.confirm("¿Eliminar alumno?")) return;
     try {
       const token = localStorage.getItem("token");
@@ -255,61 +294,104 @@ export default function PanelProfesor() {
       });
       if (!res.ok) {
         let msg = "Error al eliminar";
-        try { const j = await res.json(); if (j?.msg) msg = j.msg; } catch {}
+        try {
+          const j = await res.json();
+          if (j?.msg) msg = j.msg;
+        } catch {}
         throw new Error(`${msg} (HTTP ${res.status})`);
       }
       setAlumnos((prev) => prev.filter((a) => a._id !== id));
-      setSelected(prev => { const n = new Set(prev); n.delete(id); return n; });
-    } catch (err) { alert(err.message); }
+      setSelected((prev) => {
+        const n = new Set(prev);
+        n.delete(id);
+        return n;
+      });
+    } catch (err) {
+      alert(err.message);
+    }
   }
 
   // === Eliminación MASIVA ===
   async function handleBulkDelete() {
-    if (!canDeleteAlumno) { alert("No tienes permiso para eliminar alumnos."); return; }
+    if (!canDeleteAlumno) {
+      alert("No tienes permiso para eliminar alumnos.");
+      return;
+    }
     const ids = Array.from(selected);
-    if (!ids.length) { alert("No hay alumnos seleccionados."); return; }
-    if (!window.confirm(`¿Eliminar ${ids.length} alumno(s)? Esta acción no se puede deshacer.`)) return;
+    if (!ids.length) {
+      alert("No hay alumnos seleccionados.");
+      return;
+    }
+    if (
+      !window.confirm(
+        `¿Eliminar ${ids.length} alumno(s)? Esta acción no se puede deshacer.`
+      )
+    )
+      return;
 
     const token = localStorage.getItem("token");
 
     const borrarUnoAUno = async () => {
       const headers = { Authorization: `Bearer ${token}` };
-      const calls = ids.map(id =>
-        fetch(`${API_BASE}/alumnos/${id}`, { method: "DELETE", headers })
-          .then(async (r) => {
+      const calls = ids.map((id) =>
+        fetch(`${API_BASE}/alumnos/${id}`, { method: "DELETE", headers }).then(
+          async (r) => {
             if (!r.ok) {
               let reason = `HTTP ${r.status}`;
-              try { const jj = await r.json(); if (jj?.msg) reason = jj.msg; } catch {}
+              try {
+                const jj = await r.json();
+                if (jj?.msg) reason = jj.msg;
+              } catch {}
               throw new Error(reason);
             }
             return id;
-          })
+          }
+        )
       );
       const results = await Promise.allSettled(calls);
-      const okIds = results.map((r, i) => (r.status === "fulfilled" ? ids[i] : null)).filter(Boolean);
+      const okIds = results
+        .map((r, i) => (r.status === "fulfilled" ? ids[i] : null))
+        .filter(Boolean);
       const fail = results.length - okIds.length;
 
-      setAlumnos(prev => prev.filter(a => !okIds.includes(a._id)));
+      setAlumnos((prev) => prev.filter((a) => !okIds.includes(a._id)));
       setSelected(new Set());
-      alert(`Eliminados: ${okIds.length}${fail ? ` — Fallidos: ${fail} (ver consola)` : ""}`);
-      results.forEach((r, i) => { if (r.status === "rejected") console.error(`❌ Falló eliminar ID=${ids[i]} →`, r.reason); });
+      alert(
+        `Eliminados: ${okIds.length}${
+          fail ? ` — Fallidos: ${fail} (ver consola)` : ""
+        }`
+      );
+      results.forEach((r, i) => {
+        if (r.status === "rejected")
+          console.error(`❌ Falló eliminar ID=${ids[i]} →`, r.reason);
+      });
     };
 
     try {
       const res = await fetch(`${API_BASE}/alumnos/bulk-delete`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ ids }),
       });
 
       const raw = await res.text();
-      let data; try { data = JSON.parse(raw); } catch { data = { raw }; }
+      let data;
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        data = { raw };
+      }
 
       if (res.ok) {
         const deletedIds = Array.isArray(data?.ids) ? data.ids : ids;
-        setAlumnos(prev => prev.filter(a => !deletedIds.includes(a._id)));
+        setAlumnos((prev) => prev.filter((a) => !deletedIds.includes(a._id)));
         setSelected(new Set());
-        alert(`Se eliminaron ${Number(data?.deleted ?? deletedIds.length)} alumno(s).`);
+        alert(
+          `Se eliminaron ${Number(data?.deleted ?? deletedIds.length)} alumno(s).`
+        );
         return;
       }
 
@@ -332,14 +414,62 @@ export default function PanelProfesor() {
 
   // Toggle selección
   const toggleRow = (id) => {
-    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  };
-  const selectAllCurrent = () => {
-    setSelected(prev => {
-      const allIds = alumnos.map(a => a._id);
-      const allSelected = alumnos.length > 0 && alumnos.every(a => prev.has(a._id));
-      return allSelected ? new Set() : new Set(allIds);
+    setSelected((prev) => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
     });
+  };
+
+  /* ================= FILTROS (como GestionarUsuarios) ================= */
+
+  // Opciones de semestre detectadas
+  const opcionesSemestre = useMemo(() => {
+    const set = new Set(
+      (alumnos || [])
+        .map((u) => (u.semestre ?? "").toString().trim())
+        .filter(Boolean)
+    );
+    const arr = Array.from(set);
+    arr.sort((a, b) => Number(a) - Number(b));
+    return arr;
+  }, [alumnos]);
+
+  // Opciones de año (fallbacks)
+  const opcionesAnio = useMemo(() => {
+    const set = new Set(
+      (alumnos || [])
+        .map((u) => getAnio(u))
+        .filter((a) => a !== "" && a != null)
+        .map(String)
+    );
+    const arr = Array.from(set);
+    arr.sort((a, b) => Number(b) - Number(a));
+    return arr;
+  }, [alumnos]);
+
+  // Lista filtrada
+  const alumnosFiltrados = useMemo(() => {
+    return (alumnos || []).filter((u) => {
+      if (filtroJornada && String(u.jornada || "").toLowerCase() !== filtroJornada.toLowerCase()) {
+        return false;
+      }
+      if (filtroSemestre && String(u.semestre) !== String(filtroSemestre)) {
+        return false;
+      }
+      if (filtroAnio) {
+        const anio = getAnio(u);
+        if (String(anio) !== String(filtroAnio)) return false;
+      }
+      return true;
+    });
+  }, [alumnos, filtroJornada, filtroSemestre, filtroAnio]);
+
+  const limpiarFiltros = () => {
+    setFiltroJornada("");
+    setFiltroSemestre("");
+    setFiltroAnio("");
+    setSelected(new Set());
   };
 
   // === UI helpers ===
@@ -352,12 +482,62 @@ export default function PanelProfesor() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <div className="spacer" />
-        <button className="btn btn-ghost" onClick={() => onBuscar(search)}>Buscar</button>
-        <button className="btn btn-ghost" onClick={() => { setSearch(""); onRefrescar(); }}>Refrescar</button>
+
+        {/* Filtros adicionales */}
+        <select
+          className="select"
+          value={filtroJornada}
+          onChange={(e) => setFiltroJornada(e.target.value)}
+          style={{ marginLeft: 8 }}
+        >
+          <option value="">Jornada: Todas</option>
+          {JORNADAS.map((j) => (
+            <option key={j} value={j}>{j}</option>
+          ))}
+        </select>
+
+        <select
+          className="select"
+          value={filtroSemestre}
+          onChange={(e) => setFiltroSemestre(e.target.value)}
+          style={{ marginLeft: 8 }}
+        >
+          <option value="">Semestre: Todos</option>
+          {opcionesSemestre.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+
+        <select
+          className="select"
+          value={filtroAnio}
+          onChange={(e) => setFiltroAnio(e.target.value)}
+          style={{ marginLeft: 8 }}
+        >
+          <option value="">Año: Todos</option>
+          {opcionesAnio.map((a) => (
+            <option key={a} value={a}>{a}</option>
+          ))}
+        </select>
+
+        <button className="btn btn-ghost" style={{ marginLeft: 8 }} onClick={() => onBuscar(search)}>
+          Buscar
+        </button>
+        <button
+          className="btn btn-ghost"
+          onClick={() => {
+            setSearch("");
+            onRefrescar();
+          }}
+        >
+          Refrescar
+        </button>
+        <button className="btn btn-ghost" onClick={limpiarFiltros}>
+          Limpiar filtros
+        </button>
 
         {canDeleteAlumno && (
-          <div style={{ marginLeft: 12, display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ opacity: 0.8 }}>
               Seleccionados: <b>{selected.size}</b>
             </span>
@@ -375,17 +555,33 @@ export default function PanelProfesor() {
     );
   }
 
-  function TablaListado() {
-    const rows = alumnos;
+  function TablaListado({ rows }) {
     const hdrChkRef = useRef(null);
 
-    const allSelected = rows.length > 0 && rows.every(a => selected.has(a._id));
-    const noneSelected = rows.every(a => !selected.has(a._id));
+    const allSelected = rows.length > 0 && rows.every((a) => selected.has(a._id));
+    const noneSelected = rows.every((a) => !selected.has(a._id));
     const someSelected = !allSelected && !noneSelected;
 
     useEffect(() => {
       if (hdrChkRef.current) hdrChkRef.current.indeterminate = someSelected;
-    }, [someSelected]); // ← quitamos 'selected' para evitar la advertencia
+    }, [someSelected]); // evitamos advertencia de deps
+
+    const selectAllCurrent = () => {
+      setSelected((prev) => {
+        const allIds = rows.map((a) => a._id);
+        const every = rows.length > 0 && rows.every((a) => prev.has(a._id));
+        if (every) {
+          // quitar los visibles
+          const n = new Set(prev);
+          allIds.forEach((id) => n.delete(id));
+          return n;
+        }
+        // agregar los visibles
+        const n = new Set(prev);
+        allIds.forEach((id) => n.add(id));
+        return n;
+      });
+    };
 
     return (
       <div className="table-wrap datos-table-wrap">
@@ -415,17 +611,20 @@ export default function PanelProfesor() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="99">Cargando…</td></tr>
+              <tr>
+                <td colSpan="99">Cargando…</td>
+              </tr>
             ) : rows.length ? (
               rows.map((a) => {
-                const riesgoBase = (
+                const riesgoBase =
                   a.riesgo ??
                   a.color_riesgo ??
                   a.riesgo_color ??
                   calcRiesgoFE(a.suscripcionVenceEl) ??
-                  ""
-                );
-                const venceStr = a.suscripcionVenceEl ? String(a.suscripcionVenceEl).slice(0, 10) : "—";
+                  "";
+                const venceStr = a.suscripcionVenceEl
+                  ? String(a.suscripcionVenceEl).slice(0, 10)
+                  : "—";
                 const checked = selected.has(a._id);
                 return (
                   <tr key={a._id}>
@@ -440,7 +639,7 @@ export default function PanelProfesor() {
                     <td>{a.numero_documento ?? a.rut ?? "-"}</td>
                     <td>{a.nombre ?? "-"}</td>
                     <td>{a.apellido ?? "-"}</td>
-                    <td>{a.anio ?? "-"}</td>
+                    <td>{getAnio(a) ?? "-"}</td>
                     <td>{a.semestre ?? "-"}</td>
                     <td>{a.jornada ?? "-"}</td>
                     <td>{a.habilitado === false ? "Suspendido" : "Activo"}</td>
@@ -449,9 +648,15 @@ export default function PanelProfesor() {
                     </td>
                     <td>{venceStr}</td>
                     <td className="cell-actions">
-                      <button className="btn btn-primary" onClick={() => openEdit(a)}>Editar</button>
+                      <button className="btn btn-primary" onClick={() => openEdit(a)}>
+                        Editar
+                      </button>
                       {canDeleteAlumno && (
-                        <button className="btn btn-danger" onClick={() => handleDelete(a._id)} style={{ marginLeft: 8 }}>
+                        <button
+                          className="btn btn-danger"
+                          onClick={() => handleDelete(a._id)}
+                          style={{ marginLeft: 8 }}
+                        >
                           Eliminar
                         </button>
                       )}
@@ -460,7 +665,9 @@ export default function PanelProfesor() {
                 );
               })
             ) : (
-              <tr><td colSpan="99">Sin resultados</td></tr>
+              <tr>
+                <td colSpan="99">Sin resultados</td>
+              </tr>
             )}
           </tbody>
         </table>
@@ -476,24 +683,38 @@ export default function PanelProfesor() {
       <aside className="admin-sidebar">
         <h2>Panel Profesor</h2>
         <ul>
-          <li className={liClass("cuenta")} onClick={() => setVistaActiva("cuenta")}>Mi cuenta</li>
-          <li className={liClass("inicio")} onClick={() => setVistaActiva("inicio")}>Página Chatbots</li>
-          <li className={liClass("datos")} onClick={() => setVistaActiva("datos")}>Datos del alumno</li>
-          <li className={liClass("chatbots")} onClick={() => setVistaActiva("chatbots")}>Acceso a chatbots</li>
+          <li className={liClass("cuenta")} onClick={() => setVistaActiva("cuenta")}>
+            Mi cuenta
+          </li>
+          <li className={liClass("inicio")} onClick={() => setVistaActiva("inicio")}>
+            Página Chatbots
+          </li>
+          <li className={liClass("datos")} onClick={() => setVistaActiva("datos")}>
+            Datos del alumno
+          </li>
+          <li className={liClass("chatbots")} onClick={() => setVistaActiva("chatbots")}>
+            Acceso a chatbots
+          </li>
 
           {/* SIEMPRE visible */}
-          <li className={liClass("registro")} onClick={() => setVistaActiva("registro")}>Registrar alumno</li>
+          <li className={liClass("registro")} onClick={() => setVistaActiva("registro")}>
+            Registrar alumno
+          </li>
 
           {/* Carga masiva (respetando permiso) */}
           {canLoadMassive && (
-            <li className={liClass("carga")} onClick={() => setVistaActiva("carga")}>Carga masiva</li>
+            <li className={liClass("carga")} onClick={() => setVistaActiva("carga")}>
+              Carga masiva
+            </li>
           )}
         </ul>
         <div style={{ marginTop: "auto", padding: "1rem" }}>
           <div className="kicker" style={{ marginBottom: 8, opacity: 0.8 }}>
             Rol: <b>{role || "—"}</b>
           </div>
-          <button className="btn btn-danger" onClick={handleLogout}>Cerrar sesión</button>
+          <button className="btn btn-danger" onClick={handleLogout}>
+            Cerrar sesión
+          </button>
         </div>
       </aside>
 
@@ -516,7 +737,7 @@ export default function PanelProfesor() {
           <section className="section">
             <h3>Datos del alumno</h3>
             <BarraBusqueda onBuscar={(q) => fetchAlumnos(q)} onRefrescar={() => fetchAlumnos("")} />
-            <TablaListado />
+            <TablaListado rows={alumnosFiltrados} />
           </section>
         )}
 
@@ -526,25 +747,27 @@ export default function PanelProfesor() {
           </section>
         )}
 
-        {vistaActiva === "carga" && (
-          canLoadMassive ? (
-            <section className="section">
-              <CargarAlumnos />
-            </section>
-          ) : null
-        )}
+        {vistaActiva === "carga" && (canLoadMassive ? (
+          <section className="section">
+            <CargarAlumnos />
+          </section>
+        ) : null)}
 
         {vistaActiva === "chatbots" && (
           <section className="section">
             <h3>Acceso a chatbots</h3>
             <div className="toolbar">
               <select className="select" defaultValue="">
-                <option value="" disabled>Selecciona chatbot…</option>
+                <option value="" disabled>
+                  Selecciona chatbot…
+                </option>
                 <option value="chatbotA">Chatbot A</option>
                 <option value="chatbotB">Chatbot B</option>
               </select>
               <select className="select" defaultValue="">
-                <option value="" disabled>Ámbito…</option>
+                <option value="" disabled>
+                  Ámbito…
+                </option>
                 <option value="individual">Individual</option>
                 <option value="grupo">Grupo/Masivo</option>
               </select>
@@ -616,142 +839,6 @@ export default function PanelProfesor() {
           canEditRiesgo={canEditRiesgo}
         />
       )}
-    </div>
-  );
-}
-
-/* ===================== Modal de edición ===================== */
-function EditAlumnoModal({ draft, setDraft, onClose, onSave, canEditEstado, canEditRiesgo }) {
-  useEffect(() => {
-    const onKey = (e) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  if (!draft) return null;
-
-  const bind = (key) => ({
-    value: draft[key] ?? "",
-    onChange: (e) => setDraft({ ...draft, [key]: e.target.value }),
-  });
-
-  const bindDocumento = () => ({
-    value: draft.documento ?? draft.numero_documento ?? draft.rut ?? "",
-    onChange: (e) =>
-      setDraft({
-        ...draft,
-        documento: e.target.value,
-        numero_documento: e.target.value,
-        rut: e.target.value,
-      }),
-  });
-
-  const riesgo = (draft.riesgo || calcRiesgoFE(draft.suscripcionVenceEl) || "").toLowerCase();
-  const riesgoMsg = riesgoMensajeFE(riesgo);
-  const riesgoBg = riesgo === "verde" ? "#27ae60" : riesgo === "amarillo" ? "#f1c40f" : riesgo === "rojo" ? "#c0392b" : "#95a5a6";
-
-  return (
-    <div className="modal" onMouseDown={onClose} aria-modal="true" role="dialog" aria-labelledby="edit-alumno-title">
-      <div className="modal-contenido" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: 760 }}>
-        <h3 id="edit-alumno-title">Editar alumno</h3>
-
-        <div className="grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <label className="field">
-            <span>RUT / DNI</span>
-            <input {...bindDocumento()} placeholder="11111111-1" />
-          </label>
-          <label className="field">
-            <span>Nombre</span>
-            <input {...bind("nombre")} placeholder="Nombre" />
-          </label>
-          <label className="field">
-            <span>Apellido</span>
-            <input {...bind("apellido")} placeholder="Apellido" />
-          </label>
-          <label className="field">
-            <span>Año</span>
-            <input {...bind("anio")} placeholder="2025" />
-          </label>
-          <label className="field">
-            <span>Semestre</span>
-            <input {...bind("semestre")} placeholder="1" />
-          </label>
-          <label className="field">
-            <span>Jornada</span>
-            <input {...bind("jornada")} placeholder="Vespertino" />
-          </label>
-
-          <label className="field">
-            <span>Estado de cuenta</span>
-            <select
-              value={String(draft.habilitado !== false)}
-              onChange={(e) => setDraft({ ...draft, habilitado: e.target.value === "true" })}
-              disabled={!canEditEstado}
-              title={!canEditEstado ? "El profesor modifica el estado cambiando el color de riesgo" : undefined}
-            >
-              <option value="true">Activo</option>
-              <option value="false">Suspendido</option>
-            </select>
-            {!canEditEstado && (
-              <small className="kicker">
-                Para cambiar el estado, selecciona el <b>Color de riesgo</b>.
-              </small>
-            )}
-          </label>
-
-          <label className="field">
-            <span>Vence el</span>
-            <input
-              type="date"
-              value={(draft.suscripcionVenceEl || "").slice(0, 10)}
-              onChange={(e) => setDraft({ ...draft, suscripcionVenceEl: e.target.value })}
-              disabled={!canEditEstado}
-              title={!canEditEstado ? "Solo admin/superadmin puede modificar" : undefined}
-            />
-          </label>
-
-          <label className="field">
-            <span>Color de riesgo</span>
-            <select
-              value={draft.riesgo || ""}
-              onChange={(e) => setDraft({ ...draft, riesgo: e.target.value })}
-              disabled={!canEditRiesgo}
-              title={!canEditRiesgo ? "No tienes permiso" : undefined}
-            >
-              <option value="">Sin definir</option>
-              <option value="verde">Verde</option>
-              <option value="amarillo">Amarillo</option>
-              <option value="rojo">Rojo</option>
-            </select>
-            <small className="kicker">
-              <b>ROJO</b> suspende la cuenta al guardar. <b>VERDE/AMARILLO</b> la dejan activa.
-            </small>
-          </label>
-
-          <div className="field" style={{ gridColumn: "1 / -1" }}>
-            <span>Vista previa de riesgo</span>
-            <div
-              style={{
-                display: "inline-block",
-                padding: "6px 10px",
-                borderRadius: 999,
-                background: riesgoBg,
-                color: "#fff",
-                fontWeight: 700,
-                marginRight: 8,
-              }}
-            >
-              {(riesgo || "—").toString().toUpperCase()}
-            </div>
-            <small style={{ opacity: 0.8 }}>{riesgoMsg}</small>
-          </div>
-        </div>
-
-        <div className="modal-botones" style={{ marginTop: 16 }}>
-          <button className="btn btn-primary" onClick={onSave}>Guardar</button>
-          <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
-        </div>
-      </div>
     </div>
   );
 }

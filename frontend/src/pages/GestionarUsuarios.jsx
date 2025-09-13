@@ -200,7 +200,7 @@ function GestionarUsuarios() {
         u.correo,
         u.nombre,
         getApellido(u),
-        u.numero_documento,
+        ...(tipoUsuario === 'alumnos' ? [u.numero_documento] : []), // ← no buscamos por Nº doc en profesores
         u.rut,
         u.cargo,
         u.telefono
@@ -298,6 +298,9 @@ function GestionarUsuarios() {
         if (payload.anio !== undefined && payload.anio !== '') {
           payload.anio = Number(payload.anio);
         }
+      } else {
+        // Profesores: no enviar Nº documento (lo ocultamos en UI)
+        delete payload.numero_documento;
       }
 
       await axios.put(`${API_BASE}${endpointPath}/${formulario._id}`, payload,
@@ -438,7 +441,6 @@ function GestionarUsuarios() {
             Nombre: u.nombre || '',
             Apellido: getApellido(u) || '',
             'Tipo doc': u.tipo_documento || '',
-            'N° documento': u.numero_documento || '',
             RUT: u.rut || '',
             Teléfono: u.telefono || '',
             'Fecha creación': getFechaCreacion(u) || '',
@@ -477,8 +479,8 @@ function GestionarUsuarios() {
   const isAlum = tipoUsuario === 'alumnos';
 
   // columnas para fila “sin resultados”
-  const colSpanProf = 11; // Correo, Nombre, Apellido, TipoDoc, NºDoc, RUT, Teléfono, FechaCreación, Año, Cargo, Acciones
-  const colSpanAlum = 12; // +1 por checkbox maestro
+  const colSpanProf = 10; // Correo, Nombre, Apellido, TipoDoc, RUT, Teléfono, FechaCreación, Año, Cargo, Acciones
+  const colSpanAlum = 11; // checkbox maestro + 10 columnas
 
   return (
     <div className="gestionar-usuarios">
@@ -598,7 +600,6 @@ function GestionarUsuarios() {
                   {isProf ? (
                     <>
                       <th>Tipo doc</th>
-                      <th>N° documento</th>
                       <th>RUT</th>
                       <th>Teléfono</th>
                       <th>Fecha creación</th>
@@ -639,7 +640,6 @@ function GestionarUsuarios() {
                       {isProf ? (
                         <>
                           <td>{u.tipo_documento || '-'}</td>
-                          <td>{u.numero_documento || '-'}</td>
                           <td>{u.rut || '-'}</td>
                           <td>{u.telefono || '-'}</td>
                           <td>{getFechaCreacion(u) || '-'}</td>
@@ -698,14 +698,13 @@ function GestionarUsuarios() {
 
             {tipoUsuario === 'profesores' ? (
               <>
-                {/* Profesores: datos personales */}
+                {/* Profesores: datos personales (sin Nº documento) */}
                 <select name="tipo_documento" value={formulario.tipo_documento || ''} onChange={handleFormularioChange}>
                   <option value="">Tipo de documento</option>
                   <option value="RUT">RUT</option>
                   <option value="DNI">DNI</option>
                   <option value="Pasaporte">Pasaporte</option>
                 </select>
-                <input name="numero_documento" value={formulario.numero_documento || ''} onChange={handleFormularioChange} placeholder="N° documento" />
                 <input name="rut" value={formulario.rut || ''} onChange={handleFormularioChange} placeholder="RUT" />
                 <input name="telefono" value={formulario.telefono || ''} onChange={handleFormularioChange} placeholder="Teléfono" />
                 <input
