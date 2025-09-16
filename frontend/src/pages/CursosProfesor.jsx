@@ -1,31 +1,19 @@
 // src/pages/CursosProfesor.jsx
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 
-/* ===== API local/remota =====
-   Recomendado: setear VITE_API_ROOT (Vite) o REACT_APP_API_ROOT (CRA) en el host.
-   Fallback: detecta localhost, vercel.app y netlify.app y redirige a Render. */
+/* ===== API local/remota ===== */
 const API_ROOT = (() => {
-  // 1) Variables de entorno (preferidas)
   const vite = typeof import.meta !== "undefined" ? import.meta.env?.VITE_API_ROOT : undefined;
   const cra  = typeof process !== "undefined" ? process.env?.REACT_APP_API_ROOT : undefined;
   if (vite) return vite;
   if (cra)  return cra;
 
-  // 2) Fallbacks por hostname
   if (typeof window !== "undefined") {
     const host = window.location.hostname;
-
-    // Local dev
     if (host === "localhost" || host === "127.0.0.1") return "http://localhost:5000";
-
-    // Producción/previews en Vercel
     if (host.endsWith(".vercel.app")) return "https://chatbots-educativos3.onrender.com";
-
-    // (Opcional) Netlify
     if (host.endsWith(".netlify.app")) return "https://chatbots-educativos3.onrender.com";
   }
-
-  // 3) Último recurso: mismo origen (requiere reverse proxy)
   return "";
 })();
 const API_BASE = `${API_ROOT}/api`;
@@ -46,6 +34,9 @@ export default function CursosProfesor() {
   const [busqAlumno, setBusqAlumno] = useState("");
   const [resultAlumnos, setResultAlumnos] = useState([]);
   const [buscando, setBuscando] = useState(false);
+
+  // Cache de alumnos por id (para mostrar RUT/Nombre de inscritos)
+  const [alumnoCache, setAlumnoCache] = useState({}); // { [id]: alumno }
 
   const authHdrs = useMemo(
     () => ({
@@ -120,7 +111,6 @@ export default function CursosProfesor() {
 
   /* ===== CRUD CURSO ===== */
   async function crearCurso(payload) {
-    // Limpia y castea números
     const clean = {
       nombre: (payload.nombre || "").trim(),
       descripcion: (payload.descripcion || "").trim(),
@@ -206,10 +196,13 @@ export default function CursosProfesor() {
         headers: authHdrs,
         body: JSON.stringify({ alumnoIds }),
       });
-      if (!res.ok) throw new Error(await readErr(res));
+    if (!res.ok) throw new Error(await readErr(res));
       const upd = await res.json();
       setCursos((prev) => prev.map((c) => (c._id === upd._id ? upd : c)));
       if (cursoSel?._id === upd._id) setCursoSel(upd);
+
+      // precarga detalles de los recién agregados
+      alumnoIds.forEach((id) => ensureAlumnoLoaded(id));
       alert(`Inscritos: ${alumnoIds.length}`);
     } catch (e) {
       alert(e.message || "Error al inscribir");
@@ -231,7 +224,34 @@ export default function CursosProfesor() {
     }
   }
 
-  /* ===== Modal Crear Curso (con selects/validaciones) ===== */
+  // Carga detalles de un alumno y lo mete al cache (para mostrar RUT/Nombre)
+  const ensureAlumnoLoaded = useCallback(
+    async (id) => {
+      if (!id || alumnoCache[id]) return;
+      try {
+        const r = await fetch(`${API_BASE}/alumnos/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!r.ok) return; // si no existe GET /alumnos/:id, salimos
+        const a = await r.json();
+        if (a && a._id) {
+          setAlumnoCache((prev) => ({ ...prev, [a._id]: a }));
+        }
+      } catch (_) {
+        /* noop */
+      }
+    },
+    [alumnoCache, token]
+  );
+
+  // Cuando abrimos un curso, precarga detalles de sus alumnos
+  useEffect(() => {
+    if (cursoSel?.alumnos?.length) {
+      cursoSel.alumnos.forEach((id) => ensureAlumnoLoaded(id));
+    }
+  }, [cursoSel?._id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ===== Modal Crear Curso (selects/validaciones) ===== */
   function CrearCursoModal({ onClose, onCreate }) {
     const [form, setForm] = useState({
       nombre: "",
@@ -249,7 +269,7 @@ export default function CursosProfesor() {
     };
 
     const isValidNombre = form.nombre.trim().length > 0;
-    const isValidAnio = !form.anio || /^\d{4}$/.test(form.anio); // opcional, pero si lo pone debe ser 4 dígitos
+    const isValidAnio = !form.anio || /^\d{4}$/.test(form.anio);
     const isValidSem = !form.semestre || ["1", "2"].includes(String(form.semestre));
     const isValidJor = !form.jornada || JORNADAS.includes(form.jornada);
     const canCreate = isValidNombre && isValidAnio && isValidSem && isValidJor;
@@ -334,10 +354,21 @@ export default function CursosProfesor() {
     );
   }
 
+  // Colgroup para alinear columnas de ambos listados (RUT/Nombre/Acción)
+  const Cols = () => (
+    <colgroup>
+      <col style={{ width: "32%" }} />
+      <col style={{ width: "48%" }} />
+      <col style={{ width: "20%" }} />
+    </colgroup>
+  );
+
+  const nombreCompleto = (a) => [a?.nombre, a?.apellido].filter(Boolean).join(" ");
+
   /* ===== UI principal ===== */
   return (
     <div>
-      <h3>Mis cursos</h3>
+      <h3 style={{ textAlign: "center" }}>Mis cursos</h3>
 
       <div className="toolbar">
         <button className="btn btn-primary" onClick={() => setShowCrear(true)}>Nuevo curso</button>
@@ -409,7 +440,10 @@ export default function CursosProfesor() {
         <div className="card" style={{ marginTop: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <h4 style={{ margin: 0 }}>Gestionar alumnos — {cursoSel.nombre}</h4>
-            <button className="btn btn-ghost" onClick={() => setCursoSel(null)} style={{ marginLeft: "auto" }}>
+            <div style={{ marginLeft: "auto", opacity: 0.8 }}>
+              Inscritos: <b>{Array.isArray(cursoSel.alumnos) ? cursoSel.alumnos.length : 0}</b>
+            </div>
+            <button className="btn btn-ghost" onClick={() => setCursoSel(null)} style={{ marginLeft: 8 }}>
               Cerrar
             </button>
           </div>
@@ -428,17 +462,25 @@ export default function CursosProfesor() {
                   Buscar
                 </button>
               </div>
+
               <div className="table-wrap" style={{ maxHeight: 280, overflow: "auto" }}>
                 <table className="table">
-                  <thead><tr><th>RUT/DNI</th><th>Nombre</th><th>Acción</th></tr></thead>
+                  <Cols />
+                  <thead>
+                    <tr>
+                      <th>RUT/DNI</th>
+                      <th>Nombre</th>
+                      <th>Acción</th>
+                    </tr>
+                  </thead>
                   <tbody>
                     {buscando ? (
                       <tr><td colSpan="99">Buscando…</td></tr>
                     ) : resultAlumnos.length ? (
                       resultAlumnos.map((a) => (
                         <tr key={a._id}>
-                          <td>{a.numero_documento ?? a.rut ?? "-"}</td>
-                          <td>{[a.nombre, a.apellido].filter(Boolean).join(" ") || "-"}</td>
+                          <td>{a.numero_documento ?? a.rut ?? "—"}</td>
+                          <td>{nombreCompleto(a) || "—"}</td>
                           <td>
                             <button
                               className="btn btn-primary"
@@ -459,24 +501,34 @@ export default function CursosProfesor() {
 
             {/* Listado de inscritos */}
             <div>
-              <div className="kicker" style={{ marginBottom: 8 }}>
-                Inscritos: <b>{Array.isArray(cursoSel.alumnos) ? cursoSel.alumnos.length : 0}</b>
-              </div>
               <div className="table-wrap" style={{ maxHeight: 280, overflow: "auto" }}>
                 <table className="table">
-                  <thead><tr><th>AlumnoId</th><th>Acción</th></tr></thead>
+                  <Cols />
+                  <thead>
+                    <tr>
+                      <th>RUT/DNI</th>
+                      <th>Nombre</th>
+                      <th>Acción</th>
+                    </tr>
+                  </thead>
                   <tbody>
                     {Array.isArray(cursoSel.alumnos) && cursoSel.alumnos.length ? (
-                      cursoSel.alumnos.map((alId) => (
-                        <tr key={alId}>
-                          <td>{alId}</td>
-                          <td>
-                            <button className="btn btn-danger" onClick={() => quitarAlumno(cursoSel._id, alId)}>
-                              Quitar
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                      cursoSel.alumnos.map((alId) => {
+                        const a = alumnoCache[alId] || null;
+                        const doc = a?.numero_documento ?? a?.rut ?? alId; // fallback id si no está cargado
+                        const nom = a ? nombreCompleto(a) || "—" : "—";
+                        return (
+                          <tr key={alId}>
+                            <td>{doc}</td>
+                            <td>{nom}</td>
+                            <td>
+                              <button className="btn btn-danger" onClick={() => quitarAlumno(cursoSel._id, alId)}>
+                                Quitar
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
                     ) : (
                       <tr><td colSpan="99">Sin alumnos inscritos</td></tr>
                     )}
