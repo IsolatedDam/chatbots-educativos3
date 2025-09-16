@@ -11,30 +11,19 @@ const app = express();
 app.disable('x-powered-by');
 
 /* ===================== CORS ===================== */
-
-// Dominios permitidos explícitamente
 const STATIC_ALLOWED = [
   'http://localhost:3000',
   'http://localhost:5173',
   'https://chatbots-educativos3.vercel.app',
   'https://chatbots-educativos3-bsm7swjd7-alejandros-projects-bb949aab.vercel.app',
 ];
-
-// Si quieres permitir cualquier *.vercel.app, setea en Render:
-// CORS_ALLOW_VERCEL_WILDCARD=1
 const allowVercelWildcard = process.env.CORS_ALLOW_VERCEL_WILDCARD === '1';
 
 const corsOptions = {
   origin(origin, cb) {
-    // Permite herramientas sin Origin (curl/Postman) y SSR
     if (!origin) return cb(null, true);
-
     if (STATIC_ALLOWED.includes(origin)) return cb(null, true);
-
-    if (allowVercelWildcard && origin.endsWith('.vercel.app')) {
-      return cb(null, true);
-    }
-
+    if (allowVercelWildcard && origin.endsWith('.vercel.app')) return cb(null, true);
     return cb(new Error(`CORS not allowed: ${origin}`), false);
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -42,13 +31,9 @@ const corsOptions = {
   credentials: true,
   maxAge: 86400,
 };
-
 app.use(cors(corsOptions));
-
-// ⭐️ FIX: en algunos entornos `'*'` rompe path-to-regexp, usa RegExp:
 app.options(/.*/, cors(corsOptions));
 
-/* log de preflights para depurar CORS */
 app.use((req, _res, next) => {
   if (req.method === 'OPTIONS') {
     console.log('CORS preflight from:', req.headers.origin, 'to', req.originalUrl);
@@ -62,7 +47,6 @@ app.use(express.json({ limit: '2mb' }));
 /* ================== MongoDB ================== */
 mongoose
   .connect(process.env.MONGO_URI, {
-    // En Mongoose >=6 estos flags ya son default, no molestan
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
@@ -76,7 +60,7 @@ async function auth(req, res, next) {
   if (!token) return res.status(401).json({ msg: 'Token requerido' });
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); // { id, ... }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await Admin.findById(decoded.id).lean();
     if (!user) return res.status(401).json({ msg: 'Usuario no válido' });
 
@@ -91,17 +75,20 @@ async function auth(req, res, next) {
   }
 }
 
-// Debug: quién soy (con token)
 app.get('/api/_whoami', auth, (req, res) => {
-  res.json(req.user); // { id, rol, permisos }
+  res.json(req.user);
 });
 
 /* ================== Rutas reales ================== */
-app.use('/api',        require('./routes/auth'));    // Login/registro alumnos
-app.use('/api/upload', require('./routes/upload'));  // Carga masiva desde Excel
-app.use('/api/admin',  require('./routes/admin'));   // Admin y profesores
-app.use('/api/visitas',require('./routes/visita'));  // Invitados y exportación de visitas
-app.use('/api/alumnos',require('./routes/alumno'));  // Funciones de alumnos
+app.use('/api',         require('./routes/auth'));     // Login/registro alumnos
+app.use('/api/upload',  require('./routes/upload'));   // Carga masiva desde Excel
+app.use('/api/admin',   require('./routes/admin'));    // Admin y profesores
+app.use('/api/visitas', require('./routes/visita'));   // Invitados y exportaciones
+app.use('/api/alumnos', require('./routes/alumno'));   // Alumnos
+
+// ⬇️⬇️ NUEVO: monta cursos y chatbots
+app.use('/api/cursos',   require('./routes/cursos'));
+app.use('/api/chatbots', require('./routes/chatbots'));
 
 // Healthcheck
 app.get('/', (_req, res) => {
