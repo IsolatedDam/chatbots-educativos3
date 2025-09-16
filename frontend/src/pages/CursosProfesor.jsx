@@ -1,16 +1,31 @@
 // src/pages/CursosProfesor.jsx
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 
-/* ===== API local/remota ===== */
+/* ===== API local/remota =====
+   Recomendado: setear VITE_API_ROOT (Vite) o REACT_APP_API_ROOT (CRA) en el host.
+   Fallback: detecta localhost, vercel.app y netlify.app y redirige a Render. */
 const API_ROOT = (() => {
+  // 1) Variables de entorno (preferidas)
   const vite = typeof import.meta !== "undefined" ? import.meta.env?.VITE_API_ROOT : undefined;
   const cra  = typeof process !== "undefined" ? process.env?.REACT_APP_API_ROOT : undefined;
   if (vite) return vite;
   if (cra)  return cra;
+
+  // 2) Fallbacks por hostname
   if (typeof window !== "undefined") {
-    const { hostname } = window.location;
-    if (hostname === "localhost" || hostname === "127.0.0.1") return "http://localhost:5000";
+    const host = window.location.hostname;
+
+    // Local dev
+    if (host === "localhost" || host === "127.0.0.1") return "http://localhost:5000";
+
+    // Producción/previews en Vercel
+    if (host.endsWith(".vercel.app")) return "https://chatbots-educativos3.onrender.com";
+
+    // (Opcional) Netlify
+    if (host.endsWith(".netlify.app")) return "https://chatbots-educativos3.onrender.com";
   }
+
+  // 3) Último recurso: mismo origen (requiere reverse proxy)
   return "";
 })();
 const API_BASE = `${API_ROOT}/api`;
@@ -63,7 +78,7 @@ export default function CursosProfesor() {
       }
       if (!res.ok) {
         if (res.status === 401) alert("Tu sesión expiró. Inicia sesión nuevamente.");
-        console.warn("fetchCursos non-ok", res.status, await res.text().catch(()=> ""));
+        console.warn("fetchCursos non-ok", res.status, await res.text().catch(() => ""));
         setCursos([]);
         return;
       }
@@ -86,7 +101,7 @@ export default function CursosProfesor() {
         return;
       }
       if (!res.ok) {
-        console.warn("fetchChatbots non-ok", res.status, await res.text().catch(()=> ""));
+        console.warn("fetchChatbots non-ok", res.status, await res.text().catch(() => ""));
         setChatbots([]);
         return;
       }
@@ -175,7 +190,7 @@ export default function CursosProfesor() {
       if (!res.ok) throw new Error(await readErr(res));
       const data = await res.json();
       const yaInscritos = new Set(cursoSel?.alumnos || []);
-      setResultAlumnos((Array.isArray(data) ? data : []).filter(a => !yaInscritos.has(a._id)));
+      setResultAlumnos((Array.isArray(data) ? data : []).filter((a) => !yaInscritos.has(a._id)));
     } catch (e) {
       alert(e.message || "No se pudo buscar alumnos");
     } finally {
