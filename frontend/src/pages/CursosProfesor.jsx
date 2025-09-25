@@ -1,5 +1,5 @@
-// src/pages/CursosProfesor.jsx
 import React, { useEffect, useMemo, useState, useCallback } from "react";
+import "../styles/CursosProfesor.css";
 
 /* ===== API local/remota ===== */
 const API_ROOT = (() => {
@@ -11,11 +11,16 @@ const API_ROOT = (() => {
     const { hostname } = window.location;
     if (hostname === "localhost" || hostname === "127.0.0.1") return "http://localhost:5000";
   }
-  return "https://chatbots-educativos3.onrender.com"; // fallback a tu API pública
+  return "https://chatbots-educativos3.onrender.com";
 })();
 const API_BASE = `${API_ROOT}/api`;
 
 const JORNADAS = ["Mañana", "Tarde", "Vespertino", "Viernes", "Sábados"];
+
+/* ===== Helpers presentacionales ===== */
+const docDe = (a) => a?.numero_documento ?? a?.rut ?? "—";
+const nombreDe = (a) => [a?.nombre, a?.apellido ?? a?.apellidos].filter(Boolean).join(" ") || "—";
+const idsDeInscritos = (al = []) => new Set((al || []).map((x) => (typeof x === "string" ? x : x?._id)));
 
 export default function CursosProfesor() {
   const me = JSON.parse(localStorage.getItem("usuario") || "{}");
@@ -24,10 +29,15 @@ export default function CursosProfesor() {
   const [loading, setLoading] = useState(false);
   const [cursos, setCursos] = useState([]);
   const [chatbots, setChatbots] = useState([]);
+
+  // Popup de gestión
+  const [cursoSel, setCursoSel] = useState(null);
+  const [showGestionar, setShowGestionar] = useState(false);
+
+  // Modal crear curso
   const [showCrear, setShowCrear] = useState(false);
 
-  // Gestión alumnos del curso seleccionado
-  const [cursoSel, setCursoSel] = useState(null);
+  // búsqueda dentro del popup
   const [busqAlumno, setBusqAlumno] = useState("");
   const [resultAlumnos, setResultAlumnos] = useState([]);
   const [buscando, setBuscando] = useState(false);
@@ -40,15 +50,12 @@ export default function CursosProfesor() {
     [token]
   );
 
-  /* ===== Helpers ===== */
+  /* ===== Utils ===== */
   const readErr = async (res) => {
     const txt = await res.text().catch(() => "");
     try { const j = JSON.parse(txt); return j?.msg || txt || `HTTP ${res.status}`; }
     catch { return txt || `HTTP ${res.status}`; }
   };
-  const docDe = (a) => a?.numero_documento ?? a?.rut ?? "—";
-  const nombreDe = (a) => [a?.nombre, a?.apellido ?? a?.apellidos].filter(Boolean).join(" ") || "—";
-  const idsDeInscritos = (al = []) => new Set((al || []).map((x) => (typeof x === "string" ? x : x?._id)));
 
   /* ===== Carga inicial ===== */
   const fetchCursos = useCallback(async () => {
@@ -87,7 +94,7 @@ export default function CursosProfesor() {
     fetchChatbots();
   }, [fetchCursos, fetchChatbots]);
 
-  // Trae el curso pop* con datos de alumnos
+  // Traer curso con alumnos
   const fetchCursoDetallado = useCallback(
     async (cursoId) => {
       try {
@@ -95,7 +102,7 @@ export default function CursosProfesor() {
         if (!res.ok) throw new Error(await readErr(res));
         const curso = await res.json();
         setCursoSel(curso);
-        // refrescar conteo en la tabla principal
+        // refrescar conteo en tabla principal
         setCursos((prev) => prev.map((c) => (c._id === curso._id ? { ...c, alumnos: curso.alumnos?.map(a => a._id) ?? [] } : c)));
       } catch (e) {
         console.error("fetchCursoDetallado", e);
@@ -105,7 +112,7 @@ export default function CursosProfesor() {
     [authHdrs]
   );
 
-  /* ===== CRUD CURSO ===== */
+  /* ===== CRUD Curso ===== */
   async function crearCurso(payload) {
     const clean = {
       nombre: (payload.nombre || "").trim(),
@@ -134,7 +141,7 @@ export default function CursosProfesor() {
     } catch (e) { alert(e.message || "Error al eliminar curso"); }
   }
 
-  /* ===== Asignar 1 chatbot ===== */
+  /* ===== Chatbot ===== */
   async function asignarChatbot(cursoId, chatbotId) {
     try {
       const res = await fetch(`${API_BASE}/cursos/${cursoId}/chatbot`, {
@@ -149,6 +156,7 @@ export default function CursosProfesor() {
 
   /* ===== Alumnos ===== */
   async function buscarAlumnos(q) {
+    if (!cursoSel?._id) return;
     setBuscando(true);
     try {
       const res = await fetch(`${API_BASE}/alumnos${q ? `?q=${encodeURIComponent(q)}` : ""}`, {
@@ -173,7 +181,7 @@ export default function CursosProfesor() {
       });
       if (!res.ok) throw new Error(await readErr(res));
       await fetchCursoDetallado(cursoId);
-      alert(`Inscritos: ${alumnoIds.length}`);
+      setBusqAlumno(""); setResultAlumnos([]);
     } catch (e) { alert(e.message || "Error al inscribir"); }
   }
 
@@ -187,47 +195,197 @@ export default function CursosProfesor() {
     } catch (e) { alert(e.message || "Error al quitar alumno"); }
   }
 
-  /* ===== Modal Crear Curso ===== */
+  /* ===== Modal: Crear Curso ===== */
   function CrearCursoModal({ onClose, onCreate }) {
     const [form, setForm] = useState({ nombre: "", descripcion: "", anio: "", semestre: "", jornada: "" });
+    useEffect(() => { document.body.classList.add("cp-no-scroll"); return () => document.body.classList.remove("cp-no-scroll"); }, []);
     const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
     const onAnioChange = (e) => { const v = e.target.value; if (/^\d{0,4}$/.test(v)) set("anio", v); };
+
     const ok = form.nombre.trim().length > 0 &&
                (!form.anio || /^\d{4}$/.test(form.anio)) &&
                (!form.semestre || ["1", "2"].includes(String(form.semestre))) &&
                (!form.jornada || JORNADAS.includes(form.jornada));
 
     return (
-      <div className="modal-backdrop">
-        <div className="modal">
-          <h3>Nuevo curso</h3>
-          <label className="field"><span>Nombre</span>
-            <input value={form.nombre} onChange={(e)=>set("nombre", e.target.value)} placeholder="Ej: Matemática I" />
-          </label>
-          <label className="field"><span>Descripción</span>
-            <input value={form.descripcion} onChange={(e)=>set("descripcion", e.target.value)} placeholder="Opcional" />
-          </label>
-          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8}}>
-            <label className="field"><span>Año</span>
-              <input inputMode="numeric" maxLength={4} placeholder="2025" value={form.anio} onChange={onAnioChange} />
-            </label>
-            <label className="field"><span>Semestre</span>
-              <select className="select" value={form.semestre} onChange={(e)=>set("semestre", e.target.value)}>
-                <option value="">— Seleccionar —</option>
-                <option value="1">1</option><option value="2">2</option>
-              </select>
-            </label>
-            <label className="field"><span>Jornada</span>
-              <select className="select" value={form.jornada} onChange={(e)=>set("jornada", e.target.value)}>
-                <option value="">— Seleccionar —</option>
-                {JORNADAS.map((j) => <option key={j} value={j}>{j}</option>)}
-              </select>
-            </label>
+      <div className="cp-backdrop" onMouseDown={onClose} role="dialog" aria-modal="true">
+        <div className="cp-modal" onMouseDown={(e)=>e.stopPropagation()}>
+          <div className="cp-header">
+            <h4 className="cp-title">Crear un curso</h4>
           </div>
-          <div style={{display:"flex", justifyContent:"flex-end", gap:8, marginTop:12}}>
+
+          <div className="cp-content">
+            <div className="cp-grid-2">
+              <label className="cp-field">
+                <span>Nombre</span>
+                <input className="cp-input" value={form.nombre}
+                       onChange={(e)=>set("nombre", e.target.value)} placeholder="Ej: Matemática I" />
+              </label>
+
+              <label className="cp-field">
+                <span>Descripción</span>
+                <input className="cp-input" value={form.descripcion}
+                       onChange={(e)=>set("descripcion", e.target.value)} placeholder="Opcional" />
+              </label>
+
+              <label className="cp-field">
+                <span>Año</span>
+                <input className="cp-input" inputMode="numeric" maxLength={4}
+                       placeholder="2025" value={form.anio} onChange={onAnioChange} />
+              </label>
+
+              <label className="cp-field">
+                <span>Semestre</span>
+                <select className="cp-select" value={form.semestre} onChange={(e)=>set("semestre", e.target.value)}>
+                  <option value="">— Seleccionar —</option>
+                  <option value="1">1</option><option value="2">2</option>
+                </select>
+              </label>
+
+              <label className="cp-field">
+                <span>Jornada</span>
+                <select className="cp-select" value={form.jornada} onChange={(e)=>set("jornada", e.target.value)}>
+                  <option value="">— Seleccionar —</option>
+                  {JORNADAS.map((j) => <option key={j} value={j}>{j}</option>)}
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div className="cp-footer">
             <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
             <button className="btn btn-primary" onClick={()=>onCreate(form)} disabled={!ok}
-              title={!ok ? "Completa los campos requeridos correctamente" : "Crear"}>Crear</button>
+              title={!ok ? "Completa los campos requeridos correctamente" : "Crear"}>
+              Crear
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ===== Popup: Gestionar Curso ===== */
+  function GestionarCursoModal({ curso, onClose }) {
+    useEffect(() => {
+      document.body.classList.add("cp-no-scroll");
+      return () => document.body.classList.remove("cp-no-scroll");
+    }, []);
+
+    return (
+      <div className="mgm-backdrop" onMouseDown={onClose} role="dialog" aria-modal="true">
+        <div className="mgm-modal" onMouseDown={(e)=>e.stopPropagation()}>
+          <div className="mgm-header">
+            <h4 className="mgm-title">Gestionar alumnos — {curso?.nombre ?? "Curso"}</h4>
+            <div className="mgm-meta">
+              <span>{curso?.anio ?? "—"}</span>
+              <span>Sem {curso?.semestre ?? "—"}</span>
+              <span>{curso?.jornada ?? "—"}</span>
+            </div>
+          </div>
+
+          <div className="mgm-toolbar">
+            <div className="mgm-field">
+              <label>Chatbot</label>
+              <select
+                className="cp-select"
+                value={curso?.chatbotId || ""}
+                onChange={(e)=>asignarChatbot(curso._id, e.target.value || null)}
+              >
+                <option value="">— Sin chatbot —</option>
+                {chatbots.map((cb) => <option key={cb._id} value={cb._id}>{cb.nombre}</option>)}
+              </select>
+            </div>
+
+            <div className="mgm-spacer" />
+
+            <div className="mgm-field mgm-search">
+              <label>Buscar/Agregar alumno</label>
+              <div className="mgm-search-row">
+                <input
+                  className="cp-input"
+                  placeholder="RUT/DNI, nombre o apellido…"
+                  value={busqAlumno}
+                  onChange={(e)=>setBusqAlumno(e.target.value)}
+                  onKeyDown={(e)=>{ if(e.key==='Enter') buscarAlumnos(busqAlumno); }}
+                />
+                <button className="btn btn-primary" onClick={()=>buscarAlumnos(busqAlumno)} disabled={buscando}>
+                  Buscar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Resultados de búsqueda */}
+          <div className="mgm-block">
+            <div className="mgm-block-title">Resultados</div>
+            <div className="cp-table-clip">
+              <table className="cp-table">
+                <colgroup>
+                  <col className="cp-col-doc" /><col className="cp-col-name" /><col className="cp-col-min" />
+                </colgroup>
+                <thead><tr><th>RUT/DNI</th><th>Nombre</th><th>Acción</th></tr></thead>
+                <tbody>
+                  {buscando ? (
+                    <tr><td colSpan="99">Buscando…</td></tr>
+                  ) : (resultAlumnos?.length ? (
+                    resultAlumnos.map((a)=>(
+                      <tr key={a._id}>
+                        <td>{docDe(a)}</td>
+                        <td title={nombreDe(a)}>{nombreDe(a)}</td>
+                        <td>
+                          <button className="btn btn-primary cp-btn-block"
+                                  onClick={()=>agregarAlumnos(curso._id, [a._id])}>
+                            Agregar
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr><td colSpan="99">Sin resultados</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Inscritos del curso */}
+          <div className="mgm-block">
+            <div className="mgm-block-title">
+              Alumnos inscritos <span className="mgm-count">{curso?.alumnos?.length ?? 0}</span>
+            </div>
+            <div className="cp-table-clip">
+              <table className="cp-table">
+                <colgroup>
+                  <col className="cp-col-doc" /><col className="cp-col-name" /><col className="cp-col-min" />
+                </colgroup>
+                <thead><tr><th>RUT/DNI</th><th>Nombre</th><th>Acción</th></tr></thead>
+                <tbody>
+                  {Array.isArray(curso?.alumnos) && curso.alumnos.length ? (
+                    curso.alumnos.map((al) => {
+                      const a = typeof al === "string" ? { _id: al } : al;
+                      return (
+                        <tr key={a._id}>
+                          <td>{docDe(a)}</td>
+                          <td title={nombreDe(a)}>{nombreDe(a)}</td>
+                          <td>
+                            <button className="btn btn-danger cp-btn-block"
+                                    onClick={()=>quitarAlumno(curso._id, a._id)}>
+                              Quitar
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr><td colSpan="99">Sin alumnos inscritos</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="mgm-footer">
+            <button className="btn btn-ghost" onClick={onClose}>Cerrar</button>
           </div>
         </div>
       </div>
@@ -236,24 +394,24 @@ export default function CursosProfesor() {
 
   /* ===== UI principal ===== */
   return (
-    <div>
-      <h3>Mis cursos</h3>
-
-      <div className="toolbar">
-        <button className="btn btn-primary" onClick={() => setShowCrear(true)}>Nuevo curso</button>
-        <button className="btn btn-primary" onClick={fetchCursos}>Refrescar</button>
+    <div className="cp-page">
+      <div className="cp-topbar">
+        <h3 className="cp-heading">Mis cursos</h3>
+        <div className="cp-actions">
+          <button className="btn btn-primary" onClick={() => setShowCrear(true)}>Nuevo curso</button>
+          <button className="btn btn-primary" onClick={fetchCursos}>Refrescar</button>
+        </div>
       </div>
 
-      <div className="table-wrap">
-        <table className="table" style={{ tableLayout: "fixed", width: "100%" }}>
-          {/* Columnas pedidas: Año | Semestre | Jornada | Chatbot | # Alumnos | Acciones */}
+      <div className="cp-table-wrap">
+        <table className="cp-table">
           <colgroup>
-            <col style={{width:"14%"}} />  {/* Año */}
-            <col style={{width:"16%"}} />  {/* Semestre */}
-            <col style={{width:"18%"}} />  {/* Jornada */}
-            <col style={{width:"28%"}} />  {/* Chatbot */}
-            <col style={{width:"10%"}} />  {/* # Alumnos */}
-            <col style={{width:"14%"}} />  {/* Acciones */}
+            <col className="cp-col-year" />
+            <col className="cp-col-sem" />
+            <col className="cp-col-jor" />
+            <col className="cp-col-cb" />
+            <col className="cp-col-num" />
+            <col className="cp-col-act" />
           </colgroup>
           <thead>
             <tr>
@@ -270,13 +428,13 @@ export default function CursosProfesor() {
               <tr><td colSpan="99">Cargando…</td></tr>
             ) : cursos.length ? (
               cursos.map((c) => (
-                <tr key={c._id} title={c.nombre || "" /* tip: nombre visible al pasar el mouse */}>
+                <tr key={c._id} title={c.nombre || ""}>
                   <td>{c.anio ?? "—"}</td>
                   <td>{c.semestre ?? "—"}</td>
                   <td>{c.jornada ?? "—"}</td>
                   <td>
                     <select
-                      className="select"
+                      className="cp-select"
                       value={c.chatbotId || ""}
                       onChange={(e)=>asignarChatbot(c._id, e.target.value || null)}
                     >
@@ -285,17 +443,25 @@ export default function CursosProfesor() {
                     </select>
                   </td>
                   <td>{Array.isArray(c.alumnos) ? c.alumnos.length : 0}</td>
-                  <td className="cell-actions">
-                    <button className="btn btn-primary" onClick={()=>fetchCursoDetallado(c._id)}>Gestionar</button>
-                    <button className="btn btn-danger" style={{marginLeft:8}} onClick={()=>eliminarCurso(c._id)}>Eliminar</button>
+                  <td className="cp-cell-actions">
+                    <button
+                      className="btn btn-primary"
+                      onClick={async()=>{
+                        await fetchCursoDetallado(c._id);
+                        setBusqAlumno(""); setResultAlumnos([]);
+                        setShowGestionar(true);
+                      }}
+                    >
+                      Gestionar
+                    </button>
+                    <button className="btn btn-danger" onClick={()=>eliminarCurso(c._id)}>Eliminar</button>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="99" style={{ textAlign: "center", padding: "20px" }}>
-                  <div style={{ opacity: 0.9, marginBottom: 12 }}>Aún no tienes cursos.</div>
-                  <button className="btn btn-primary" onClick={() => setShowCrear(true)}>Crear mi primer curso</button>
+                <td colSpan="99" className="cp-empty">
+                  <div>Aún no tienes cursos.</div>
                 </td>
               </tr>
             )}
@@ -303,91 +469,21 @@ export default function CursosProfesor() {
         </table>
       </div>
 
-      {/* Panel de gestión de alumnos del curso seleccionado */}
-      {cursoSel && (
-        <div className="card" style={{marginTop:16}}>
-          <div style={{display:"flex", alignItems:"center", gap:8}}>
-            <h4 style={{margin:0}}>Gestionar alumnos — {cursoSel.nombre}</h4>
-            <span style={{marginLeft:"auto", opacity:.8}}>Inscritos: <b>{cursoSel.alumnos?.length ?? 0}</b></span>
-            <button className="btn btn-ghost" onClick={()=>setCursoSel(null)} style={{marginLeft:8}}>Cerrar</button>
-          </div>
-
-          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginTop:12}}>
-            {/* Buscar y agregar */}
-            <div>
-              <div className="toolbar">
-                <input
-                  className="search"
-                  placeholder="Buscar alumnos (nombre, apellido, RUT/DNI)"
-                  value={busqAlumno}
-                  onChange={(e)=>setBusqAlumno(e.target.value)}
-                />
-                <button className="btn btn-primary" onClick={()=>buscarAlumnos(busqAlumno)} disabled={buscando}>
-                  Buscar
-                </button>
-              </div>
-
-              <div className="table-wrap" style={{maxHeight:280, overflow:"auto"}}>
-                <table className="table" style={{ tableLayout: "fixed", width: "100%" }}>
-                  <colgroup>
-                    <col style={{width:"35%"}} /><col style={{width:"55%"}} /><col style={{width:"10%"}} />
-                  </colgroup>
-                  <thead><tr><th>RUT/DNI</th><th>Nombre</th><th>Acción</th></tr></thead>
-                  <tbody>
-                    {buscando ? (
-                      <tr><td colSpan="99">Buscando…</td></tr>
-                    ) : resultAlumnos.length ? (
-                      resultAlumnos.map((a) => (
-                        <tr key={a._id}>
-                          <td>{docDe(a)}</td>
-                          <td title={nombreDe(a)}>{nombreDe(a)}</td>
-                          <td>
-                            <button className="btn btn-primary" onClick={()=>agregarAlumnos(cursoSel._id, [a._id])}>Agregar</button>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr><td colSpan="99">Sin resultados</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Listado de inscritos */}
-            <div>
-              <div className="table-wrap" style={{maxHeight:280, overflow:"auto"}}>
-                <table className="table" style={{ tableLayout: "fixed", width: "100%" }}>
-                  <colgroup>
-                    <col style={{width:"35%"}} /><col style={{width:"55%"}} /><col style={{width:"10%"}} />
-                  </colgroup>
-                  <thead><tr><th>RUT/DNI</th><th>Nombre</th><th>Acción</th></tr></thead>
-                  <tbody>
-                    {Array.isArray(cursoSel.alumnos) && cursoSel.alumnos.length ? (
-                      cursoSel.alumnos.map((al) => {
-                        const a = typeof al === "string" ? { _id: al } : al;
-                        return (
-                          <tr key={a._id}>
-                            <td>{docDe(a)}</td>
-                            <td title={nombreDe(a)}>{nombreDe(a)}</td>
-                            <td>
-                              <button className="btn btn-danger" onClick={()=>quitarAlumno(cursoSel._id, a._id)}>Quitar</button>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr><td colSpan="99">Sin alumnos inscritos</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Popup de gestión */}
+      {showGestionar && cursoSel && (
+        <GestionarCursoModal
+          curso={cursoSel}
+          onClose={()=>{ setShowGestionar(false); setCursoSel(null); }}
+        />
       )}
 
-      {showCrear && <CrearCursoModal onClose={() => setShowCrear(false)} onCreate={crearCurso} />}
+      {/* Modal crear curso */}
+      {showCrear && (
+        <CrearCursoModal
+          onClose={() => setShowCrear(false)}
+          onCreate={crearCurso}
+        />
+      )}
     </div>
   );
 }
