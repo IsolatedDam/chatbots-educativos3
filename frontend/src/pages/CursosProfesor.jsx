@@ -1,3 +1,4 @@
+// src/pages/CursosProfesor.jsx
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import "../styles/CursosProfesor.css";
 
@@ -102,8 +103,18 @@ export default function CursosProfesor() {
         if (!res.ok) throw new Error(await readErr(res));
         const curso = await res.json();
         setCursoSel(curso);
-        // refrescar conteo en tabla principal
-        setCursos((prev) => prev.map((c) => (c._id === curso._id ? { ...c, alumnos: curso.alumnos?.map(a => a._id) ?? [] } : c)));
+        // refrescar conteo y chatbotId en la tabla principal
+        setCursos((prev) =>
+          prev.map((c) =>
+            c._id === curso._id
+              ? {
+                  ...c,
+                  alumnos: curso.alumnos?.map((a) => a._id) ?? [],
+                  chatbotId: curso.chatbotId || null,
+                }
+              : c
+          )
+        );
       } catch (e) {
         console.error("fetchCursoDetallado", e);
         alert(e.message || "No se pudo cargar el curso.");
@@ -143,15 +154,21 @@ export default function CursosProfesor() {
 
   /* ===== Chatbot ===== */
   async function asignarChatbot(cursoId, chatbotId) {
+    // sanea valores "undefined" / falsy
+    const clean = (v) => (v && v !== "undefined" ? v : null);
     try {
       const res = await fetch(`${API_BASE}/cursos/${cursoId}/chatbot`, {
-        method: "POST", headers: authHdrs, body: JSON.stringify({ chatbotId: chatbotId || null }),
+        method: "POST",
+        headers: authHdrs,
+        body: JSON.stringify({ chatbotId: clean(chatbotId) }),
       });
       if (!res.ok) throw new Error(await readErr(res));
       const upd = await res.json();
       setCursos((prev) => prev.map((c) => (c._id === upd._id ? upd : c)));
       if (cursoSel?._id === upd._id) setCursoSel(upd);
-    } catch (e) { alert(e.message || "Error asignando chatbot"); }
+    } catch (e) {
+      alert(e.message || "Error asignando chatbot");
+    }
   }
 
   /* ===== Alumnos ===== */
@@ -195,7 +212,7 @@ export default function CursosProfesor() {
     } catch (e) { alert(e.message || "Error al quitar alumno"); }
   }
 
-  /* ===== Modal: Crear Curso (form bonito) ===== */
+  /* ===== Modal: Crear Curso ===== */
   function CrearCursoModal({ onClose, onCreate }) {
     const [form, setForm] = useState({ nombre: "", descripcion: "", anio: "", semestre: "", jornada: "" });
     useEffect(() => { document.body.classList.add("cp-no-scroll"); return () => document.body.classList.remove("cp-no-scroll"); }, []);
@@ -215,7 +232,6 @@ export default function CursosProfesor() {
           </div>
 
           <div className="cp-content">
-            {/* Grid 12 columnas para alinear todo prolijo */}
             <div className="cp-form">
               <label className="cp-field cp-col-6">
                 <span>Nombre</span>
@@ -294,7 +310,14 @@ export default function CursosProfesor() {
                 onChange={(e)=>asignarChatbot(curso._id, e.target.value || null)}
               >
                 <option value="">— Sin chatbot —</option>
-                {chatbots.map((cb) => <option key={cb._id} value={cb._id}>{cb.nombre}</option>)}
+                {chatbots.map((cb) => {
+                  const id = cb._id || cb.id; // 👈 clave: usar _id || id
+                  return (
+                    <option key={id} value={id}>
+                      {cb.nombre}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -317,7 +340,7 @@ export default function CursosProfesor() {
             </div>
           </div>
 
-          {/* Resultados y Alumnos inscritos (igual que antes) */}
+          {/* Resultados y Alumnos inscritos */}
           <div className="mgm-block">
             <div className="mgm-block-title">Resultados</div>
             <div className="cp-table-clip">
@@ -400,7 +423,12 @@ export default function CursosProfesor() {
         <h3 className="cp-heading">Mis cursos</h3>
         <div className="cp-actions">
           <button className="btn btn-primary" onClick={() => setShowCrear(true)}>Nuevo curso</button>
-          <button className="btn btn-primary" onClick={fetchCursos}>Refrescar</button>
+          <button
+            className="btn btn-primary"
+            onClick={() => { fetchCursos(); fetchChatbots(); }} // recarga también chatbots
+          >
+            Refrescar
+          </button>
         </div>
       </div>
 
@@ -443,7 +471,14 @@ export default function CursosProfesor() {
                       onChange={(e)=>asignarChatbot(c._id, e.target.value || null)}
                     >
                       <option value="">— Sin chatbot —</option>
-                      {chatbots.map((cb) => <option key={cb._id} value={cb._id}>{cb.nombre}</option>)}
+                      {chatbots.map((cb) => {
+                        const id = cb._id || cb.id; // 👈 clave: usar _id || id
+                        return (
+                          <option key={id} value={id}>
+                            {cb.nombre}
+                          </option>
+                        );
+                      })}
                     </select>
                   </td>
                   <td style={{textAlign:"center"}}>{Array.isArray(c.alumnos) ? c.alumnos.length : 0}</td>
@@ -451,7 +486,7 @@ export default function CursosProfesor() {
                     <button
                       className="btn btn-primary"
                       onClick={async()=>{
-                        await fetchCursoDetallado(c._id);
+                        await Promise.all([fetchCursoDetallado(c._id), fetchChatbots()]);
                         setBusqAlumno(""); setResultAlumnos([]);
                         setShowGestionar(true);
                       }}

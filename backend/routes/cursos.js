@@ -121,24 +121,39 @@ router.post(
   autorizarRoles("profesor", "admin", "superadmin"),
   async (req, res) => {
     try {
-      const { chatbotId = null } = req.body;
-      const curso = await Curso.findById(req.params.id);
+      const { id } = req.params;
+      const { chatbotId = null } = req.body || {};
+
+      const curso = await Curso.findById(id);
       if (!curso) return res.status(404).json({ msg: "Curso no encontrado" });
-      if (String(req.usuario.rol).toLowerCase() === "profesor" &&
-          String(curso.profesorId) !== String(req.usuario.id)) {
+
+      // Solo el dueño si es profesor
+      if (
+        String(req.usuario.rol).toLowerCase() === "profesor" &&
+        String(curso.profesorId) !== String(req.usuario.id)
+      ) {
         return res.status(403).json({ msg: "No autorizado" });
       }
 
+      // Validar el chatbot si envían un id
       if (chatbotId) {
-        const cb = await Chatbot.findById(chatbotId);
+        if (!mongoose.isValidObjectId(chatbotId)) {
+          return res.status(400).json({ msg: "chatbotId inválido" });
+        }
+        const cb = await Chatbot.findOne({ _id: chatbotId /*, activo: true */ });
         if (!cb) return res.status(404).json({ msg: "Chatbot no existe" });
-        curso.chatbotId = cb._id;
-      } else {
-        curso.chatbotId = null;
       }
 
-      await curso.save();
-      return res.json(curso);
+      // Actualizar y devolver el curso actualizado (alumnos poblados para mantener la UI)
+      const actualizado = await Curso.findByIdAndUpdate(
+        id,
+        { $set: { chatbotId: chatbotId || null } },
+        { new: true }
+      )
+        .populate("alumnos", "numero_documento rut nombre apellido apellidos")
+        .lean();
+
+      return res.json(actualizado);
     } catch (e) {
       console.error("POST /cursos/:id/chatbot error:", e);
       return res.status(500).json({ msg: "Error asignando chatbot" });
@@ -162,11 +177,10 @@ router.post(
       }
 
       const set = new Set((curso.alumnos || []).map(String));
-      (alumnoIds || []).forEach((id) => id && set.add(String(id)));
-      curso.alumnos = Array.from(set).map((id) => new mongoose.Types.ObjectId(id));
+      (alumnoIds || []).forEach((aid) => aid && set.add(String(aid)));
+      curso.alumnos = Array.from(set).map((aid) => new mongoose.Types.ObjectId(aid));
       await curso.save();
 
-      // devolver pop para que el front muestre rut/nombre
       curso = await populateAlumnos(Curso.findById(curso._id)).exec();
       return res.json(curso);
     } catch (e) {
@@ -194,7 +208,6 @@ router.delete(
       curso.alumnos = (curso.alumnos || []).filter((x) => String(x) !== String(alumnoId));
       await curso.save();
 
-      // devolver pop para que el front mantenga los datos visibles
       curso = await populateAlumnos(Curso.findById(curso._id)).exec();
       return res.json(curso);
     } catch (e) {

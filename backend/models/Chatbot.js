@@ -4,29 +4,15 @@ const { Schema } = mongoose;
 
 const ChatbotSchema = new Schema(
   {
-    nombre: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 120,
-    },
-    descripcion: {
-      type: String,
-      default: "",
-      trim: true,
-      maxlength: 500,
-    },
-    activo: {
-      type: Boolean,
-      default: true,
-      index: true,
-    },
-    // Opcional: quién lo creó (si tienes usuarios autenticados)
+    nombre: { type: String, required: true, trim: true, maxlength: 120 },
+    descripcion: { type: String, default: "", trim: true, maxlength: 500 },
+    activo: { type: Boolean, default: true, index: true },
+    // opcional: quién lo creó (si quieres guardarlo)
     createdBy: { type: Schema.Types.ObjectId, ref: "Usuario", index: true },
   },
   {
-    timestamps: true,     // createdAt / updatedAt
-    versionKey: false,    // oculta __v
+    timestamps: true,
+    versionKey: false,
     toJSON: {
       transform(_doc, ret) {
         ret.id = ret._id;
@@ -37,11 +23,9 @@ const ChatbotSchema = new Schema(
   }
 );
 
-/* Índices útiles */
-// Único por nombre (case-insensitive). Requiere MongoDB con soporte de collation.
+// único por nombre (case-insensitive) — opcional, borra si no lo quieres
 ChatbotSchema.index({ nombre: 1 }, { unique: true, collation: { locale: "es", strength: 2 } });
-// Búsqueda de texto (opcional)
+// búsqueda por texto — opcional
 ChatbotSchema.index({ nombre: "text", descripcion: "text" });
 
-module.exports =
-  mongoose.models.Chatbot || mongoose.model("Chatbot", ChatbotSchema);
+module.exports = mongoose.models.Chatbot || mongoose.model("Chatbot", ChatbotSchema);

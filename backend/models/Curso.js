@@ -13,7 +13,7 @@ const CursoSchema = new Schema(
     chatbotId: { type: Schema.Types.ObjectId, ref: "Chatbot", default: null },
     alumnos: [{ type: Schema.Types.ObjectId, ref: "Alumno" }],
   },
-  { timestamps: true }
+  { timestamps: true, versionKey: false }
 );
 
-module.exports = mongoose.model("Curso", CursoSchema);
+module.exports = mongoose.models.Curso || mongoose.model("Curso", CursoSchema);
