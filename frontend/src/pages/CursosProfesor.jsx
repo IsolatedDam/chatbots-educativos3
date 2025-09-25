@@ -95,7 +95,7 @@ export default function CursosProfesor() {
         if (!res.ok) throw new Error(await readErr(res));
         const curso = await res.json();
         setCursoSel(curso);
-        // también refrescamos el conteo en la tabla principal
+        // refrescar conteo en la tabla principal
         setCursos((prev) => prev.map((c) => (c._id === curso._id ? { ...c, alumnos: curso.alumnos?.map(a => a._id) ?? [] } : c)));
       } catch (e) {
         console.error("fetchCursoDetallado", e);
@@ -172,7 +172,6 @@ export default function CursosProfesor() {
         method: "POST", headers: authHdrs, body: JSON.stringify({ alumnoIds }),
       });
       if (!res.ok) throw new Error(await readErr(res));
-      // el backend ya devuelve el curso (populado), pero igual refresco por si acaso
       await fetchCursoDetallado(cursoId);
       alert(`Inscritos: ${alumnoIds.length}`);
     } catch (e) { alert(e.message || "Error al inscribir"); }
@@ -242,15 +241,28 @@ export default function CursosProfesor() {
 
       <div className="toolbar">
         <button className="btn btn-primary" onClick={() => setShowCrear(true)}>Nuevo curso</button>
-        <button className="btn btn-ghost" onClick={fetchCursos}>Refrescar</button>
+        <button className="btn btn-primary" onClick={fetchCursos}>Refrescar</button>
       </div>
 
       <div className="table-wrap">
         <table className="table" style={{ tableLayout: "fixed", width: "100%" }}>
+          {/* Columnas pedidas: Año | Semestre | Jornada | Chatbot | # Alumnos | Acciones */}
+          <colgroup>
+            <col style={{width:"14%"}} />  {/* Año */}
+            <col style={{width:"16%"}} />  {/* Semestre */}
+            <col style={{width:"18%"}} />  {/* Jornada */}
+            <col style={{width:"28%"}} />  {/* Chatbot */}
+            <col style={{width:"10%"}} />  {/* # Alumnos */}
+            <col style={{width:"14%"}} />  {/* Acciones */}
+          </colgroup>
           <thead>
             <tr>
-              <th>Nombre</th><th>Año</th><th>Semestre</th><th>Jornada</th>
-              <th>Chatbot</th><th># Alumnos</th><th>Acciones</th>
+              <th>Año</th>
+              <th>Semestre</th>
+              <th>Jornada</th>
+              <th>Chatbot</th>
+              <th># Alumnos</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -258,28 +270,31 @@ export default function CursosProfesor() {
               <tr><td colSpan="99">Cargando…</td></tr>
             ) : cursos.length ? (
               cursos.map((c) => (
-                <tr key={c._id}>
-                  <td>{c.nombre}</td>
+                <tr key={c._id} title={c.nombre || "" /* tip: nombre visible al pasar el mouse */}>
                   <td>{c.anio ?? "—"}</td>
                   <td>{c.semestre ?? "—"}</td>
                   <td>{c.jornada ?? "—"}</td>
                   <td>
-                    <select className="select" value={c.chatbotId || ""} onChange={(e)=>asignarChatbot(c._id, e.target.value || null)}>
+                    <select
+                      className="select"
+                      value={c.chatbotId || ""}
+                      onChange={(e)=>asignarChatbot(c._id, e.target.value || null)}
+                    >
                       <option value="">— Sin chatbot —</option>
                       {chatbots.map((cb) => <option key={cb._id} value={cb._id}>{cb.nombre}</option>)}
                     </select>
                   </td>
                   <td>{Array.isArray(c.alumnos) ? c.alumnos.length : 0}</td>
                   <td className="cell-actions">
-                    <button className="btn btn-primary" onClick={()=>fetchCursoDetallado(c._id)}>Gestionar alumnos</button>
+                    <button className="btn btn-primary" onClick={()=>fetchCursoDetallado(c._id)}>Gestionar</button>
                     <button className="btn btn-danger" style={{marginLeft:8}} onClick={()=>eliminarCurso(c._id)}>Eliminar</button>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="99" style={{ textAlign: "center", padding: "1rem" }}>
-                  <div style={{ opacity: 0.9, marginBottom: 8 }}>Aún no tienes cursos.</div>
+                <td colSpan="99" style={{ textAlign: "center", padding: "20px" }}>
+                  <div style={{ opacity: 0.9, marginBottom: 12 }}>Aún no tienes cursos.</div>
                   <button className="btn btn-primary" onClick={() => setShowCrear(true)}>Crear mi primer curso</button>
                 </td>
               </tr>
@@ -301,9 +316,15 @@ export default function CursosProfesor() {
             {/* Buscar y agregar */}
             <div>
               <div className="toolbar">
-                <input className="search" placeholder="Buscar alumnos (nombre, apellido, RUT/DNI)"
-                       value={busqAlumno} onChange={(e)=>setBusqAlumno(e.target.value)} />
-                <button className="btn btn-ghost" onClick={()=>buscarAlumnos(busqAlumno)} disabled={buscando}>Buscar</button>
+                <input
+                  className="search"
+                  placeholder="Buscar alumnos (nombre, apellido, RUT/DNI)"
+                  value={busqAlumno}
+                  onChange={(e)=>setBusqAlumno(e.target.value)}
+                />
+                <button className="btn btn-primary" onClick={()=>buscarAlumnos(busqAlumno)} disabled={buscando}>
+                  Buscar
+                </button>
               </div>
 
               <div className="table-wrap" style={{maxHeight:280, overflow:"auto"}}>
@@ -319,7 +340,7 @@ export default function CursosProfesor() {
                       resultAlumnos.map((a) => (
                         <tr key={a._id}>
                           <td>{docDe(a)}</td>
-                          <td>{nombreDe(a)}</td>
+                          <td title={nombreDe(a)}>{nombreDe(a)}</td>
                           <td>
                             <button className="btn btn-primary" onClick={()=>agregarAlumnos(cursoSel._id, [a._id])}>Agregar</button>
                           </td>
@@ -333,7 +354,7 @@ export default function CursosProfesor() {
               </div>
             </div>
 
-            {/* Listado de inscritos (con datos) */}
+            {/* Listado de inscritos */}
             <div>
               <div className="table-wrap" style={{maxHeight:280, overflow:"auto"}}>
                 <table className="table" style={{ tableLayout: "fixed", width: "100%" }}>
@@ -348,7 +369,7 @@ export default function CursosProfesor() {
                         return (
                           <tr key={a._id}>
                             <td>{docDe(a)}</td>
-                            <td>{nombreDe(a)}</td>
+                            <td title={nombreDe(a)}>{nombreDe(a)}</td>
                             <td>
                               <button className="btn btn-danger" onClick={()=>quitarAlumno(cursoSel._id, a._id)}>Quitar</button>
                             </td>

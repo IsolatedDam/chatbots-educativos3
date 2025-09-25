@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
+import "../styles/EditAlumnoModal.css";
 
-/* Helpers locales (para que el archivo sea autónomo) */
+/* Helpers locales (autónomos) */
 function calcRiesgoFE(vence) {
   if (!vence) return null;
   const hoy = new Date(); hoy.setHours(0,0,0,0);
@@ -16,135 +17,163 @@ function riesgoMensajeFE(r) {
   return "Suscripción activa";
 }
 
-export default function EditAlumnoModal({ draft, setDraft, onClose, onSave, canEditEstado, canEditRiesgo }) {
+const JORNADAS = ["Mañana","Tarde","Vespertino","Viernes","Sábados"];
+
+export default function EditAlumnoModal({
+  draft,
+  setDraft,
+  onClose,
+  onSave,
+  canEditEstado,
+  canEditRiesgo
+}) {
+  // Cerrar con ESC y bloquear scroll del fondo
   useEffect(() => {
+    if (!draft) return;
+    document.body.classList.add("ea-no-scroll");
     const onKey = (e) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+    return () => {
+      document.body.classList.remove("ea-no-scroll");
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [draft, onClose]);
 
   if (!draft) return null;
 
-  const bind = (key) => ({
-    value: draft[key] ?? "",
-    onChange: (e) => setDraft({ ...draft, [key]: e.target.value }),
-  });
-
-  const bindDocumento = () => ({
-    value: draft.documento ?? draft.numero_documento ?? draft.rut ?? "",
-    onChange: (e) =>
-      setDraft({
-        ...draft,
-        documento: e.target.value,
-        numero_documento: e.target.value,
-        rut: e.target.value,
-      }),
-  });
-
-  const riesgo = (draft.riesgo || calcRiesgoFE(draft.suscripcionVenceEl) || "").toLowerCase();
+  const riesgo = String(
+    draft.riesgo ??
+    draft.color_riesgo ??
+    draft.riesgo_color ??
+    calcRiesgoFE(draft.suscripcionVenceEl) ??
+    ""
+  ).toLowerCase();
   const riesgoMsg = riesgoMensajeFE(riesgo);
-  const riesgoBg = riesgo === "verde" ? "#27ae60" : riesgo === "amarillo" ? "#f1c40f" : riesgo === "rojo" ? "#c0392b" : "#95a5a6";
+
+  const set = (k) => (e) => setDraft((d) => ({ ...d, [k]: e.target.value }));
+  const setBool = (k) => (e) => setDraft((d) => ({ ...d, [k]: e.target.checked }));
 
   return (
-    <div className="modal" onMouseDown={onClose} aria-modal="true" role="dialog" aria-labelledby="edit-alumno-title">
-      <div className="modal-contenido" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: 760 }}>
-        <h3 id="edit-alumno-title">Editar alumno</h3>
+    <div className="ea-backdrop" onMouseDown={onClose} role="dialog" aria-modal="true">
+      <div className="ea-modal" onMouseDown={(e)=>e.stopPropagation()}>
+        {/* Header */}
+        <div className="ea-header">
+          <h4 className="ea-title">Editar alumno</h4>
+        </div>
 
-        <div className="grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <label className="field">
-            <span>RUT / DNI</span>
-            <input {...bindDocumento()} placeholder="11111111-1" />
-          </label>
-          <label className="field">
-            <span>Nombre</span>
-            <input {...bind("nombre")} placeholder="Nombre" />
-          </label>
-          <label className="field">
-            <span>Apellido</span>
-            <input {...bind("apellido")} placeholder="Apellido" />
-          </label>
-          <label className="field">
-            <span>Año</span>
-            <input {...bind("anio")} placeholder="2025" />
-          </label>
-          <label className="field">
-            <span>Semestre</span>
-            <input {...bind("semestre")} placeholder="1" />
-          </label>
-          <label className="field">
-            <span>Jornada</span>
-            <input {...bind("jornada")} placeholder="Vespertino" />
-          </label>
+        {/* Contenido */}
+        <div className="ea-content">
+          <div className="ea-grid-2">
+            <label className="ea-field">
+              <span>RUT / DNI</span>
+              <input
+                className="input"
+                value={draft.documento ?? draft.numero_documento ?? draft.rut ?? ""}
+                onChange={(e)=>setDraft(d=>({
+                  ...d,
+                  documento: e.target.value,
+                  numero_documento: e.target.value,
+                  rut: e.target.value,
+                }))}
+                placeholder="11111111-1"
+              />
+            </label>
 
-          <label className="field">
-            <span>Estado de cuenta</span>
-            <select
-              value={String(draft.habilitado !== false)}
-              onChange={(e) => setDraft({ ...draft, habilitado: e.target.value === "true" })}
-              disabled={!canEditEstado}
-              title={!canEditEstado ? "El profesor modifica el estado cambiando el color de riesgo" : undefined}
-            >
-              <option value="true">Activo</option>
-              <option value="false">Suspendido</option>
-            </select>
-            {!canEditEstado && (
-              <small className="kicker">
-                Para cambiar el estado, selecciona el <b>Color de riesgo</b>.
-              </small>
-            )}
-          </label>
+            <label className="ea-field">
+              <span>Nombre</span>
+              <input className="input" value={draft.nombre ?? ""} onChange={set("nombre")} />
+            </label>
 
-          <label className="field">
-            <span>Vence el</span>
-            <input
-              type="date"
-              value={(draft.suscripcionVenceEl || "").slice(0, 10)}
-              onChange={(e) => setDraft({ ...draft, suscripcionVenceEl: e.target.value })}
-              disabled={!canEditEstado}
-              title={!canEditEstado ? "Solo admin/superadmin puede modificar" : undefined}
-            />
-          </label>
+            <label className="ea-field">
+              <span>Apellido</span>
+              <input className="input" value={draft.apellido ?? ""} onChange={set("apellido")} />
+            </label>
 
-          <label className="field">
-            <span>Color de riesgo</span>
-            <select
-              value={draft.riesgo || ""}
-              onChange={(e) => setDraft({ ...draft, riesgo: e.target.value })}
-              disabled={!canEditRiesgo}
-              title={!canEditRiesgo ? "No tienes permiso" : undefined}
-            >
-              <option value="">Sin definir</option>
-              <option value="verde">Verde</option>
-              <option value="amarillo">Amarillo</option>
-              <option value="rojo">Rojo</option>
-            </select>
-            <small className="kicker">
-              <b>ROJO</b> suspende la cuenta al guardar. <b>VERDE/AMARILLO</b> la dejan activa.
-            </small>
-          </label>
+            <label className="ea-field">
+              <span>Año</span>
+              <input
+                className="input"
+                type="number" min="2000" max="2100"
+                value={draft.anio ?? ""}
+                onChange={set("anio")}
+                placeholder="2025"
+              />
+            </label>
 
-          <div className="field" style={{ gridColumn: "1 / -1" }}>
-            <span>Vista previa de riesgo</span>
-            <div
-              style={{
-                display: "inline-block",
-                padding: "6px 10px",
-                borderRadius: 999,
-                background: riesgoBg,
-                color: "#fff",
-                fontWeight: 700,
-                marginRight: 8,
-              }}
-            >
-              {(riesgo || "—").toString().toUpperCase()}
-            </div>
-            <small style={{ opacity: 0.8 }}>{riesgoMsg}</small>
+            <label className="ea-field">
+              <span>Semestre</span>
+              <select className="select" value={draft.semestre ?? ""} onChange={set("semestre")}>
+                <option value="">—</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+              </select>
+            </label>
+
+            <label className="ea-field">
+              <span>Jornada</span>
+              <select className="select" value={draft.jornada ?? ""} onChange={set("jornada")}>
+                <option value="">—</option>
+                {JORNADAS.map(j => <option key={j} value={j}>{j}</option>)}
+              </select>
+            </label>
+
+            <label className="ea-field">
+              <span>Vence el</span>
+              <input
+                className="input"
+                type="date"
+                value={(draft.suscripcionVenceEl || "").slice(0,10)}
+                onChange={(e)=>setDraft(d=>({ ...d, suscripcionVenceEl: e.target.value }))}
+                disabled={!canEditEstado}
+                title={!canEditEstado ? "Solo admin/superadmin puede modificar" : undefined}
+              />
+            </label>
+
+            {/* Estado de cuenta: checkbox centrado y alineado */}
+            <label className="ea-field ea-inline">
+              <span>Estado de cuenta</span>
+              <div>
+                <input
+                  type="checkbox"
+                  disabled={!canEditEstado}
+                  checked={draft.habilitado !== false}
+                  onChange={setBool("habilitado")}
+                />
+                <span>{draft.habilitado === false ? "Suspendido" : "Activo"}</span>
+              </div>
+            </label>
+
+            {/* Color de riesgo (ocupa 2 columnas) */}
+            <label className="ea-field ea-span-2 ea-risk-field">
+              <span>Color de riesgo</span>
+              <div className="ea-risk-group">
+                {[
+                  {v:"verde", label:"Verde", cls:"ea-risk ea-risk-verde"},
+                  {v:"amarillo", label:"Amarillo", cls:"ea-risk ea-risk-amarillo"},
+                  {v:"rojo", label:"Rojo", cls:"ea-risk ea-risk-rojo"},
+                  {v:"", label:"— (sin especificar)", cls:"ea-risk"},
+                ].map(opt=>(
+                  <label key={opt.v} className={opt.cls}>
+                    <input
+                      type="radio" name="riesgo" value={opt.v}
+                      disabled={!canEditRiesgo}
+                      checked={riesgo === opt.v}
+                      onChange={(e)=>setDraft(d=>({ ...d, riesgo: e.target.value }))}
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+              <small className="kicker">{riesgoMsg}</small>
+            </label>
+
           </div>
         </div>
 
-        <div className="modal-botones" style={{ marginTop: 16 }}>
-          <button className="btn btn-primary" onClick={onSave}>Guardar</button>
+        {/* Footer */}
+        <div className="ea-footer">
           <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary" onClick={onSave}>Guardar</button>
         </div>
       </div>
     </div>

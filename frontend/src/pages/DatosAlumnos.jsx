@@ -121,30 +121,47 @@ export default function DatosAlumnos({ canDeleteAlumno, canEditEstado, canEditRi
 
   /* UI internos */
   function BarraBusqueda({ onBuscar, onRefrescar }){
-    return (
-      <div className="toolbar">
-        <input className="search" placeholder="Buscar por nombre, apellido, RUT/DNI" value={search} onChange={e=>setSearch(e.target.value)} />
-        <select className="select" value={filtroJornada} onChange={e=>setFiltroJornada(e.target.value)} style={{marginLeft:8}}>
-          <option value="">Jornada: Todas</option>{JORNADAS.map(j=><option key={j} value={j}>{j}</option>)}
-        </select>
-        <select className="select" value={filtroSemestre} onChange={e=>setFiltroSemestre(e.target.value)} style={{marginLeft:8}}>
-          <option value="">Semestre: Todos</option>{opcionesSemestre.map(s=><option key={s} value={s}>{s}</option>)}
-        </select>
-        <select className="select" value={filtroAnio} onChange={e=>setFiltroAnio(e.target.value)} style={{marginLeft:8}}>
-          <option value="">Año: Todos</option>{opcionesAnio.map(a=><option key={a} value={a}>{a}</option>)}
-        </select>
-        <button className="btn btn-ghost" style={{marginLeft:8}} onClick={()=>onBuscar(search)}>Buscar</button>
-        <button className="btn btn-ghost" onClick={()=>{ setSearch(""); onRefrescar(); }}>Refrescar</button>
-        <button className="btn btn-ghost" onClick={limpiarFiltros}>Limpiar filtros</button>
-        {canDeleteAlumno && (
-          <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
-            <span style={{opacity:0.8}}>Seleccionados: <b>{selected.size}</b></span>
-            <button className="btn btn-danger" disabled={!selected.size} onClick={handleBulkDelete} title="Eliminar alumnos seleccionados">Eliminar seleccionados</button>
-          </div>
-        )}
-      </div>
-    );
-  }
+  return (
+    <div className="toolbar">
+      <input
+        className="search"
+        placeholder="Buscar por nombre, apellido, RUT/DNI"
+        value={search}
+        onChange={e=>setSearch(e.target.value)}
+      />
+      <select className="select" value={filtroJornada} onChange={e=>setFiltroJornada(e.target.value)} style={{marginLeft:8}}>
+        <option value="">Jornada: Todas</option>{JORNADAS.map(j=><option key={j} value={j}>{j}</option>)}
+      </select>
+      <select className="select" value={filtroSemestre} onChange={e=>setFiltroSemestre(e.target.value)} style={{marginLeft:8}}>
+        <option value="">Semestre: Todos</option>{opcionesSemestre.map(s=><option key={s} value={s}>{s}</option>)}
+      </select>
+      <select className="select" value={filtroAnio} onChange={e=>setFiltroAnio(e.target.value)} style={{marginLeft:8}}>
+        <option value="">Año: Todos</option>{opcionesAnio.map(a=><option key={a} value={a}>{a}</option>)}
+      </select>
+
+      {/* ⬇️ Cambiado a btn btn-primary */}
+      <button className="btn btn-primary" style={{marginLeft:8}} onClick={()=>onBuscar(search)}>Buscar</button>
+      <button className="btn btn-primary" onClick={()=>{ setSearch(""); onRefrescar(); }}>Refrescar</button>
+      <button className="btn btn-primary" onClick={limpiarFiltros}>Limpiar filtros</button>
+
+      {canDeleteAlumno && (
+        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
+          <span style={{opacity:0.8}}>
+            Seleccionados: <b>{selected.size}</b>
+          </span>
+          <button
+            className="btn btn-danger"
+            disabled={!selected.size}
+            onClick={handleBulkDelete}
+            title="Eliminar alumnos seleccionados"
+          >
+            Eliminar seleccionados
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
   function TablaListado({ rows }){
     const hdrChkRef=useRef(null);

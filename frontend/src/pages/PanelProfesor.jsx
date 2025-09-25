@@ -18,6 +18,18 @@ export default function PanelProfesor() {
   const role = String(me?.rol || "").toLowerCase();
   const permisos = Array.isArray(me?.permisos) ? me.permisos : [];
 
+  // Nombre mostrado
+  const displayName =
+    [me?.nombre, me?.apellido].filter(Boolean).join(" ") ||
+    me?.correo ||
+    "Usuario";
+  const initials = (me?.nombre || me?.correo || "U")
+    .split(" ")
+    .map(p => p[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   const canEditEstado =
     role === "superadmin" || role === "admin";
   const canEditRiesgo =
@@ -121,6 +133,16 @@ export default function PanelProfesor() {
       {/* Sidebar */}
       <aside className="admin-sidebar">
         <h2>Panel Profesor</h2>
+
+        {/* Chip de usuario */}
+        <div className="user-chip">
+          <div className="user-avatar" aria-hidden>{initials}</div>
+          <div className="user-meta">
+            <div className="user-name" title={displayName}>{displayName}</div>
+            <div className="user-role">{role || "—"}</div>
+          </div>
+        </div>
+
         <ul>
           <li className={liClass("cuenta")} onClick={() => setVistaActiva("cuenta")}>
             Mi cuenta
@@ -150,10 +172,8 @@ export default function PanelProfesor() {
             </li>
           )}
         </ul>
+
         <div style={{ marginTop: "auto", padding: "1rem" }}>
-          <div className="kicker" style={{ marginBottom: 8, opacity: 0.8 }}>
-            Rol: <b>{role || "—"}</b>
-          </div>
           <button className="btn btn-danger" onClick={handleLogout}>
             Cerrar sesión
           </button>
@@ -162,6 +182,11 @@ export default function PanelProfesor() {
 
       {/* Main */}
       <main className="admin-main">
+        {/* Saludo superior */}
+        <div className="top-greeting">
+          Hola, <b>{displayName}</b> 👋
+        </div>
+
         {vistaActiva === "inicio" && (
           <section className="section">
             <div className="iframe-wrapper" style={{ width: "100%", height: "80vh" }}>
