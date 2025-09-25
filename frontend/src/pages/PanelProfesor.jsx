@@ -1,4 +1,3 @@
-// src/pages/PanelProfesor.jsx
 import React, { useState, useEffect } from "react";
 import { decryptLocalPassword } from "../utils/localVault";
 import "../styles/PanelProfesor.css";
@@ -8,6 +7,7 @@ import RegistroAlumno from "./RegistroAlumno";
 import CargarAlumnos from "./CargarAlumnos";
 import DatosAlumnos from "./DatosAlumnos";
 import CursosProfesor from "./CursosProfesor";
+import AccesoChatbots from "./AccesoChatbots";   // <-- NUEVO IMPORT
 
 export default function PanelProfesor() {
   // Vista activa
@@ -30,10 +30,8 @@ export default function PanelProfesor() {
     .slice(0, 2)
     .toUpperCase();
 
-  const canEditEstado =
-    role === "superadmin" || role === "admin";
-  const canEditRiesgo =
-    ["superadmin", "admin", "profesor"].includes(role);
+  const canEditEstado = role === "superadmin" || role === "admin";
+  const canEditRiesgo = ["superadmin", "admin", "profesor"].includes(role);
   const canDeleteAlumno =
     role === "superadmin" ||
     role === "admin" ||
@@ -144,39 +142,23 @@ export default function PanelProfesor() {
         </div>
 
         <ul>
-          <li className={liClass("cuenta")} onClick={() => setVistaActiva("cuenta")}>
-            Mi cuenta
-          </li>
-          <li className={liClass("inicio")} onClick={() => setVistaActiva("inicio")}>
-            Página Chatbots
-          </li>
-          <li className={liClass("datos")} onClick={() => setVistaActiva("datos")}>
-            Datos del alumno
-          </li>
-          <li className={liClass("cursos")} onClick={() => setVistaActiva("cursos")}>
-            Cursos
-          </li>
-          <li className={liClass("chatbots")} onClick={() => setVistaActiva("chatbots")}>
-            Acceso a chatbots
-          </li>
+          <li className={liClass("cuenta")} onClick={() => setVistaActiva("cuenta")}>Mi cuenta</li>
+          <li className={liClass("inicio")} onClick={() => setVistaActiva("inicio")}>Página Chatbots</li>
+          <li className={liClass("datos")} onClick={() => setVistaActiva("datos")}>Datos del alumno</li>
+          <li className={liClass("cursos")} onClick={() => setVistaActiva("cursos")}>Cursos</li>
+          <li className={liClass("chatbots")} onClick={() => setVistaActiva("chatbots")}>Acceso a chatbots</li>
 
           {/* Siempre visible */}
-          <li className={liClass("registro")} onClick={() => setVistaActiva("registro")}>
-            Registrar alumno
-          </li>
+          <li className={liClass("registro")} onClick={() => setVistaActiva("registro")}>Registrar alumno</li>
 
           {/* Carga masiva (si permiso) */}
           {canLoadMassive && (
-            <li className={liClass("carga")} onClick={() => setVistaActiva("carga")}>
-              Carga masiva
-            </li>
+            <li className={liClass("carga")} onClick={() => setVistaActiva("carga")}>Carga masiva</li>
           )}
         </ul>
 
         <div style={{ marginTop: "auto", padding: "1rem" }}>
-          <button className="btn btn-danger" onClick={handleLogout}>
-            Cerrar sesión
-          </button>
+          <button className="btn btn-danger" onClick={handleLogout}>Cerrar sesión</button>
         </div>
       </aside>
 
@@ -228,27 +210,8 @@ export default function PanelProfesor() {
 
         {vistaActiva === "chatbots" && (
           <section className="section">
-            <h3>Acceso a chatbots</h3>
-            <div className="toolbar">
-              <select className="select" defaultValue="">
-                <option value="" disabled>
-                  Selecciona chatbot…
-                </option>
-                <option value="chatbotA">Chatbot A</option>
-                <option value="chatbotB">Chatbot B</option>
-              </select>
-              <select className="select" defaultValue="">
-                <option value="" disabled>
-                  Ámbito…
-                </option>
-                <option value="individual">Individual</option>
-                <option value="grupo">Grupo/Masivo</option>
-              </select>
-              <div className="spacer" />
-              <button className="btn btn-primary">Autorizar</button>
-              <button className="btn btn-ghost">Desautorizar</button>
-            </div>
-            <p className="kicker">Cada chatbot puede tener N° o letra.</p>
+            {/* Ahora todo vive en su propio componente */}
+            <AccesoChatbots token={localStorage.getItem("token")} me={me} />
           </section>
         )}
 

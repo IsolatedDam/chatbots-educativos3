@@ -195,7 +195,7 @@ export default function CursosProfesor() {
     } catch (e) { alert(e.message || "Error al quitar alumno"); }
   }
 
-  /* ===== Modal: Crear Curso ===== */
+  /* ===== Modal: Crear Curso (form bonito) ===== */
   function CrearCursoModal({ onClose, onCreate }) {
     const [form, setForm] = useState({ nombre: "", descripcion: "", anio: "", semestre: "", jornada: "" });
     useEffect(() => { document.body.classList.add("cp-no-scroll"); return () => document.body.classList.remove("cp-no-scroll"); }, []);
@@ -215,26 +215,28 @@ export default function CursosProfesor() {
           </div>
 
           <div className="cp-content">
-            <div className="cp-grid-2">
-              <label className="cp-field">
+            {/* Grid 12 columnas para alinear todo prolijo */}
+            <div className="cp-form">
+              <label className="cp-field cp-col-6">
                 <span>Nombre</span>
                 <input className="cp-input" value={form.nombre}
                        onChange={(e)=>set("nombre", e.target.value)} placeholder="Ej: Matemática I" />
               </label>
 
-              <label className="cp-field">
+              <label className="cp-field cp-col-6">
                 <span>Descripción</span>
-                <input className="cp-input" value={form.descripcion}
-                       onChange={(e)=>set("descripcion", e.target.value)} placeholder="Opcional" />
+                <textarea className="cp-textarea" rows={3}
+                       value={form.descripcion} onChange={(e)=>set("descripcion", e.target.value)}
+                       placeholder="Opcional" />
               </label>
 
-              <label className="cp-field">
+              <label className="cp-field cp-col-3">
                 <span>Año</span>
                 <input className="cp-input" inputMode="numeric" maxLength={4}
                        placeholder="2025" value={form.anio} onChange={onAnioChange} />
               </label>
 
-              <label className="cp-field">
+              <label className="cp-field cp-col-3">
                 <span>Semestre</span>
                 <select className="cp-select" value={form.semestre} onChange={(e)=>set("semestre", e.target.value)}>
                   <option value="">— Seleccionar —</option>
@@ -242,7 +244,7 @@ export default function CursosProfesor() {
                 </select>
               </label>
 
-              <label className="cp-field">
+              <label className="cp-field cp-col-6">
                 <span>Jornada</span>
                 <select className="cp-select" value={form.jornada} onChange={(e)=>set("jornada", e.target.value)}>
                   <option value="">— Seleccionar —</option>
@@ -315,7 +317,7 @@ export default function CursosProfesor() {
             </div>
           </div>
 
-          {/* Resultados de búsqueda */}
+          {/* Resultados y Alumnos inscritos (igual que antes) */}
           <div className="mgm-block">
             <div className="mgm-block-title">Resultados</div>
             <div className="cp-table-clip">
@@ -348,7 +350,6 @@ export default function CursosProfesor() {
             </div>
           </div>
 
-          {/* Inscritos del curso */}
           <div className="mgm-block">
             <div className="mgm-block-title">
               Alumnos inscritos <span className="mgm-count">{curso?.alumnos?.length ?? 0}</span>
@@ -366,7 +367,7 @@ export default function CursosProfesor() {
                       return (
                         <tr key={a._id}>
                           <td>{docDe(a)}</td>
-                          <td title={nombreDe(a)}>{nombreDe(a)}</td>
+                          <td title={nombreDe(a)} className="cp-ellipsis">{nombreDe(a)}</td>
                           <td>
                             <button className="btn btn-danger cp-btn-block"
                                     onClick={()=>quitarAlumno(curso._id, a._id)}>
@@ -406,6 +407,7 @@ export default function CursosProfesor() {
       <div className="cp-table-wrap">
         <table className="cp-table">
           <colgroup>
+            <col className="cp-col-nameCourse" />
             <col className="cp-col-year" />
             <col className="cp-col-sem" />
             <col className="cp-col-jor" />
@@ -415,11 +417,12 @@ export default function CursosProfesor() {
           </colgroup>
           <thead>
             <tr>
+              <th>Curso</th>
               <th>Año</th>
               <th>Semestre</th>
               <th>Jornada</th>
               <th>Chatbot</th>
-              <th># Alumnos</th>
+              <th>#</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -429,6 +432,7 @@ export default function CursosProfesor() {
             ) : cursos.length ? (
               cursos.map((c) => (
                 <tr key={c._id} title={c.nombre || ""}>
+                  <td className="cp-ellipsis">{c.nombre || "—"}</td>
                   <td>{c.anio ?? "—"}</td>
                   <td>{c.semestre ?? "—"}</td>
                   <td>{c.jornada ?? "—"}</td>
@@ -442,7 +446,7 @@ export default function CursosProfesor() {
                       {chatbots.map((cb) => <option key={cb._id} value={cb._id}>{cb.nombre}</option>)}
                     </select>
                   </td>
-                  <td>{Array.isArray(c.alumnos) ? c.alumnos.length : 0}</td>
+                  <td style={{textAlign:"center"}}>{Array.isArray(c.alumnos) ? c.alumnos.length : 0}</td>
                   <td className="cp-cell-actions">
                     <button
                       className="btn btn-primary"
