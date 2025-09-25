@@ -10,7 +10,7 @@ const Admin    = require('./models/Admin');
 const app = express();
 app.disable('x-powered-by');
 
-/* ===================== CORS (Express 5 safe) ===================== */
+/* ====== CORS ====== */
 const ALLOWED_STATIC = new Set([
   'http://localhost:3000',
   'http://localhost:5173',
@@ -25,89 +25,63 @@ if (process.env.FRONT_URL) {
 }
 
 function isAllowedOrigin(origin) {
-  if (!origin) return true; // curl/postman/SSR
+  if (!origin) return true;
   if (ALLOWED_STATIC.has(origin)) return true;
-  if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) return true;   // previews Vercel
-  if (/^https:\/\/[a-z0-9-]+\.onrender\.com$/i.test(origin)) return true; // dominios Render
+  if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) return true;
+  if (/^https:\/\/[a-z0-9-]+\.onrender\.com$/i.test(origin)) return true;
   return false;
 }
 
-const corsOptions = {
-  origin(origin, cb) {
-    const ok = isAllowedOrigin(origin);
-    if (!ok) {
-      console.warn('[CORS] origin NO permitido:', origin);
-      return cb(null, false);
-    }
-    cb(null, true);
-  },
+app.use((req, _res, next) => { console.log('[REQ]', req.method, req.path, 'Origin:', req.headers.origin || '—'); next(); });
+
+app.use(cors({
+  origin(origin, cb) { cb(null, isAllowedOrigin(origin)); },
   credentials: true,
   methods: ['GET','HEAD','PUT','PATCH','POST','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization','X-Requested-With'],
   optionsSuccessStatus: 204,
   maxAge: 86400,
-};
+}));
 
-app.use(cors(corsOptions));
-// Short-circuit para preflights (sin patrones problemáticos)
-app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') return res.sendStatus(204);
-  next();
-});
+app.use((req, res, next) => { if (req.method === 'OPTIONS') return res.sendStatus(204); next(); });
 
-/* ================== Parsers ================== */
+/* ====== Parsers ====== */
 app.use(express.json({ limit: '2mb' }));
 
-/* ================== MongoDB ================== */
-mongoose
-  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('✅ Conectado a MongoDB Atlas'))
-  .catch((err) => console.error('❌ Error de conexión a MongoDB:', err));
-
-/* ============== Auth helper (debug/_whoami) ============== */
-async function auth(req, res, next) {
-  const h = req.headers.authorization || '';
-  const token = h.startsWith('Bearer ') ? h.slice(7) : h;
-  if (!token) return res.status(401).json({ msg: 'Token requerido' });
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await Admin.findById(decoded.id).lean();
-    if (!user) return res.status(401).json({ msg: 'Usuario no válido' });
-
-    req.user = {
-      id: String(user._id),
-      rol: String(user.rol || '').toLowerCase(),
-      permisos: Array.isArray(user.permisos) ? user.permisos : [],
-    };
-    next();
-  } catch {
-    return res.status(401).json({ msg: 'Token inválido' });
-  }
-}
-
-app.get('/api/_whoami', auth, (req, res) => {
-  res.json(req.user);
-});
-
-/* ================== Rutas ================== */
-app.use('/api',         require('./routes/auth'));
-app.use('/api/upload',  require('./routes/upload'));
-app.use('/api/admin',   require('./routes/admin'));
-app.use('/api/visitas', require('./routes/visita'));
-app.use('/api/alumnos', require('./routes/alumno'));
-app.use('/api/cursos',  require('./routes/cursos'));
-app.use('/api/chatbots',require('./routes/chatbots'));
+/* ====== Rutas ====== */
+app.use('/api',          require('./routes/auth'));
+app.use('/api/upload',   require('./routes/upload'));
+app.use('/api/admin',    require('./routes/admin'));
+app.use('/api/visitas',  require('./routes/visita'));
+app.use('/api/alumnos',  require('./routes/alumno'));
+app.use('/api/cursos',   require('./routes/cursos'));
+app.use('/api/chatbots', require('./routes/chatbots'));
 app.use('/api/password', require('./routes/password'));
 console.log('MONTADA: /api/password');
 
-// Healthcheck
-app.get('/', (_req, res) => {
-  res.send('🚀 API funcionando correctamente en Render');
-});
+app.get('/', (_req, res) => res.send('🚀 API funcionando correctamente en Render'));
+app.get('/health', (_req, res) => res.json({ ok: true, mongo: mongoose.connection.readyState })); // 1=ok
 
-/* ================== Server ================== */
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Backend corriendo en puerto ${PORT}`);
-});
+/* ====== Start AFTER DB connect ====== */
+(async () => {
+  try {
+    const uri = process.env.MONGO_URI;
+    if (!uri) throw new Error('Falta MONGO_URI');
+
+    mongoose.set('bufferCommands', false);
+    mongoose.connection.on('connected', () => console.log('✅ MongoDB conectado'));
+    mongoose.connection.on('error', (err) => console.error('❌ MongoDB error:', err));
+
+    await mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 20000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+    });
+
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => console.log(`🚀 Backend corriendo en puerto ${PORT}`));
+  } catch (err) {
+    console.error('No se pudo iniciar el servidor:', err);
+    process.exit(1);
+  }
+})();
