@@ -1,0 +1,130 @@
+/* ===== Variables y reset local (no tocamos body ni html global) ===== */
+:root{
+  --radius: 12px;
+  --gap: 14px;
+  --card: #fff;
+  --text: #0f172a;
+  --muted: #6b7280;
+  --brand: #2563eb;
+  --brand-2: #1d4ed8;
+  --ring: 0 0 0 3px rgba(37,99,235,.18);
+}
+
+/* ===== Shell del componente: ancho y scroll controlado ===== */
+.rp-page{
+  /* este wrapper se adapta a cualquier layout (con sidebar, topbar, etc.) */
+  width: 100%;
+}
+.rp-shell{
+  /* Centramos y limitamos el ancho del contenido */
+  width: min(980px, 100%);
+  margin: 16px auto 24px;
+  padding: 0 16px;
+  /* SOLO aquí vive el scroll si el contenido se pasa de alto */
+  max-height: calc(100dvh - 48px);    /* resta aprox. el topbar; ajusta si tu header es diferente */
+  overflow: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+}
+
+/* ===== Encabezado del formulario ===== */
+.rp-header{
+  text-align: center;
+  margin: 0 0 12px;
+}
+.rp-header h2{
+  margin: 0 0 6px;
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 700;
+}
+.rp-header p{
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* ===== Formulario ===== */
+.rp-form{ display:flex; flex-direction:column; gap:12px; }
+.card{
+  background: var(--card);
+  border: 1px solid rgba(2,6,23,.08);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 24px rgba(2,6,23,.06);
+  padding: 18px;
+  margin-bottom: 14px;
+}
+.card__head{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; margin-bottom:12px;
+}
+.card__head h3{ margin:0; font-size:18px; font-weight:600; }
+.card__head--row{ gap:12px; }
+
+/* ===== Grids ===== */
+.grid{ display:grid; gap: var(--gap); }
+.grid--2{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+.grid--3{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+.field--sm-1{ grid-column: span 1; }
+@media (max-width:1024px){ .grid--3{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width:640px){ .grid--2, .grid--3{ grid-template-columns: 1fr; } }
+
+/* ===== Campos ===== */
+.field{ display:flex; flex-direction:column; gap:6px; }
+.field label{ font-size:13px; color:var(--muted); }
+.field input, .field select{
+  width:100%;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid rgba(2,6,23,.12);
+  background:#fff; color:var(--text);
+  outline:none; transition:border-color .15s ease, box-shadow .15s ease;
+}
+.field input::placeholder{ color:#9aa6b2; }
+.field input:focus, .field select:focus{ border-color:var(--brand); box-shadow:var(--ring); }
+.hint{ margin-top:2px; font-size:12px; color:var(--muted); }
+
+/* ===== Permisos ===== */
+.perm-group{
+  border:1px dashed rgba(2,6,23,.12);
+  padding:6px 8px 10px;
+  border-radius:10px;
+  margin-bottom:10px;
+}
+.perm-group legend{ padding:0 6px; font-size:12px; color:var(--muted); }
+.perm-grid{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px; }
+@media (max-width:700px){ .perm-grid{ grid-template-columns: 1fr; } }
+.perm-item{
+  display:flex; align-items:flex-start; gap:10px;
+  background:#fff; border:1px solid rgba(2,6,23,.12);
+  border-radius:12px; padding:10px 12px;
+  transition:border-color .15s ease, transform .05s ease, background .15s ease;
+}
+.perm-item:hover{ border-color: rgba(2,6,23,.22); background:#fbfdff; }
+.perm-item input{ transform: translateY(2px); }
+
+/* ===== Acciones ===== */
+.form-actions{
+  display:flex; justify-content:flex-end; gap:10px;
+  margin-top:8px; margin-bottom:0;
+}
+.btn{
+  background: linear-gradient(180deg, var(--brand), var(--brand-2));
+  color:#fff; border:0; padding:12px 18px; border-radius:12px;
+  font-weight:600; cursor:pointer;
+  box-shadow:0 8px 18px rgba(29,78,216,.18);
+  transition: transform .08s ease, box-shadow .15s ease, opacity .15s ease;
+}
+.btn:hover{ transform: translateY(-1px); }
+.btn:active{ transform: translateY(0); box-shadow:0 6px 14px rgba(29,78,216,.22); }
+.btn:disabled{ opacity:.7; cursor:not-allowed; }
+
+/* ===== Último elemento sin margen colapsado ===== */
+.rp-form > :last-child{ margin-bottom:0; }
+
+/* Para que los inputs nunca se desborden */
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  box-sizing: border-box; /* 👈 asegura que padding + border no sumen al ancho */
+}

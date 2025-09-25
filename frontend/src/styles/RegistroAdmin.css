@@ -1,0 +1,132 @@
+/* ====== Card principal ====== */
+.registro-admin-container {
+  background: #fff;
+  padding: 32px;
+  border-radius: 14px;
+  max-width: 640px;            /* más compacto: ya no hay permisos */
+  margin: 32px auto;
+  box-shadow: 0 10px 30px rgba(0,0,0,.06);
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.registro-admin-container h2 {
+  text-align: center;
+  color: #005D8C;
+  margin-bottom: 22px;
+  font-weight: 700;
+}
+
+/* ====== Form en grid limpio ====== */
+.registro-admin-container form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 16px 20px;
+}
+
+/* inputs/selects */
+.registro-admin-container input,
+.registro-admin-container select {
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid #dcdcdc;
+  border-radius: 8px;
+  font-size: 15px;
+  background-color: #fff;
+  transition: border-color .2s, box-shadow .2s, transform .06s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.registro-admin-container input:focus,
+.registro-admin-container select:focus {
+  outline: none;
+  border-color: #00AEEF;
+  box-shadow: 0 0 0 3px rgba(0,174,239,.15);
+  transform: translateY(-1px);
+}
+
+/* Select y botón ocupan toda la fila en el final */
+.registro-admin-container select,
+.registro-admin-container button[type="submit"] {
+  grid-column: 1 / -1;
+}
+
+/* ====== Botón principal ====== */
+.registro-admin-container button {
+  height: 44px;
+  background-color: #00AEEF;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color .2s, transform .06s, box-shadow .2s;
+}
+
+.registro-admin-container button:hover {
+  background-color: #008ec9;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0,0,0,.08);
+}
+
+/* ====== Responsive ====== */
+@media (max-width: 760px) {
+  .registro-admin-container {
+    margin: 20px 14px;
+    padding: 22px;
+  }
+  .registro-admin-container form {
+    grid-template-columns: 1fr; /* todo en una columna */
+  }
+}
+
+/* ===== OJO contraseña — reutilizable ===== */
+/* Para formularios con clases "rp-form" (tus cards) y también para .registro-admin-container */
+.rp-form .pwd-field,
+.registro-admin-container .pwd-field {
+  position: relative;
+  width: 100%;
+}
+
+.rp-form .pwd-field input,
+.registro-admin-container .pwd-field input {
+  padding-right: 44px;           /* espacio para el botón del ojo */
+  box-sizing: border-box;
+}
+
+/* Botón del ojo: NO hereda estilos de los botones primarios */
+.rp-form .toggle-pwd,
+.registro-admin-container .toggle-pwd {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none !important;
+  background: transparent !important;
+  color: #7F8C8D;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 0;
+  box-shadow: none !important;
+  margin: 0 !important;
+  z-index: 3;
+}
+
+.rp-form .toggle-pwd:hover,
+.registro-admin-container .toggle-pwd:hover {
+  color: #005D8C;
+  transform: translateY(-50%);   /* evita escalar/mover */
+}
+
+.rp-form .toggle-pwd:focus,
+.registro-admin-container .toggle-pwd:focus {
+  outline: 2px solid #7aa7ff;
+  outline-offset: 2px;
+}
+
+.rp-form .toggle-pwd svg,
+.registro-admin-container .toggle-pwd svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+}

@@ -1,0 +1,22 @@
+﻿# Node / Frontend
+node_modules/
+dist/
+build/
+.cache/
+.next/
+.out/
+coverage/
+
+# General
+.env
+.env.*
+*.log
+.DS_Store
+.vscode/
+.idea/
+
+# Python (si usas Flask)
+__pycache__/
+*.pyc
+.venv/
+env/

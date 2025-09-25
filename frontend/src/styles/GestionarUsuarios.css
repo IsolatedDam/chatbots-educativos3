@@ -1,0 +1,350 @@
+/* ===== Lienzo general ===== */
+.gestionar-usuarios {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+  color: #232323;
+}
+
+/* Título */
+.gestionar-usuarios h2 {
+  text-align: center;
+  margin: 4px 0 10px;
+  font-size: 28px;
+  font-weight: 800;
+  color: #0b6fae;
+  letter-spacing: .2px;
+  text-shadow: 0 1px 0 #fff;
+}
+
+/* ===== Radios (Alumnos / Profesores) ===== */
+.tipo-selector {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  margin: 4px 0 14px;
+}
+
+.tipo-selector label {
+  background: #fff;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid #e6eef5;
+  box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  font-weight: 600;
+  color: #0b6fae;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.tipo-selector input[type="radio"] {
+  accent-color: #00AEEF;
+}
+
+/* ===== Barra de filtros ===== */
+.filtros-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 6px 0 14px;
+}
+
+.filtro-input,
+.filtro-select {
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid #e6eef5;
+  background: #fff;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.05);
+  outline: none;
+  transition: box-shadow .2s ease, transform .08s ease;
+}
+
+.filtro-input { min-width: 320px; }
+.filtro-select { min-width: 180px; }
+
+.filtro-input:focus,
+.filtro-select:focus {
+  box-shadow: 0 0 0 3px rgba(0,174,239,.18);
+  transform: translateY(-1px);
+}
+
+/* Botones */
+.btn-prim,
+.btn-sec {
+  height: 42px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .08s ease, box-shadow .15s ease, background .2s ease;
+}
+
+.btn-prim {
+  background: #00AEEF;
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(0,174,239,.25);
+}
+.btn-prim:hover { background: #008ec9; transform: translateY(-1px); }
+
+.btn-sec {
+  background: #eaf2f8;
+  color: #0b6fae;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+.btn-sec:hover { background: #dbeaf6; }
+
+/* Mensaje de error */
+.alerta-error {
+  max-width: 820px;
+  margin: 0 auto 12px;
+  background: #ffefef;
+  color: #a92121;
+  border: 1px solid #ffd0d0;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+/* ===== Tarjeta de tabla ===== */
+.tabla-contenedor {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #eaf0f5;
+  box-shadow: 0 10px 22px rgba(0,0,0,.06);
+  overflow: hidden; /* el scroll va dentro de .tabla-scroll */
+  margin-top: 12px;
+}
+
+/* Contenedor con scroll interno */
+.tabla-scroll {
+  max-height: calc(100vh - 260px); /* ajusta según tu layout */
+  overflow: auto;
+  padding-bottom: 2px; /* evita que la tabla choque con el borde redondeado */
+}
+
+/* Tabla */
+.tabla {
+  width: 100%;
+  min-width: 980px; /* evita que colapsen columnas */
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: 14px;
+}
+
+.tabla thead th,
+.tabla tbody td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #eef2f6;
+  white-space: nowrap; /* filas compactas */
+  text-align: left;
+}
+
+/* Encabezado fijo */
+.tabla thead th {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(180deg, #f7fbff, #eef5fb);
+  color: #0b6fae;
+  font-weight: 800;
+  z-index: 2;
+}
+
+/* Filas */
+.tabla tbody tr:hover td { background: #f9fcff; }
+
+/* Botón Editar */
+.btn-edit {
+  background: #00AEEF;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 6px 14px rgba(0,174,239,.22);
+}
+.btn-edit:hover { background: #008ec9; }
+
+/* Estado vacío / loading */
+.tabla tbody td[colspan] { text-align: center; padding: 22px 12px; color: #6e7a86; }
+.tabla-loading { padding: 28px; text-align: center; color: #6e7a86; }
+
+/* ===== Modal ===== */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 50;
+}
+
+/* ⬇️ Tamaño controlado + scroll interno */
+.modal-contenido {
+  width: 100%;
+  max-width: 680px;       /* más angosto */
+  max-height: 85vh;       /* no supera el alto de la pantalla */
+  overflow-y: auto;       /* scroll si el contenido se extiende */
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px 22px;
+  box-shadow: 0 18px 40px rgba(0,0,0,.18);
+}
+
+.modal-contenido h3 {
+  margin-top: 0;
+  color: #0b6fae;
+  font-size: 20px;
+}
+
+.modal-contenido input,
+.modal-contenido select {
+  width: 100%;
+  margin: 6px 0;
+  padding: 10px 12px;
+  border: 1px solid #e6eef5;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: inset 0 2px 7px rgba(0,0,0,.05);
+  font-size: 14px;        /* compacto */
+}
+
+.modal-botones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.modal-botones button:first-child {
+  background: #00AEEF;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
+}
+.modal-botones button:last-child {
+  background: #eaf2f8;
+  color: #0b6fae;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
+}
+
+/* ===== Permisos en el modal (compacto y responsivo) ===== */
+
+/* Botón “Seleccionar/Quitar todos” dentro del modal */
+.modal-contenido .btn-ghost,
+.modal-contenido .btn-ghost:where(button) {
+  background: #eef3f8;
+  color: #0b6fae;
+  border: 1px solid #e6eef5;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.perm-wrap { margin-top: 12px; }
+
+/* Grupo */
+.perm-group {
+  border: 1px dashed #e6eef5;
+  padding: 8px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+.perm-group legend {
+  padding: 0 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Grid de items: 3 columnas desktop, 2 en tablet, 1 en móvil */
+.perm-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+@media (max-width: 1024px){
+  .perm-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 560px){
+  .perm-grid { grid-template-columns: 1fr; }
+}
+
+.perm-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid #e6eef5;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px; /* compacto */
+}
+.perm-item input { transform: translateY(1px); }
+
+/* ===== Extras ===== */
+/* que el mensaje "Sin resultados" herede el estilo centrado */
+.tabla tbody td[colspan] { text-align: center; }
+
+/* === Fix: no estilizar los checkboxes como inputs de texto === */
+.modal-contenido input[type="checkbox"],
+.modal-contenido input[type="radio"]{
+  width: auto;
+  height: 16px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+/* Permisos más ordenados */
+.perm-grid{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 12px;               /* un poco más de aire */
+}
+
+.perm-item{
+  display: flex;
+  align-items: center;      /* centra verticalmente checkbox + texto */
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e6eef5;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;          /* todo el item clickeable */
+}
+
+.perm-item input[type="checkbox"]{
+  flex: 0 0 auto;           /* no se estira */
+  transform: translateY(0); /* quita corrección previa */
+}
+
+.perm-item span{
+  line-height: 1.25;
+  color: #334155;
+  font-size: 13px;
+}
+
+/* Responsivo */
+@media (max-width: 1024px){
+  .perm-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 560px){
+  .perm-grid{ grid-template-columns: 1fr; }
+}

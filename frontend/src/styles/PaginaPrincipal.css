@@ -1,0 +1,81 @@
+.pagina-principal {
+  height: 100vh;
+  background: #EFEFEF; /* Color claro */
+  color: #232323; /* Color oscuro */
+  font-family: 'Segoe UI', sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Encabezado con color principal */
+.encabezado {
+  padding: 20px 0;
+  text-align: center;
+  font-size: 2rem;
+  font-weight: bold;
+  background-color: #CCEAF4; /* Celeste claro */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  color: #232323;
+}
+
+.contenido {
+  flex: 1;
+  display: flex;
+}
+
+/* Menú lateral */
+.menu-lateral {
+  width: 260px;
+  padding: 40px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  background-color: white;
+  border-right: 2px solid #A9A9A9; /* Gris medio */
+  align-items: center;
+}
+
+.boton-img-lateral {
+  width: 180px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.boton-img-lateral:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+
+/* Carrusel */
+.zona-central {
+  flex: 1;
+  padding: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.zona-central .slick-slider {
+  width: 100%;
+  max-width: 900px;
+}
+
+/* Slide del carrusel */
+.slide {
+  aspect-ratio: 16 / 9;
+  max-height: 400px;
+  width: 100%;
+  background-color: white;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  font-size: 24px;
+  color: #232323;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}

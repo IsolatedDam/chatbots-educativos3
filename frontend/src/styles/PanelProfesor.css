@@ -1,0 +1,114 @@
+/* Reusa layout del Admin */
+.admin-panel{display:flex;height:100vh;font-family:Arial,sans-serif}
+.admin-sidebar{width:220px;background:#005D8C;color:#fff;padding:20px;display:flex;flex-direction:column}
+.admin-sidebar h2{font-size:20px;margin-bottom:20px}
+.admin-sidebar ul{list-style:none;padding:0;margin:0}
+.admin-sidebar li{margin-bottom:12px;cursor:pointer;transition:.25s}
+.admin-sidebar li:hover{color:#00AEEF}
+.admin-main{flex:1;padding:30px;background:#f4f7fa;overflow:hidden}
+
+/* Inputs y controles */
+.input,.select,.file,.search{
+  width:100%;max-width:420px;padding:10px 12px;
+  border:1px solid #d9e2ec;border-radius:8px;background:#fff;
+  outline:none;transition:border-color .2s,box-shadow .2s
+}
+.input:focus,.select:focus,.file:focus,.search:focus{
+  border-color:#00AEEF;box-shadow:0 0 0 3px rgba(0,174,239,.15)
+}
+
+/* Botones base */
+.btn{padding:10px 14px;border:0;border-radius:8px;cursor:pointer}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.btn-primary{background:#00AEEF;color:#fff}
+.btn-primary:hover{filter:brightness(.95)}
+.btn-ghost{background:#eef3f8}
+.btn-ghost:hover{filter:brightness(.97)}
+.btn-danger{background:#e74c3c;color:#fff}
+.btn-danger:hover{background:#c0392b}
+
+/* === NUEVOS: botones vistosos para filtros === */
+.btn-prim{background:linear-gradient(180deg,#1e40af,#1d4ed8);color:#fff;box-shadow:0 8px 18px rgba(29,78,216,.18)}
+.btn-sec{background:linear-gradient(180deg,#0ea5e9,#0284c7);color:#fff;box-shadow:0 8px 18px rgba(2,132,199,.18)}
+.btn-prim:hover,.btn-sec:hover{filter:brightness(1.05)}
+/* Habilitar/Deshabilitar */
+.btn-warning{background:#f59e0b;color:#fff}
+.btn-success{background:#16a34a;color:#fff}
+
+/* Contenedores */
+.section{
+  background:#fff;border:1px solid #e8eef5;border-radius:12px;
+  padding:18px;margin-bottom:18px;box-shadow:0 2px 6px rgba(16,24,40,.04)
+}
+.section h3{margin:0 0 12px 0}
+
+/* ===================== TABLA ===================== */
+/* Contenedor genérico de tabla (sin altura forzada) */
+.table-wrap{
+  overflow:auto;border-radius:12px;border:1px solid #e8eef5;background:#fff
+}
+
+/* Scroll SOLO en "Datos del alumno" */
+.datos-table-wrap{
+  /* ajusta este alto si lo necesitas; resta el header, título y toolbar */
+  max-height:calc(100vh - 260px);
+  overflow:auto;
+}
+
+/* Tabla y celdas */
+.table{width:100%;border-collapse:separate;border-spacing:0}
+.table th,.table td{
+  text-align:left;vertical-align:middle;white-space:nowrap;
+  padding:12px 14px;border-bottom:1px solid #f0f3f7
+}
+
+/* Header fijo al hacer scroll */
+.table thead th{
+  position:sticky;top:0;z-index:2;
+  background:#fff; /* para que no se transparente */
+  font-weight:600;border-bottom:1px solid #e8eef5;
+  box-shadow:0 1px 0 #eaeaea inset; /* línea sutil */
+}
+
+/* Hover filas */
+.table tbody tr:hover{background:#fafcff}
+
+/* Primera columna un poco más cómoda */
+.table th:first-child,.table td:first-child{padding-left:16px}
+
+/* Acciones en tabla */
+.table .cell-actions{white-space:nowrap}
+.cell-actions .btn + .btn{margin-left:8px}
+
+/* Badge/estado */
+.kicker{color:#667085;font-size:14px;margin:8px 0 0}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid transparent}
+.badge-on{background:#e6f7ef;color:#065f46;border-color:#34d399}
+.badge-off{background:#fff7ed;color:#9a3412;border-color:#fb923c}
+
+/* Riesgos (si los usas como botones) */
+.risk-grid{display:flex;gap:8px}
+.risk{padding:10px 12px;border-radius:8px;border:1px solid transparent;cursor:pointer}
+.risk-verde{background:#e8f7e8;border-color:#c8efc8}
+.risk-amarillo{background:#fff7cc;border-color:#f5e69a}
+.risk-rojo{background:#ffe1dd;border-color:#ffb8ae}
+
+/* Fila editable (otras vistas) */
+.row-input{width:100%;padding:8px 10px;border:1px solid #dfe6ee;border-radius:8px}
+.row-select{padding:8px 10px;border:1px solid #dfe6ee;border-radius:8px;background:#fff}
+
+/* Toolbar de búsqueda / filtros */
+.toolbar{display:flex;gap:10px;align-items:center;margin:12px 0 16px 0;flex-wrap:wrap}
+.toolbar .spacer{flex:1 1 auto}
+/* No empujar demasiado la tabla */
+.toolbar .search{max-width:360px}
+.toolbar .select{max-width:200px;min-width:150px}
+
+/* Responsive mejoras pequeñas */ 
+@media (max-width:900px){
+  .admin-sidebar{width:200px}
+  .toolbar{gap:8px}
+  .toolbar .search{max-width:100%}
+  .toolbar .select{min-width:140px}
+  .datos-table-wrap{max-height:calc(100vh - 220px);}
+}

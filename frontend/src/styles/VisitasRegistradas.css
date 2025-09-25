@@ -1,0 +1,54 @@
+.visitas-container {
+  padding: 20px;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.visitas-container h2 {
+  margin-bottom: 15px;
+  color: #005D8C;
+}
+
+.descargar-btn {
+  background-color: #00AEEF;
+  color: white;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 20px;
+  font-weight: bold;
+}
+
+.descargar-btn:hover {
+  background-color: #0092cc;
+}
+
+.tabla-scroll {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.tabla-visitas {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tabla-visitas th,
+.tabla-visitas td {
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+}
+
+.tabla-visitas th {
+  background-color: #f0f0f0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.tabla-visitas tr:hover {
+  background-color: #f9f9f9;
+}

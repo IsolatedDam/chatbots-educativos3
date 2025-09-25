@@ -1,0 +1,118 @@
+.panel-alumno {
+  display: flex;
+  height: 100vh;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f2f6f9;
+}
+
+.panel-menu {
+  width: 240px;
+  background-color: #005D8C;
+  color: white;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.panel-user {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.panel-user img {
+  width: 70px;
+  border-radius: 50%;
+  margin-bottom: 10px;
+}
+
+.panel-user p {
+  font-weight: bold;
+}
+
+.panel-menu ul {
+  list-style: none;
+  padding: 0;
+}
+
+.panel-menu li {
+  padding: 10px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.3s;
+}
+
+.panel-menu li:hover,
+.panel-menu .activo {
+  background-color: #00AEEF;
+}
+
+.panel-menu button {
+  margin-top: auto;
+  background-color: #00AEEF;
+  border: none;
+  padding: 10px;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.panel-contenido {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+}
+
+.panel-box {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.05);
+}
+
+.panel-box h2 {
+  color: #005D8C;
+  margin-bottom: 20px;
+}
+
+.perfil-box {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.05);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.perfil-box h2 {
+  color: #005D8C;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.perfil-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.form-group input {
+  padding: 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #f9f9f9;
+}

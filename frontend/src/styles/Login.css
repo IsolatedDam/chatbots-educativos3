@@ -1,0 +1,417 @@
+/* src/styles/Login.css
+   Versión mejorada: variables, accesibilidad, modal y spinner.
+*/
+
+/* =========================
+   Variables (fácil de ajustar)
+   ========================= */
+:root{
+  --bg-page: #f2f6f9;
+  --card-bg: #ffffff;
+  --accent: #00AEEF;
+  --accent-600: #008ec9;
+  --muted: #7F8C8D;
+  --text: #122231;
+  --border: #e6eef8;
+  --danger: #d64545;
+  --shadow-1: 0 8px 20px rgba(0, 0, 0, 0.08);
+  --radius: 10px;
+  --glass: rgba(255,255,255,0.6);
+  --focus-ring: 0 6px 18px rgba(0, 174, 239, 0.12);
+  --max-width: 420px;
+}
+
+/* =========================
+   Layout general
+   ========================= */
+html,body{
+  height:100%;
+  margin:0;
+  font-family: Inter, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  color:var(--text);
+  background:var(--bg-page);
+}
+
+.login-wrapper {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:100vh;
+  padding:24px;
+  box-sizing:border-box;
+}
+
+/* =========================
+   Card
+   ========================= */
+.login-container{
+  width:100%;
+  max-width:var(--max-width);
+  background:var(--card-bg);
+  border-radius:14px;
+  padding:32px;
+  box-shadow:var(--shadow-1);
+  border:1px solid rgba(2,16,32,0.04);
+  text-align:center;
+  box-sizing:border-box;
+}
+
+/* Logo / header */
+.login-logo {
+  width:76px;
+  height:auto;
+  margin:0 auto 8px;
+  display:block;
+}
+.login-container h2{
+  margin:4px 0 6px;
+  font-size:20px;
+  color: #034158;
+  letter-spacing:0.2px;
+}
+.login-info{
+  margin:0 0 14px;
+  color:var(--muted);
+  font-size:13px;
+}
+
+/* =========================
+   Role selector
+   ========================= */
+.rol-selector{
+  display:flex;
+  justify-content:center;
+  gap:18px;
+  margin:10px 0 16px;
+  font-weight:600;
+  color:#26364a;
+}
+.rol-selector label{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  cursor:pointer;
+  user-select:none;
+  font-size:14px;
+}
+.rol-selector input[type="radio"]{
+  width:16px;
+  height:16px;
+  accent-color:var(--accent);
+}
+
+/* =========================
+   Form: layout & controls
+   ========================= */
+.login-form{
+  display:grid;
+  gap:12px;
+  margin-top:6px;
+  align-items:center;
+}
+
+.login-form input[type="text"],
+.login-form input[type="password"],
+.login-form input[type="email"]{
+  width:100%;
+  padding:12px 14px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:linear-gradient(180deg,#fbfdff,#ffffff);
+  font-size:14px;
+  color:var(--text);
+  box-sizing:border-box;
+  transition:box-shadow .15s ease, border-color .12s ease, transform .06s ease;
+}
+.login-form input::placeholder{ color: #9aa7b1; }
+
+.login-form input:focus{
+  outline:none;
+  border-color:var(--accent);
+  box-shadow:var(--focus-ring);
+  transform:translateY(-1px);
+}
+
+/* Password field wrapper (ojito) */
+.pwd-field{
+  position:relative;
+  width:100%;
+}
+.pwd-field input{
+  padding-right:44px; /* espacio para el toggle */
+}
+
+/* eye toggle */
+.toggle-pwd{
+  position:absolute;
+  right:10px;
+  top:50%;
+  transform:translateY(-50%);
+  border:0;
+  background:transparent;
+  padding:6px;
+  cursor:pointer;
+  color:#6b7b84;
+  border-radius:8px;
+}
+.toggle-pwd:hover{ background:rgba(2,16,32,0.03); color:#034158; }
+.toggle-pwd:focus{ outline:3px solid rgba(3,65,96,0.08); outline-offset:2px; }
+
+/* =========================
+   Buttons
+   ========================= */
+button[type="submit"],
+.btn-primary{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  background:linear-gradient(180deg,var(--accent),var(--accent-600));
+  color:#fff;
+  border:0;
+  padding:11px 16px;
+  border-radius:10px;
+  font-weight:700;
+  cursor:pointer;
+  box-shadow:0 8px 20px rgba(3,132,199,0.12);
+  transition:transform .06s ease, box-shadow .08s ease, opacity .12s;
+  min-height:44px;
+}
+button[type="submit"]:active,
+.btn-primary:active{ transform:translateY(1px); }
+.btn-primary[disabled]{ opacity:.6; cursor:not-allowed; box-shadow:none; }
+
+/* ghost / link */
+.btn-ghost{
+  background:transparent;
+  border:1px solid var(--border);
+  padding:9px 12px;
+  border-radius:10px;
+  color:#334155;
+  cursor:pointer;
+}
+
+/* small link */
+.login-link{
+  display:inline-block;
+  margin-top:10px;
+  color:var(--accent);
+  text-decoration:underline;
+  font-size:13px;
+  cursor:pointer;
+}
+.login-link:hover{ color:var(--accent-600); }
+
+/* message */
+.login-msg{
+  margin-top:10px;
+  font-weight:700;
+  color:var(--danger);
+  font-size:13px;
+}
+
+/* volver */
+.volver-inicio{
+  margin-top:12px;
+  border:0;
+  background:transparent;
+  color:#177fb8;
+  font-size:13px;
+  text-decoration:underline;
+  cursor:pointer;
+}
+
+/* =========================
+   Modal (Recuperar contraseña)
+   ========================= */
+.modal-backdrop{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(rgba(6,10,14,0.45), rgba(6,10,14,0.45));
+  z-index:1600;
+  padding:18px;
+  box-sizing:border-box;
+}
+
+.modal{
+  width:100%;
+  max-width:520px;
+  background:var(--card-bg);
+  border-radius:12px;
+  padding:20px 22px;
+  box-shadow:0 18px 60px rgba(2,6,23,0.42);
+  border:1px solid rgba(2,16,32,0.06);
+  animation:modalIn .12s ease;
+}
+@keyframes modalIn{
+  from{ transform:translateY(-6px) scale(.995); opacity:0; }
+  to{ transform:translateY(0) scale(1); opacity:1; }
+}
+.modal h3{ margin:0 0 8px; color:#033d5f; }
+.modal p{ margin:0 0 12px; color:var(--muted); font-size:14px; }
+
+/* modal fields */
+.field{ text-align:left; margin-bottom:10px; }
+.field > span{ display:block; font-size:13px; color:#6b7280; margin-bottom:6px; }
+.field input[type="email"]{
+  width:100%;
+  padding:10px 12px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  font-size:14px;
+}
+
+/* modal actions row */
+.modal-actions{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  margin-top:10px;
+}
+
+/* success message inside modal */
+.modal .success{ color:#0b8043; font-weight:700; font-size:13px; }
+
+/* =========================
+   Spinner pequeño (inline en botón)
+   ========================= */
+.spinner{
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,0.25);
+  border-top-color:rgba(255,255,255,0.95);
+  animation:spin .9s linear infinite;
+  display:inline-block;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+
+/* =========================
+   Tabla responsive (si la usas dentro del modal)
+   ========================= */
+.table-inline{ width:100%; border-collapse:collapse; margin-top:8px; }
+.table-inline th, .table-inline td{
+  text-align:left; padding:10px; border-bottom:1px solid #eef4fb; font-size:14px;
+}
+
+/* =========================
+   Responsive tweaks
+   ========================= */
+@media (max-width:520px){
+  .login-container{ padding:20px; border-radius:12px; }
+  .rol-selector{ gap:10px; font-size:13px; }
+  .modal{ padding:16px; }
+}
+
+/* =========================
+   Accessibility helpers
+   ========================= */
+button:focus, input:focus, .toggle-pwd:focus {
+  outline: 3px solid rgba(3,65,96,0.09);
+  outline-offset: 2px;
+  border-radius:8px;
+}
+
+/* ================= Side panel modal (recuperar contraseña) - versión celeste ================= */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  background: rgba(6, 10, 14, 0.45);
+  z-index: 1600;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Panel lateral con fondo celeste similar al botón/login */
+.modal {
+  width: 480px;
+  max-width: 92vw;
+  min-width: 300px;
+  height: 100%;
+  background: linear-gradient(180deg, #00AEEF 0%, #007bb3 100%); /* celeste -> azul profundo */
+  color: #ffffff;
+  border-radius: 0 12px 12px 0;
+  padding: 22px;
+  box-shadow: -10px 24px 60px rgba(2, 6, 23, 0.36);
+  border: 1px solid rgba(255,255,255,0.06);
+  box-sizing: border-box;
+  transform: translateX(12px);
+  animation: slideInRight 180ms cubic-bezier(.2,.9,.2,1);
+  overflow-y: auto;
+}
+
+/* header */
+.modal h3 { margin: 0; font-size: 18px; color: #ffffff; font-weight: 700; }
+.modal .modal-close { display: none; } /* X eliminado visualmente */
+
+.modal .modal-body { display: block; margin-top: 12px; gap: 12px; }
+.modal .modal-footer { display:flex; justify-content:flex-end; gap:10px; margin-top:18px; align-items:center; padding-bottom: 18px; }
+
+@keyframes slideInRight {
+  from { transform: translateX(18px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+/* inputs/field styling inside modal: blancos para contraste */
+.modal .field { margin-top: 8px; }
+.modal .field input[type="email"], .modal .field input[type="text"] {
+  width:100%;
+  padding:10px 12px;
+  border-radius:8px;
+  border:1px solid rgba(2,16,32,0.06);
+  box-sizing:border-box;
+  font-size: 14px;
+  background: #ffffff;
+  color: #063240;
+}
+
+/* placeholdes slightly muted */
+.modal .field input::placeholder { color: #7b8b92; }
+
+/* botones: cancelar (blanco) y enviar (oscuro) */
+.btn { border-radius: 8px; padding: 8px 12px; cursor: pointer; font-weight: 600; }
+.btn-ghost {
+  background: #ffffff;
+  color: #063240;
+  border: 1px solid rgba(2,16,32,0.06);
+}
+.btn-primary {
+  background: #033d5f; /* botón oscuro sobre panel celeste */
+  color: #fff;
+  border: none;
+}
+.btn-ghost:disabled, .btn-primary:disabled { opacity: 0.6; cursor: default; }
+
+/* mobile tweaks */
+@media (max-width: 640px) {
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: 92vh;
+    border-radius: 12px;
+    margin: 6vh auto;
+    transform: translateY(8px);
+    animation: slideUp 180ms cubic-bezier(.2,.9,.2,1);
+  }
+  @keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+  .modal-backdrop { align-items: center; justify-content: center; padding: 12px; }
+}
+
+/* pequeño estilo para resultado (texto claro sobre panel) */
+.modal .result-ok { background: rgba(255,255,255,0.12); color: #ffffff; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); }
+.modal .result-err { background: rgba(255,255,255,0.08); color: #fff; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); }
+
+/* accesibilidad: focus visible */
+.modal .field input:focus { outline: 2px solid rgba(255,255,255,0.18); outline-offset: 2px; }
