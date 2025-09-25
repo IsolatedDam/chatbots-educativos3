@@ -103,7 +103,7 @@ function PanelAdmin() {
         {vistaActiva === 'inicio' && (
           <div className="iframe-wrapper" style={{ width: '100%', height: '80vh' }}>
             <iframe
-              src="https://inquisitive-concha-7da15f.netlify.app/"
+              src="https://aipoweredchatbot-production.up.railway.app/"
               style={{ width: '100%', height: '100%', border: 'none', borderRadius: 12 }}
               allowFullScreen
               title="IframePanelAdmin"

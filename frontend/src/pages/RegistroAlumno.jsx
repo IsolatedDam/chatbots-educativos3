@@ -74,13 +74,26 @@ function RegistroAlumno() {
       semestre: Number(form.semestre),
       jornada: form.jornada,
       contrasena: contrasenaGenerada
-      // 'anio' y 'rut' no se envían: backend los resuelve
+      // 'anio' y 'rut' los resuelve el backend
     };
 
     try {
       setEnviando(true);
       const API_BASE = 'https://chatbots-educativos3.onrender.com';
-      await axios.post(`${API_BASE}/api/registro`, alumno);
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        setMensaje('Tu sesión expiró. Vuelve a iniciar sesión.');
+        setTimeout(() => {
+          localStorage.clear();
+          window.location.href = '/login';
+        }, 1200);
+        return;
+      }
+
+      await axios.post(`${API_BASE}/api/registro`, alumno, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
       Swal.fire({
         icon: 'success',
@@ -104,8 +117,17 @@ function RegistroAlumno() {
         jornada: ''
       });
     } catch (err) {
-      setMensaje(err.response?.data?.msg || 'Error al registrar alumno');
-      setTimeout(() => setMensaje(''), 3000);
+      const status = err.response?.status;
+      if (status === 401 || status === 403) {
+        setMensaje('Tu sesión expiró o no tienes permisos.');
+        setTimeout(() => {
+          localStorage.clear();
+          window.location.href = '/login';
+        }, 1200);
+      } else {
+        setMensaje(err.response?.data?.msg || 'Error al registrar alumno');
+        setTimeout(() => setMensaje(''), 3000);
+      }
     } finally {
       setEnviando(false);
     }

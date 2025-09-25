@@ -1,10 +1,10 @@
+// models/Alumno.js
 const mongoose = require('mongoose');
 
 function normalizarRut(v = '') {
   return String(v).replace(/\./g, '').replace(/\s+/g, '').toUpperCase();
 }
 
-// Teléfono: permite opcional '+' y 8–12 dígitos
 const TELEFONO_REGEX = /^\+?\d{8,12}$/;
 
 const AlumnoSchema = new mongoose.Schema(
@@ -16,7 +16,7 @@ const AlumnoSchema = new mongoose.Schema(
       set: (v) => (v ? normalizarRut(v) : v),
       index: true,
       unique: true,
-      sparse: true, // permite varios docs sin RUT
+      sparse: true,
     },
 
     correo: {
@@ -35,11 +35,9 @@ const AlumnoSchema = new mongoose.Schema(
     nombre:   { type: String, trim: true },
     apellido: { type: String, trim: true },
 
-    // ✅ Fecha de ingreso completa + año derivado
     fechaIngreso: { type: Date, required: true, default: Date.now },
     anio: { type: Number, required: true, min: 2000, max: 9999, index: true },
 
-    // ✅ Teléfono requerido (validado)
     telefono: {
       type: String,
       required: true,
@@ -47,10 +45,8 @@ const AlumnoSchema = new mongoose.Schema(
       match: [TELEFONO_REGEX, 'Teléfono no válido'],
     },
 
-    // ✅ Ajustes
     semestre: { type: Number, enum: [1, 2], required: true },
 
-    // Mañana, Tarde, Vespertino, Viernes, Sábados
     jornada: {
       type: String,
       enum: ['Mañana', 'Tarde', 'Vespertino', 'Viernes', 'Sábados'],
@@ -68,17 +64,25 @@ const AlumnoSchema = new mongoose.Schema(
 
     color_riesgo: { type: String, default: 'verde' },
     rol: { type: String, default: 'alumno' },
+
+    // 🔹 DUEÑO del registro (profesor que lo creó)
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Admin',
+      index: true,
+      default: null,
+    },
   },
   { timestamps: true }
 );
 
-// Índice único compuesto para documento (evita duplicados del mismo doc)
 AlumnoSchema.index(
   { tipo_documento: 1, numero_documento: 1 },
   { unique: true, name: 'unique_doc' }
 );
 
-// Quitar la contraseña en la salida JSON
+AlumnoSchema.index({ createdBy: 1, createdAt: -1 });
+
 AlumnoSchema.set('toJSON', {
   transform: (_doc, ret) => {
     delete ret.contrasena;
@@ -86,7 +90,6 @@ AlumnoSchema.set('toJSON', {
   },
 });
 
-// Normaliza RUT si el tipo es RUT
 AlumnoSchema.pre('save', function (next) {
   if (this.isModified('tipo_documento') || this.isModified('numero_documento')) {
     if ((this.tipo_documento || '').toUpperCase() === 'RUT' && this.numero_documento) {
@@ -97,7 +100,6 @@ AlumnoSchema.pre('save', function (next) {
   next();
 });
 
-// ✅ Deriva 'anio' desde 'fechaIngreso' y rellena fecha si falta (creación)
 AlumnoSchema.pre('validate', function (next) {
   if (!this.fechaIngreso) {
     if (Number.isInteger(this.anio)) {
@@ -113,7 +115,6 @@ AlumnoSchema.pre('validate', function (next) {
   next();
 });
 
-// ✅ Mantener consistencia al ACTUALIZAR con findOneAndUpdate
 AlumnoSchema.pre('findOneAndUpdate', function(next) {
   const upd = this.getUpdate() || {};
   const set = upd.$set || {};
@@ -133,7 +134,6 @@ AlumnoSchema.pre('findOneAndUpdate', function(next) {
     }
   }
 
-  // Si cambian a RUT, normaliza y completa rut
   const tipoNuevo = (set.tipo_documento ?? upd.tipo_documento);
   const numNuevo  = (set.numero_documento ?? upd.numero_documento);
   if (tipoNuevo && String(tipoNuevo).toUpperCase() === 'RUT' && numNuevo) {
