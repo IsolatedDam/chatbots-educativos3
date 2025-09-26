@@ -145,3 +145,46 @@
 @media (max-width: 860px){
   .mgm-toolbar{ grid-template-columns:1fr; }
 }
+
+/* ===== MODO COMPACTO ===== */
+.cp-compact {
+  --cp-fz: 12.5px;         /* tamaño base compacto */
+  --cp-cell-pad-y: 6px;    /* padding vertical celdas */
+  --cp-cell-pad-x: 8px;    /* padding horizontal celdas */
+  --cp-ctl-h: 32px;        /* alto selects/botones */
+  --cp-ctl-pad-x: 10px;    /* padding horizontal controles */
+  --cp-radius: 8px;
+}
+
+/* texto y celdas más pequeños */
+.cp-compact .cp-table th,
+.cp-compact .cp-table td {
+  padding: var(--cp-cell-pad-y) var(--cp-cell-pad-x);
+  font-size: var(--cp-fz);
+  line-height: 1.25;
+}
+
+/* selects y botones más compactos */
+.cp-compact .cp-select,
+.cp-compact .btn {
+  font-size: var(--cp-fz);
+  height: var(--cp-ctl-h);
+  padding: 0 var(--cp-ctl-pad-x);
+  border-radius: var(--cp-radius);
+}
+
+/* inputs del modal y toolbar */
+.cp-compact .cp-input,
+.cp-compact .cp-textarea {
+  font-size: var(--cp-fz);
+}
+
+/* columnas para textos largos (ajusta a gusto) */
+.cp-compact .cp-col-cat { width: 14%; }
+.cp-compact .cp-col-cb  { width: 22%; }
+
+/* que los <select> aprovechen el ancho de la celda */
+.cp-compact .cp-select { width: 100%; }
+
+/* tooltips legibles en opciones largas */
+.cp-compact option { font-size: var(--cp-fz); }

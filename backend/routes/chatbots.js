@@ -4,7 +4,6 @@ const { verificarToken, autorizarRoles } = require("../middlewares/auth");
 const Chatbot = require("../models/Chatbot");
 const ChatbotCategoria = require("../models/ChatbotCategoria");
 
-// Asegura que el modelo Admin esté registrado para populate
 require("../models/Admin");
 
 const router = express.Router();
@@ -35,7 +34,7 @@ router.get(
 
       const list = await Chatbot.find(filtro)
         .sort({ createdAt: -1 })
-        // 👇 Campos reales que existen en Admin: usa 'correo' (no 'email')
+        // Campos reales que existen en Admin: usa 'correo' (no 'email')
         .populate("createdBy", "nombre apellido apellidos correo")
         .lean();
 
@@ -82,7 +81,7 @@ router.get(
         count: countMap.get(nombre) || 0,
       }));
 
-      // Orden alfabético (opcional)
+      // Orden alfabético
       out.sort((a, b) => a.categoria.localeCompare(b.categoria, "es"));
 
       res.json(out);
@@ -154,7 +153,7 @@ router.post(
         categoria: cat,
         descripcion: desc,
         activo: true,
-        // 👇 viene del middleware verificarToken
+        //middleware verificarToken
         createdBy: req.usuario?.id || req.usuario?._id,
       });
 
@@ -214,7 +213,7 @@ router.patch(
 
 /**
  * DELETE /api/chatbots/:id
- * (opcional) elimina un chatbot
+ * elimina un chatbot
  */
 router.delete(
   "/:id",

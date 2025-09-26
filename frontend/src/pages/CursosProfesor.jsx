@@ -31,6 +31,11 @@ export default function CursosProfesor() {
   const [cursos, setCursos] = useState([]);
   const [chatbots, setChatbots] = useState([]);
 
+  // NUEVO: categorías y mapeo
+  const [cats, setCats] = useState([]);                 // ["Inglés", "Matemática", ...]
+  const [catMap, setCatMap] = useState({});             // { "Inglés":[{...}], ... }
+  const [selCatByCourse, setSelCatByCourse] = useState({}); // { [cursoId]: "Inglés" }
+
   // Popup de gestión
   const [cursoSel, setCursoSel] = useState(null);
   const [showGestionar, setShowGestionar] = useState(false);
@@ -77,16 +82,27 @@ export default function CursosProfesor() {
     }
   }, [authHdrs, me?._id]);
 
+  // MODIFICADO: arma categorías a partir de los chatbots
   const fetchChatbots = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/chatbots`, { headers: authHdrs });
-      if (res.status === 404 || res.status === 204) { setChatbots([]); return; }
-      if (!res.ok) { console.warn("fetchChatbots", res.status, await res.text().catch(()=> "")); setChatbots([]); return; }
+      if (res.status === 404 || res.status === 204) { setChatbots([]); setCats([]); setCatMap({}); return; }
+      if (!res.ok) { console.warn("fetchChatbots", res.status, await res.text().catch(()=> "")); setChatbots([]); setCats([]); setCatMap({}); return; }
       const data = await res.json().catch(() => []);
-      setChatbots(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      setChatbots(list);
+
+      const byCat = {};
+      for (const cb of list) {
+        const cat = cb.categoria || "Sin categoría";
+        (byCat[cat] ||= []).push(cb);
+      }
+      Object.values(byCat).forEach(arr => arr.sort((a,b)=> (a.nombre||"").localeCompare(b.nombre||"", "es")));
+      setCatMap(byCat);
+      setCats(Object.keys(byCat).sort((a,b)=> a.localeCompare(b, "es")));
     } catch (e) {
       console.warn("fetchChatbots error →", e);
-      setChatbots([]);
+      setChatbots([]); setCats([]); setCatMap({});
     }
   }, [authHdrs]);
 
@@ -94,6 +110,21 @@ export default function CursosProfesor() {
     fetchCursos();
     fetchChatbots();
   }, [fetchCursos, fetchChatbots]);
+
+  // Preselecciona categoría según el chatbot ya asignado
+  useEffect(() => {
+    if (!chatbots.length || !cursos.length) return;
+    setSelCatByCourse(prev => {
+      const next = { ...prev };
+      for (const c of cursos) {
+        if (!next[c._id] && c.chatbotId) {
+          const found = chatbots.find(b => (b._id || b.id) === c.chatbotId);
+          if (found?.categoria) next[c._id] = found.categoria;
+        }
+      }
+      return next;
+    });
+  }, [chatbots, cursos]);
 
   // Traer curso con alumnos
   const fetchCursoDetallado = useCallback(
@@ -154,7 +185,6 @@ export default function CursosProfesor() {
 
   /* ===== Chatbot ===== */
   async function asignarChatbot(cursoId, chatbotId) {
-    // sanea valores "undefined" / falsy
     const clean = (v) => (v && v !== "undefined" ? v : null);
     try {
       const res = await fetch(`${API_BASE}/cursos/${cursoId}/chatbot`, {
@@ -284,6 +314,12 @@ export default function CursosProfesor() {
 
   /* ===== Popup: Gestionar Curso ===== */
   function GestionarCursoModal({ curso, onClose }) {
+    // categoría local del popup (parte del filtro)
+    const [catSel, setCatSel] = useState(() => {
+      const found = chatbots.find(b => (b._id || b.id) === (curso?.chatbotId || ""));
+      return found?.categoria || "";
+    });
+
     useEffect(() => {
       document.body.classList.add("cp-no-scroll");
       return () => document.body.classList.remove("cp-no-scroll");
@@ -302,18 +338,39 @@ export default function CursosProfesor() {
           </div>
 
           <div className="mgm-toolbar">
+            {/* NUEVO: Categoría */}
+            <div className="mgm-field">
+              <label>Categoría</label>
+              <select
+                className="cp-select"
+                value={catSel}
+                onChange={async (e)=>{
+                  const val = e.target.value;
+                  setCatSel(val);
+                  const actual = chatbots.find(b => (b._id || b.id) === (curso?.chatbotId || ""));
+                  if (actual && actual.categoria !== val) {
+                    await asignarChatbot(curso._id, null);
+                  }
+                }}
+              >
+                <option value="">— Selecciona —</option>
+                {cats.map(cat => <option key={cat} value={cat} title={cat}>{cat}</option>)}
+              </select>
+            </div>
+
             <div className="mgm-field">
               <label>Chatbot</label>
               <select
                 className="cp-select"
                 value={curso?.chatbotId || ""}
                 onChange={(e)=>asignarChatbot(curso._id, e.target.value || null)}
+                disabled={!catSel}
               >
                 <option value="">— Sin chatbot —</option>
-                {chatbots.map((cb) => {
-                  const id = cb._id || cb.id; // 👈 clave: usar _id || id
+                {(catSel ? (catMap[catSel] || []) : []).map((cb) => {
+                  const id = cb._id || cb.id;
                   return (
-                    <option key={id} value={id}>
+                    <option key={id} value={id} title={cb.nombre}>
                       {cb.nombre}
                     </option>
                   );
@@ -418,7 +475,8 @@ export default function CursosProfesor() {
 
   /* ===== UI principal ===== */
   return (
-    <div className="cp-page">
+    // ACTIVAMOS MODO COMPACTO
+    <div className="cp-page cp-compact">
       <div className="cp-topbar">
         <h3 className="cp-heading">Mis cursos</h3>
         <div className="cp-actions">
@@ -439,6 +497,7 @@ export default function CursosProfesor() {
             <col className="cp-col-year" />
             <col className="cp-col-sem" />
             <col className="cp-col-jor" />
+            <col className="cp-col-cat" /> {/* NUEVO: categoría */}
             <col className="cp-col-cb" />
             <col className="cp-col-num" />
             <col className="cp-col-act" />
@@ -449,6 +508,7 @@ export default function CursosProfesor() {
               <th>Año</th>
               <th>Semestre</th>
               <th>Jornada</th>
+              <th>Categoría</th> {/* NUEVO */}
               <th>Chatbot</th>
               <th>#</th>
               <th>Acciones</th>
@@ -464,23 +524,47 @@ export default function CursosProfesor() {
                   <td>{c.anio ?? "—"}</td>
                   <td>{c.semestre ?? "—"}</td>
                   <td>{c.jornada ?? "—"}</td>
+
+                  {/* NUEVO: selector de categoría */}
+                  <td>
+                    <select
+                      className="cp-select"
+                      value={selCatByCourse[c._id] || ""}
+                      onChange={async (e)=>{
+                        const val = e.target.value;
+                        setSelCatByCourse(s => ({ ...s, [c._id]: val }));
+                        const actual = chatbots.find(b => (b._id || b.id) === c.chatbotId);
+                        if (actual && actual.categoria !== val) {
+                          await asignarChatbot(c._id, null);
+                        }
+                      }}
+                    >
+                      <option value="">— Selecciona —</option>
+                      {cats.map(cat => <option key={cat} value={cat} title={cat}>{cat}</option>)}
+                    </select>
+                  </td>
+
+                  {/* Chatbot filtrado por categoría */}
                   <td>
                     <select
                       className="cp-select"
                       value={c.chatbotId || ""}
                       onChange={(e)=>asignarChatbot(c._id, e.target.value || null)}
+                      disabled={!selCatByCourse[c._id]}
+                      title={!selCatByCourse[c._id] ? "Elige una categoría primero" : "Asignar chatbot"}
                     >
                       <option value="">— Sin chatbot —</option>
-                      {chatbots.map((cb) => {
-                        const id = cb._id || cb.id; // 👈 clave: usar _id || id
+                      {(selCatByCourse[c._id] ? (catMap[selCatByCourse[c._id]] || []) : []).map((cb) => {
+                        const id = cb._id || cb.id;
                         return (
-                          <option key={id} value={id}>
+                          <option key={id} value={id} title={cb.nombre}>
                             {cb.nombre}
                           </option>
                         );
                       })}
                     </select>
                   </td>
+
                   <td style={{textAlign:"center"}}>{Array.isArray(c.alumnos) ? c.alumnos.length : 0}</td>
                   <td className="cp-cell-actions">
                     <button

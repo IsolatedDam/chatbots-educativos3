@@ -4,7 +4,7 @@ const { Schema } = mongoose;
 
 const ChatbotSchema = new Schema(
   {
-    // 👉 categoría simple por string (sin colección aparte)
+    // categoría simple por string
     categoria: {
       type: String,
       required: true,
@@ -30,7 +30,7 @@ const ChatbotSchema = new Schema(
       index: true,
     },
 
-    // 👇 IMPORTANTE: ahora referencia a Admin (NO "Usuario")
+    // Referencia a admin
     createdBy: { type: Schema.Types.ObjectId, ref: "Admin", index: true }, // opcional
   },
   {
@@ -39,7 +39,6 @@ const ChatbotSchema = new Schema(
     toJSON: {
       virtuals: true,
       transform(_doc, ret) {
-        // dejamos _id y además exponemos id para conveniencia
         ret.id = ret._id;
         return ret;
       },
@@ -53,7 +52,7 @@ ChatbotSchema.index(
   { unique: true, collation: { locale: "es", strength: 2 } }
 );
 
-// Búsqueda por texto (opcional)
+// Búsqueda por texto
 ChatbotSchema.index({ nombre: "text", descripcion: "text", categoria: "text" });
 
 module.exports =
