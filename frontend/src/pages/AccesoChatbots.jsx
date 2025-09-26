@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "../styles/AccesoChatbots.css";
 
-/* ===== API local/remota (mismo patrón que usas en otras páginas) ===== */
+/* ========= API base ========= */
 const API_ROOT = (() => {
   const vite = typeof import.meta !== "undefined" ? import.meta.env?.VITE_API_ROOT : undefined;
   const cra  = typeof process !== "undefined" ? process.env?.REACT_APP_API_ROOT : undefined;
@@ -17,129 +17,328 @@ const API_BASE = `${API_ROOT}/api`;
 
 export default function AccesoChatbots() {
   const token = localStorage.getItem("token");
-
-  const [chatbots, setChatbots] = useState([]);
-  const [loading, setLoading]   = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [name, setName]         = useState("");
-
-  const authHdrs = useMemo(
+  const headers = useMemo(
     () => ({ Authorization: `Bearer ${token}`, "Content-Type": "application/json" }),
     [token]
   );
 
-  const readErr = async (res) => {
+  /* ====== state ====== */
+  const [cats, setCats] = useState([]);     // [{nombre, count}]
+  const [selCat, setSelCat] = useState(""); // nombre de la categoría seleccionada
+  const [bots, setBots] = useState([]);     // chatbots de esa categoría
+
+  const [cargandoCats, setCargandoCats] = useState(false);
+  const [cargandoBots, setCargandoBots] = useState(false);
+
+  const [nuevaCat, setNuevaCat] = useState("");
+  const [creandoCat, setCreandoCat] = useState(false);
+
+  const [nuevoBot, setNuevoBot] = useState("");
+  const [creandoBot, setCreandoBot] = useState(false);
+
+  const didInitRef = useRef(false);
+
+  const jsonSeguro = async (res) => {
     const txt = await res.text().catch(() => "");
-    try { const j = JSON.parse(txt); return j?.msg || txt || `HTTP ${res.status}`; }
-    catch { return txt || `HTTP ${res.status}`; }
+    try { return txt ? JSON.parse(txt) : null; } catch { return null; }
   };
 
-  const fetchChatbots = useCallback(async () => {
-    setLoading(true);
+  /* ====== API ====== */
+  async function cargarCategorias() {
+    setCargandoCats(true);
     try {
-      const res = await fetch(`${API_BASE}/chatbots`, { headers: authHdrs });
-      if (!res.ok && res.status !== 404 && res.status !== 204) throw new Error(await readErr(res));
-      const data = res.ok ? await res.json().catch(() => []) : [];
-      setChatbots(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.warn("fetchChatbots", e);
-      setChatbots([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [authHdrs]);
+      // 1) Intento con endpoint de categorías (incluye vacías)
+      const r = await fetch(`${API_BASE}/chatbots/categories`, { headers });
+      if (r.ok) {
+        const data = (await jsonSeguro(r)) || [];
+        const list = (Array.isArray(data) ? data : [])
+          .map(x => ({ nombre: x.categoria, count: x.count }))
+          .filter(x => x.nombre);
 
-  useEffect(() => { fetchChatbots(); }, [fetchChatbots]);
+        setCats(list);
+        if (!selCat && list.length) setSelCat(list[0].nombre);
+        return; // el finally corre igual
+      }
 
-  async function crearChatbot() {
-    const nombre = (name || "").trim();
-    if (!nombre) return;
-    setCreating(true);
-    try {
-      const res = await fetch(`${API_BASE}/chatbots`, {
-        method: "POST",
-        headers: authHdrs,
-        body: JSON.stringify({ nombre }),
+      // 2) Fallback si no hay endpoint
+      const r2 = await fetch(`${API_BASE}/chatbots`, { headers });
+      const data = r2.ok ? (await jsonSeguro(r2)) || [] : [];
+      const map = new Map();
+      (Array.isArray(data) ? data : []).forEach(b => {
+        const c = b.categoria || "Sin categoría";
+        map.set(c, (map.get(c) || 0) + 1);
       });
-      if (!res.ok) throw new Error(await readErr(res));
-      setName("");
-      await fetchChatbots();
+      const list = Array.from(map.entries()).map(([nombre, count]) => ({ nombre, count }));
+      setCats(list);
+      if (!selCat && list.length) setSelCat(list[0].nombre);
     } catch (e) {
-      alert(e.message || "No se pudo crear el chatbot");
+      console.error("cargarCategorias error:", e);
+      setCats([]);
     } finally {
-      setCreating(false);
+      setCargandoCats(false);
     }
   }
 
-  const fmtFecha = (v) => {
+  async function cargarBots(catName) {
+    if (!catName) { setBots([]); return; }
+    setCargandoBots(true);
+    try {
+      const url = `${API_BASE}/chatbots?categoria=${encodeURIComponent(catName)}`;
+      const r = await fetch(url, { headers });
+      const data = r.ok ? (await jsonSeguro(r)) || [] : [];
+      setBots(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error("cargarBots error:", e);
+      setBots([]);
+    } finally {
+      setCargandoBots(false);
+    }
+  }
+
+  /* ====== init ====== */
+  useEffect(() => {
+    if (didInitRef.current) return;
+    didInitRef.current = true;
+    cargarCategorias();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => { if (selCat) cargarBots(selCat); }, [selCat]);
+
+  /* ====== acciones ====== */
+  async function crearCategoria() {
+    const nombre = (nuevaCat || "").trim();
+    if (!nombre) return;
+    setCreandoCat(true);
+    try {
+      const res = await fetch(`${API_BASE}/chatbot-categorias`, {
+        method: "POST", headers, body: JSON.stringify({ nombre }),
+      });
+      if (!res.ok && res.status !== 409) {
+        const txt = await res.text().catch(()=> "");
+        console.warn("Crear categoría no-OK:", txt);
+      }
+      setCats(prev => prev.find(c => c.nombre.toLowerCase() === nombre.toLowerCase())
+        ? prev
+        : [{ nombre, count: 0 }, ...prev]);
+      setSelCat(nombre);
+      setNuevaCat("");
+      await cargarCategorias();
+    } catch (e) {
+      alert("No se pudo crear la categoría");
+    } finally {
+      setCreandoCat(false);
+    }
+  }
+
+  async function crearChatbot() {
+    const nombre = (nuevoBot || "").trim();
+    const categoria = (selCat || "").trim();
+    if (!nombre || !categoria) return;
+    setCreandoBot(true);
+    try {
+      const res = await fetch(`${API_BASE}/chatbots`, {
+        method: "POST", headers, body: JSON.stringify({ nombre, categoria }),
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(()=> "");
+        throw new Error(txt || "No se pudo crear el chatbot");
+      }
+      setNuevoBot("");
+      await Promise.all([cargarBots(categoria), cargarCategorias()]);
+    } catch (e) {
+      alert(e.message || "No se pudo crear el chatbot");
+    } finally {
+      setCreandoBot(false);
+    }
+  }
+
+  async function eliminarChatbot(id) {
+    if (!id) return;
+    if (!window.confirm("¿Eliminar este chatbot? Esta acción no se puede deshacer.")) return;
+    try {
+      const res = await fetch(`${API_BASE}/chatbots/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers,
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(()=> "");
+        throw new Error(txt || "No se pudo eliminar el chatbot");
+      }
+      await Promise.all([cargarBots(selCat), cargarCategorias()]);
+    } catch (e) {
+      alert(e.message || "No se pudo eliminar el chatbot");
+    }
+  }
+
+  async function eliminarCategoria(nombre) {
+    if (!nombre) return;
+    if (!window.confirm(`¿Eliminar la categoría "${nombre}"?\nSolo se permite eliminar categorías vacías.`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/chatbot-categorias/${encodeURIComponent(nombre)}`, {
+        method: "DELETE",
+        headers,
+      });
+      if (!res.ok) {
+        const body = await jsonSeguro(res);
+        const msg = (body && (body.msg || body.error)) || "No se pudo eliminar la categoría";
+        throw new Error(msg);
+      }
+      // actualizar listas
+      await cargarCategorias();
+      if (selCat === nombre) {
+        const next = cats.find(c => c.nombre !== nombre)?.nombre || "";
+        setSelCat(next);
+        if (next) await cargarBots(next); else setBots([]);
+      }
+    } catch (e) {
+      alert(e.message || "No se pudo eliminar la categoría");
+    }
+  }
+
+  /* ====== helpers ====== */
+  function creadoPor(b) {
+    const u = b.createdBy || b.creadoPor || {};
+    const parts = [u.nombre, u.apellido, u.apellidos, u.name].filter(Boolean);
+    return parts.length ? parts.join(" ") : (u.correo || u.email || u.username || "—");
+  }
+  const fecha = (v) => {
     if (!v) return "—";
     const d = new Date(v);
-    if (isNaN(d)) return "—";
-    return d.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" });
-    // ajusta a tu locale preferido
+    return isNaN(d) ? "—" : d.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" });
   };
 
   return (
-    <div className="ab-page">
-      <h3 className="ab-heading">Acceso a chatbots</h3>
+    <div className="cb-simple-page">
+      <h3 className="cb-title">Acceso a chatbots</h3>
 
-      {/* Crear chatbot */}
-      <div className="ab-card">
-        <div className="ab-create">
-          <label className="ab-field">
-            <span>Nombre del chatbot</span>
-            <input
-              className="ab-input"
-              placeholder="Ej: Asistente Matemática I"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e)=>{ if(e.key === "Enter") crearChatbot(); }}
-            />
-          </label>
+      {/* ARRIBA: crear categoría */}
+      <section className="cb-card">
+        <div className="cb-card-title">Crear categoría</div>
+        <div className="cb-row">
+          <input
+            className="cb-input"
+            placeholder="Nueva categoría (Ej: Matemáticas)"
+            value={nuevaCat}
+            onChange={(e)=>setNuevaCat(e.target.value)}
+            onKeyDown={(e)=>{ if(e.key==="Enter") crearCategoria(); }}
+          />
           <button
             className="btn btn-primary"
-            disabled={!name.trim() || creating}
-            onClick={crearChatbot}
-            title={!name.trim() ? "Escribe un nombre" : "Crear chatbot"}
+            onClick={crearCategoria}
+            disabled={!nuevaCat.trim() || creandoCat}
           >
-            {creating ? "Creando…" : "Crear chatbot"}
+            {creandoCat ? "Creando…" : "Crear"}
           </button>
         </div>
-      </div>
+      </section>
 
-      {/* IMPORTANTE: Se eliminó el bloque de “Chatbot” y “Ámbito” */}
-
-      {/* Listado */}
-      <div className="ab-table-wrap">
-        <table className="ab-table">
-          <colgroup>
-            <col className="ab-col-name" />
-            <col className="ab-col-id" />
-            <col className="ab-col-date" />
-          </colgroup>
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>ID</th>
-              <th>Creado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan="99">Cargando…</td></tr>
-            ) : chatbots.length ? (
-              chatbots.map((cb) => (
-                <tr key={cb._id}>
-                  <td className="ab-ellipsis" title={cb.nombre || ""}>{cb.nombre || "—"}</td>
-                  <td className="ab-mono">{cb._id}</td>
-                  <td>{fmtFecha(cb.createdAt || cb.creado)}</td>
-                </tr>
+      {/* ABAJO: dos columnas */}
+      <div className="cb-grid">
+        {/* Izquierda: categorías */}
+        <aside className="cb-card">
+          <div className="cb-card-title">Categorías</div>
+          <div className="cb-catlist">
+            {cargandoCats ? (
+              <div className="cb-empty">Cargando…</div>
+            ) : cats.length ? (
+              cats.map(c => (
+                <div key={c.nombre} className={`cb-catitem ${selCat === c.nombre ? "is-active" : ""}`}>
+                  <button
+                    className="cb-catbtn"
+                    onClick={()=>setSelCat(c.nombre)}
+                    title={`Ver ${c.nombre}`}
+                  >
+                    <span className="cb-catname">{c.nombre}</span>
+                    <span className="cb-badge">{c.count ?? 0}</span>
+                  </button>
+                  <button
+                    className="btn btn-ghost cb-catitem-delete"
+                    title="Eliminar categoría"
+                    onClick={(e) => { e.stopPropagation(); eliminarCategoria(c.nombre); }}
+                    disabled={(c.count ?? 0) > 0}
+                  >
+                    ✕
+                  </button>
+                </div>
               ))
             ) : (
-              <tr><td colSpan="99">Aún no hay chatbots creados.</td></tr>
+              <div className="cb-empty">Aún no hay categorías.</div>
             )}
-          </tbody>
-        </table>
+          </div>
+          <div className="cb-hint">Solo puedes eliminar categorías vacías.</div>
+        </aside>
+
+        {/* Derecha: crear chatbot + tabla */}
+        <main className="cb-card">
+          <div className="cb-card-title">
+            {selCat ? `Chatbots — ${selCat}` : "Selecciona una categoría"}
+          </div>
+
+          {selCat && (
+            <>
+              <div className="cb-row">
+                <input
+                  className="cb-input"
+                  placeholder="Nombre del chatbot (Ej: Matemática I)"
+                  value={nuevoBot}
+                  onChange={(e)=>setNuevoBot(e.target.value)}
+                  onKeyDown={(e)=>{ if(e.key==="Enter") crearChatbot(); }}
+                />
+                <button
+                  className="btn btn-primary"
+                  onClick={crearChatbot}
+                  disabled={!nuevoBot.trim() || creandoBot}
+                >
+                  {creandoBot ? "Creando…" : "Crear chatbot"}
+                </button>
+              </div>
+
+              <div className="cb-tablewrap">
+                <table className="cb-table">
+                  <colgroup>
+                    <col style={{width:"40%"}} />
+                    <col style={{width:"25%"}} />
+                    <col style={{width:"25%"}} />
+                    <col style={{width:"10%"}} />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>Nombre</th>
+                      <th>Creado por</th>
+                      <th>Creado</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cargandoBots ? (
+                      <tr><td colSpan="99">Cargando…</td></tr>
+                    ) : bots.length ? (
+                      bots.map(b => (
+                        <tr key={b._id || b.id}>
+                          <td className="cb-ellipsis" title={b.nombre || ""}>{b.nombre || "—"}</td>
+                          <td>{creadoPor(b)}</td>
+                          <td>{fecha(b.createdAt)}</td>
+                          <td>
+                            <button
+                              className="btn btn-danger btn-sm"
+                              title="Eliminar chatbot"
+                              onClick={() => eliminarChatbot(b._id || b.id)}
+                            >
+                              Eliminar
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr><td colSpan="99">Sin chatbots en esta categoría.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </main>
       </div>
     </div>
   );

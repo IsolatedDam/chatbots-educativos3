@@ -1,11 +1,15 @@
 // index.js
 require('dotenv').config();
+require("./models/Admin");
+require("./models/Chatbot");
 
 const express  = require('express');
 const cors     = require('cors');
 const mongoose = require('mongoose');
 const jwt      = require('jsonwebtoken');
 const Admin    = require('./models/Admin');
+const chatbotsRouter = require("./routes/chatbots");
+const categoriasRouter = require("./routes/chatbot-categorias");
 
 const app = express();
 app.disable('x-powered-by');
@@ -58,6 +62,9 @@ app.use('/api/cursos',   require('./routes/cursos'));
 app.use('/api/chatbots', require('./routes/chatbots'));
 app.use('/api/password', require('./routes/password'));
 console.log('MONTADA: /api/password');
+app.use("/api/chatbots", require("./routes/chatbots"));
+app.use("/api/chatbot-categorias", require("./routes/chatbot-categorias"));
+
 
 app.get('/', (_req, res) => res.send('🚀 API funcionando correctamente en Render'));
 app.get('/health', (_req, res) => res.json({ ok: true, mongo: mongoose.connection.readyState })); // 1=ok
