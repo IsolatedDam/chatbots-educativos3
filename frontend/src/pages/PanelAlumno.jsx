@@ -2,53 +2,139 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/PanelAlumno.css';
 
-const API_BASE = "https://chatbots-educativos3.onrender.com/api";
+/* ===== API base ===== */
+const API_ROOT = (() => {
+  const vite = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_API_ROOT : undefined;
+  const cra  = typeof process !== 'undefined' ? process.env?.REACT_APP_API_ROOT : undefined;
+  if (vite) return vite;
+  if (cra)  return cra;
+  if (typeof window !== 'undefined') {
+    const { hostname } = window.location;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return 'http://localhost:5000';
+  }
+  return 'https://chatbots-educativos3.onrender.com';
+})();
+const API_BASE = `${API_ROOT}/api`;
+
+/* ===== Embed del chatbot ===== */
+const EMBED_BASE = (() => {
+  const vite = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_CHATBOT_EMBED_BASE : undefined;
+  const cra  = typeof process !== 'undefined' ? process.env?.REACT_APP_CHATBOT_EMBED_BASE : undefined;
+  const val  = vite || cra || 'https://aipoweredchatbot-production.up.railway.app';
+  return String(val).replace(/\/+$/, '');
+})();
+const EMBED_KEY = (() => {
+  const vite = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_CHATBOT_EMBED_KEY : undefined;
+  const cra  = typeof process !== 'undefined' ? process.env?.REACT_APP_CHATBOT_EMBED_KEY : undefined;
+  return vite || cra || 'PDykle3B8BEfzdIjR8XN__jQ4UPgU6x-JjAKt_SdWAnYrFHslUNeZH5NHZgOAh2M';
+})();
+const buildEmbedUrl = (chatbotId) =>
+  `${EMBED_BASE}/chatbot/${encodeURIComponent(chatbotId)}${EMBED_KEY ? `?key=${encodeURIComponent(EMBED_KEY)}` : ''}`;
 
 export default function PanelAlumno() {
   const navigate = useNavigate();
+
   const [usuario, setUsuario] = useState(null);
   const [seccion, setSeccion] = useState('perfil');
 
+  // chatbots permitidos
+  const [permitidos, setPermitidos] = useState([]);
+  const [loadingCB, setLoadingCB] = useState(false);
+  const [lastLoadedAt, setLastLoadedAt] = useState(null);
+
+  // UI state
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+  const [frameHeight, setFrameHeight] = useState(560);
+  const [expanded, setExpanded] = useState({}); // { [id]: true }
+
+  /* ===== Montaje ===== */
   useEffect(() => {
-    const datos = localStorage.getItem('usuario');
-    if (datos) { try { setUsuario(JSON.parse(datos)); } catch {} }
+    const raw = localStorage.getItem('usuario');
+    if (raw) { try { setUsuario(JSON.parse(raw)); } catch {} }
     refetchUsuario();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // refrescar al volver a la pestaña
   useEffect(() => {
     const onVisible = () => document.visibilityState === 'visible' && refetchUsuario();
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
+  // refresca en cada cambio de sección
   useEffect(() => {
     if (seccion === 'perfil' || seccion === 'chatbots') refetchUsuario();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seccion]);
 
+  // carga chatbots al entrar a la sección
+  useEffect(() => {
+    if (seccion === 'chatbots' && usuario?._id) fetchChatbotsPermitidos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seccion, usuario?._id]);
+
+  /* ===== Fetchers ===== */
   async function refetchUsuario() {
     try {
-      const raw = localStorage.getItem('usuario');
       const token = localStorage.getItem('token');
-      if (!raw || !token) return;
-      const u = JSON.parse(raw);
-      if (!u?._id) return;
+      if (!token) { navigate('/login'); return; }
 
-      let res = await fetch(`${API_BASE}/alumnos/${u._id}`, {
+      const res = await fetch(`${API_BASE}/alumnos/me`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (!res.ok) {
-        const tryMe = await fetch(`${API_BASE}/alumnos/me`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (tryMe.ok) res = tryMe; else return;
+
+      if (res.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('usuario');
+        navigate('/login');
+        return;
       }
+      if (!res.ok) return;
+
       const fresh = await res.json();
-      const merged = { ...u, ...fresh };
-      setUsuario(merged);
-      localStorage.setItem('usuario', JSON.stringify(merged));
-    } catch {}
+      setUsuario(fresh);
+      localStorage.setItem('usuario', JSON.stringify(fresh));
+    } catch { /* noop */ }
+  }
+
+  async function fetchChatbotsPermitidos() {
+    setLoadingCB(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) { navigate('/login'); return; }
+
+      const res = await fetch(`${API_BASE}/mis-chatbots-permitidos`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('usuario');
+        navigate('/login');
+        return;
+      }
+
+      const data = await res.json();
+      const list = (Array.isArray(data) ? data : [])
+        .filter(x => x && x.chatbotId && x.activo !== false)
+        .map(x => ({
+          _id: String(x.chatbotId),
+          nombre: x.nombre || 'Chatbot',
+          categoria: x.categoria || 'General',
+          embedUrl: buildEmbedUrl(String(x.chatbotId)),
+          cursosCount: Number(x.cursosCount || 0),
+        }))
+        .sort((a,b)=> (a.categoria||'').localeCompare(b.categoria||'', 'es')
+                      || (a.nombre||'').localeCompare(b.nombre||'', 'es'));
+
+      setPermitidos(list);
+      setLastLoadedAt(new Date());
+    } catch {
+      setPermitidos([]);
+    } finally {
+      setLoadingCB(false);
+    }
   }
 
   const cerrarSesion = () => {
@@ -57,7 +143,7 @@ export default function PanelAlumno() {
     navigate('/login');
   };
 
-  // ===== Helpers de riesgo (solo pill) =====
+  /* ===== Helpers visuales (riesgo) ===== */
   const { riesgo } = useMemo(() => {
     if (!usuario) return { riesgo: '' };
     if (usuario.habilitado === false) return { riesgo: 'rojo' };
@@ -80,8 +166,23 @@ export default function PanelAlumno() {
     riesgo === 'amarillo' ? 'badge badge-amarillo' :
     riesgo === 'rojo' ? 'badge badge-rojo' : 'badge';
 
+  /* ===== Agrupar chatbots por categoría ===== */
+  const grupos = useMemo(() => {
+    const map = new Map();
+    for (const cb of permitidos) {
+      const k = cb.categoria || 'General';
+      if (!map.has(k)) map.set(k, []);
+      map.get(k).push(cb);
+    }
+    return Array.from(map.entries())
+      .sort((a,b)=> a[0].localeCompare(b[0], 'es'));
+  }, [permitidos]);
+
+  const toggleExpand = (id) => setExpanded((s) => ({ ...s, [id]: !s[id] }));
+
+  /* ===== UI ===== */
   return (
-    <div className="al-theme">{/* <- wrapper que aplica la paleta y el fondo */}
+    <div className="al-theme">
       <div className="al-layout">
         {/* Sidebar */}
         <aside className="al-sidebar">
@@ -123,7 +224,6 @@ export default function PanelAlumno() {
               <h1>Panel del Alumno</h1>
               <p className="subtitle">Tu información personal, académica y accesos.</p>
             </div>
-            {/* Botón "Actualizar" eliminado */}
           </header>
 
           {seccion === 'perfil' && usuario && (
@@ -162,23 +262,97 @@ export default function PanelAlumno() {
             </div>
           )}
 
-          {seccion === 'chatbots' && usuario && (
+          {seccion === 'chatbots' && (
             <section className="card">
               <div className="card-head">
                 <h3 className="card-title">Chatbots Asignados</h3>
-                <span className="hint">Si no ves ninguno, consulta con tu profesor.</span>
+
+                <div className="cb-toolbar">
+                  <div className="cb-left">
+                    <button className="btn btn-primary" onClick={fetchChatbotsPermitidos} title="Recargar">⟳ Recargar</button>
+                    <div className="divider" />
+                    <button className={`btn ${viewMode==='grid' ? 'btn-active' : 'btn-ghost'}`} onClick={() => setViewMode('grid')} title="Vista de tarjetas">⬚ Grid</button>
+                    <button className={`btn ${viewMode==='list' ? 'btn-active' : 'btn-ghost'}`} onClick={() => setViewMode('list')} title="Vista de lista">☰ Lista</button>
+                  </div>
+
+                  <div className="cb-right">
+                    <label className="slider-label">
+                      Alto del chat <span className="mono">{frameHeight}px</span>
+                      <input type="range" min="320" max="720" step="20" value={frameHeight} onChange={(e)=>setFrameHeight(Number(e.target.value))}/>
+                    </label>
+                    {lastLoadedAt && <span className="hint small">Actualizado: {lastLoadedAt.toLocaleTimeString()}</span>}
+                  </div>
+                </div>
               </div>
-              {usuario.chatbot?.length ? (
-                <div className="ifr-grid">
-                  {usuario.chatbot.map((cb, i) => (
-                    <div className="iframe-wrap" key={i}>
-                      <iframe src={cb} title={`Chatbot ${i}`} width="100%" height="320" style={{ border: '0' }} />
+
+              {loadingCB ? (
+                <div className={`cb-groups ${viewMode}`}>
+                  {[1,2].map(g => (
+                    <div className="cb-group" key={g}>
+                      <div className="cb-group-title skeleton" style={{width:180}} />
+                      <div className={`cb-cards ${viewMode} one`}>
+                        {[1].map(i => <div className="cb-card skeleton" key={i} />)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (permitidos.length ? (
+                <div className={`cb-groups ${viewMode}`}>
+                  {grupos.map(([categoria, items]) => (
+                    <div className="cb-group" key={categoria}>
+                      <div className="cb-group-title">
+                        {categoria} <span className="chip">{items.length}</span>
+                      </div>
+
+                      {/* 🟢 centrado y ancho completo: 1 columna si hay 1; 2 si hay 2 o más */}
+                      <div className={`cb-cards ${viewMode} ${items.length >= 2 ? 'two' : 'one'}`}>
+                        {items.map(cb => {
+                          const isExpanded = !!expanded[cb._id];
+                          const h = isExpanded ? Math.max(frameHeight + 220, 540) : frameHeight;
+                          return (
+                            <div className={`cb-card ${isExpanded ? 'is-expanded' : ''}`} key={cb._id}>
+                              <div className="cb-card-head">
+                                <div className="cb-card-meta">
+                                  <div className="cb-avatar">🧠</div>
+                                  <div className="cb-info">
+                                    <div className="cb-name">{cb.nombre}</div>
+                                    <div className="cb-sub">
+                                      <span className="chip">{cb.categoria}</span>
+                                      <span className="sep">•</span>
+                                      <span className="muted">{cb.cursosCount} curso{cb.cursosCount===1?'':'s'}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="cb-actions">
+                                  <a className="btn btn-ghost" href={cb.embedUrl} target="_blank" rel="noreferrer">↗ Abrir</a>
+                                  <button className="btn btn-ghost" onClick={() => toggleExpand(cb._id)}>
+                                    {isExpanded ? '⤢ Contraer' : '⤢ Pantalla completa'}
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="cb-frame-wrap" style={{height: h}}>
+                                <iframe
+                                  src={cb.embedUrl}
+                                  title={`Chatbot ${cb.nombre}`}
+                                  width="100%"
+                                  height="100%"
+                                  frameBorder="0"
+                                  style={{ borderRadius: 12 }}
+                                  allow="clipboard-write; microphone; camera"
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <p className="empty">No tienes chatbots asignados aún.</p>
-              )}
+              ))}
             </section>
           )}
 

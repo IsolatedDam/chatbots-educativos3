@@ -31,10 +31,9 @@ export default function CursosProfesor() {
   const [cursos, setCursos] = useState([]);
   const [chatbots, setChatbots] = useState([]);
 
-  // NUEVO: categorías y mapeo
-  const [cats, setCats] = useState([]);                 // ["Inglés", "Matemática", ...]
-  const [catMap, setCatMap] = useState({});             // { "Inglés":[{...}], ... }
-  const [selCatByCourse, setSelCatByCourse] = useState({}); // { [cursoId]: "Inglés" }
+  // categorías y mapeo (para mostrar nombres y usar en modal)
+  const [cats, setCats] = useState([]);
+  const [catMap, setCatMap] = useState({});
 
   // Popup de gestión
   const [cursoSel, setCursoSel] = useState(null);
@@ -82,7 +81,6 @@ export default function CursosProfesor() {
     }
   }, [authHdrs, me?._id]);
 
-  // MODIFICADO: arma categorías a partir de los chatbots
   const fetchChatbots = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/chatbots`, { headers: authHdrs });
@@ -106,25 +104,7 @@ export default function CursosProfesor() {
     }
   }, [authHdrs]);
 
-  useEffect(() => {
-    fetchCursos();
-    fetchChatbots();
-  }, [fetchCursos, fetchChatbots]);
-
-  // Preselecciona categoría según el chatbot ya asignado
-  useEffect(() => {
-    if (!chatbots.length || !cursos.length) return;
-    setSelCatByCourse(prev => {
-      const next = { ...prev };
-      for (const c of cursos) {
-        if (!next[c._id] && c.chatbotId) {
-          const found = chatbots.find(b => (b._id || b.id) === c.chatbotId);
-          if (found?.categoria) next[c._id] = found.categoria;
-        }
-      }
-      return next;
-    });
-  }, [chatbots, cursos]);
+  useEffect(() => { fetchCursos(); fetchChatbots(); }, [fetchCursos, fetchChatbots]);
 
   // Traer curso con alumnos
   const fetchCursoDetallado = useCallback(
@@ -314,7 +294,6 @@ export default function CursosProfesor() {
 
   /* ===== Popup: Gestionar Curso ===== */
   function GestionarCursoModal({ curso, onClose }) {
-    // categoría local del popup (parte del filtro)
     const [catSel, setCatSel] = useState(() => {
       const found = chatbots.find(b => (b._id || b.id) === (curso?.chatbotId || ""));
       return found?.categoria || "";
@@ -338,7 +317,6 @@ export default function CursosProfesor() {
           </div>
 
           <div className="mgm-toolbar">
-            {/* NUEVO: Categoría */}
             <div className="mgm-field">
               <label>Categoría</label>
               <select
@@ -475,16 +453,12 @@ export default function CursosProfesor() {
 
   /* ===== UI principal ===== */
   return (
-    // ACTIVAMOS MODO COMPACTO
     <div className="cp-page cp-compact">
       <div className="cp-topbar">
         <h3 className="cp-heading">Mis cursos</h3>
         <div className="cp-actions">
           <button className="btn btn-primary" onClick={() => setShowCrear(true)}>Nuevo curso</button>
-          <button
-            className="btn btn-primary"
-            onClick={() => { fetchCursos(); fetchChatbots(); }} // recarga también chatbots
-          >
+          <button className="btn btn-primary" onClick={() => { fetchCursos(); fetchChatbots(); }}>
             Refrescar
           </button>
         </div>
@@ -497,7 +471,7 @@ export default function CursosProfesor() {
             <col className="cp-col-year" />
             <col className="cp-col-sem" />
             <col className="cp-col-jor" />
-            <col className="cp-col-cat" /> {/* NUEVO: categoría */}
+            <col className="cp-col-cat" />
             <col className="cp-col-cb" />
             <col className="cp-col-num" />
             <col className="cp-col-act" />
@@ -508,7 +482,7 @@ export default function CursosProfesor() {
               <th>Año</th>
               <th>Semestre</th>
               <th>Jornada</th>
-              <th>Categoría</th> {/* NUEVO */}
+              <th>Categoría</th>
               <th>Chatbot</th>
               <th>#</th>
               <th>Acciones</th>
@@ -518,69 +492,36 @@ export default function CursosProfesor() {
             {loading ? (
               <tr><td colSpan="99">Cargando…</td></tr>
             ) : cursos.length ? (
-              cursos.map((c) => (
-                <tr key={c._id} title={c.nombre || ""}>
-                  <td className="cp-ellipsis">{c.nombre || "—"}</td>
-                  <td>{c.anio ?? "—"}</td>
-                  <td>{c.semestre ?? "—"}</td>
-                  <td>{c.jornada ?? "—"}</td>
-
-                  {/* NUEVO: selector de categoría */}
-                  <td>
-                    <select
-                      className="cp-select"
-                      value={selCatByCourse[c._id] || ""}
-                      onChange={async (e)=>{
-                        const val = e.target.value;
-                        setSelCatByCourse(s => ({ ...s, [c._id]: val }));
-                        const actual = chatbots.find(b => (b._id || b.id) === c.chatbotId);
-                        if (actual && actual.categoria !== val) {
-                          await asignarChatbot(c._id, null);
-                        }
-                      }}
-                    >
-                      <option value="">— Selecciona —</option>
-                      {cats.map(cat => <option key={cat} value={cat} title={cat}>{cat}</option>)}
-                    </select>
-                  </td>
-
-                  {/* Chatbot filtrado por categoría */}
-                  <td>
-                    <select
-                      className="cp-select"
-                      value={c.chatbotId || ""}
-                      onChange={(e)=>asignarChatbot(c._id, e.target.value || null)}
-                      disabled={!selCatByCourse[c._id]}
-                      title={!selCatByCourse[c._id] ? "Elige una categoría primero" : "Asignar chatbot"}
-                    >
-                      <option value="">— Sin chatbot —</option>
-                      {(selCatByCourse[c._id] ? (catMap[selCatByCourse[c._id]] || []) : []).map((cb) => {
-                        const id = cb._id || cb.id;
-                        return (
-                          <option key={id} value={id} title={cb.nombre}>
-                            {cb.nombre}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </td>
-
-                  <td style={{textAlign:"center"}}>{Array.isArray(c.alumnos) ? c.alumnos.length : 0}</td>
-                  <td className="cp-cell-actions">
-                    <button
-                      className="btn btn-primary"
-                      onClick={async()=>{
-                        await Promise.all([fetchCursoDetallado(c._id), fetchChatbots()]);
-                        setBusqAlumno(""); setResultAlumnos([]);
-                        setShowGestionar(true);
-                      }}
-                    >
-                      Gestionar
-                    </button>
-                    <button className="btn btn-danger" onClick={()=>eliminarCurso(c._id)}>Eliminar</button>
-                  </td>
-                </tr>
-              ))
+              cursos.map((c) => {
+                const cb = chatbots.find(b => (b._id || b.id) === c.chatbotId);
+                return (
+                  <tr key={c._id} title={c.nombre || ""}>
+                    <td className="cp-ellipsis">{c.nombre || "—"}</td>
+                    <td>{c.anio ?? "—"}</td>
+                    <td>{c.semestre ?? "—"}</td>
+                    <td>{c.jornada ?? "—"}</td>
+                    {/* SOLO LECTURA */}
+                    <td title={cb?.categoria || "—"}>{cb?.categoria || "—"}</td>
+                    <td className="cp-ellipsis" title={cb?.nombre || "— Sin chatbot —"}>
+                      {cb?.nombre || "— Sin chatbot —"}
+                    </td>
+                    <td style={{textAlign:"center"}}>{Array.isArray(c.alumnos) ? c.alumnos.length : 0}</td>
+                    <td className="cp-cell-actions">
+                      <button
+                        className="btn btn-primary"
+                        onClick={async()=>{
+                          await Promise.all([fetchCursoDetallado(c._id), fetchChatbots()]);
+                          setBusqAlumno(""); setResultAlumnos([]);
+                          setShowGestionar(true);
+                        }}
+                      >
+                        Gestionar
+                      </button>
+                      <button className="btn btn-danger" onClick={()=>eliminarCurso(c._id)}>Eliminar</button>
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
                 <td colSpan="99" className="cp-empty">
@@ -592,7 +533,6 @@ export default function CursosProfesor() {
         </table>
       </div>
 
-      {/* Popup de gestión */}
       {showGestionar && cursoSel && (
         <GestionarCursoModal
           curso={cursoSel}
@@ -600,7 +540,6 @@ export default function CursosProfesor() {
         />
       )}
 
-      {/* Modal crear curso */}
       {showCrear && (
         <CrearCursoModal
           onClose={() => setShowCrear(false)}

@@ -4,12 +4,34 @@ const mongoose = require("mongoose");
 const { verificarToken, autorizarRoles } = require("../middlewares/auth");
 const Curso = require("../models/Curso");
 const Chatbot = require("../models/Chatbot");
+const AlumnoChatbot = require("../models/AlumnoChatbot"); // 👈 nuevo
 
 const router = express.Router();
 
 /* helper: popula alumnos con campos básicos */
 function populateAlumnos(q) {
   return q.populate("alumnos", "numero_documento rut nombre apellido apellidos");
+}
+
+/* helpers: vincular / desvincular alumno <-> chatbot por curso */
+async function linkAlumnoChatbot(alumnoId, chatbotId, cursoId) {
+  if (!alumnoId || !chatbotId || !cursoId) return;
+  await AlumnoChatbot.findOneAndUpdate(
+    { alumnoId, chatbotId },
+    { $addToSet: { cursoIds: cursoId } },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+}
+async function unlinkAlumnoChatbotForCurso(alumnoId, chatbotId, cursoId) {
+  if (!alumnoId || !chatbotId || !cursoId) return;
+  const doc = await AlumnoChatbot.findOneAndUpdate(
+    { alumnoId, chatbotId },
+    { $pull: { cursoIds: cursoId } },
+    { new: true }
+  );
+  if (doc && (!doc.cursoIds || doc.cursoIds.length === 0)) {
+    await AlumnoChatbot.deleteOne({ _id: doc._id });
+  }
 }
 
 /* Listar cursos (del profe logueado o por query ?profesor / ?profesorId) */
@@ -105,6 +127,15 @@ router.delete(
           String(curso.profesorId) !== String(req.usuario.id)) {
         return res.status(403).json({ msg: "No autorizado" });
       }
+
+      // Si el curso tenía chatbot, desvincular a sus alumnos de ese chatbot para este curso
+      if (curso.chatbotId) {
+        const alumnos = Array.isArray(curso.alumnos) ? curso.alumnos : [];
+        await Promise.all(
+          alumnos.map(aid => unlinkAlumnoChatbotForCurso(String(aid), String(curso.chatbotId), String(curso._id)))
+        );
+      }
+
       await Curso.deleteOne({ _id: curso._id });
       return res.json({ msg: "Curso eliminado" });
     } catch (e) {
@@ -144,6 +175,8 @@ router.post(
         if (!cb) return res.status(404).json({ msg: "Chatbot no existe" });
       }
 
+      const oldId = curso.chatbotId ? String(curso.chatbotId) : null;
+
       // Actualizar y devolver el curso actualizado (alumnos poblados para mantener la UI)
       const actualizado = await Curso.findByIdAndUpdate(
         id,
@@ -152,6 +185,17 @@ router.post(
       )
         .populate("alumnos", "numero_documento rut nombre apellido apellidos")
         .lean();
+
+      const newId = actualizado.chatbotId ? String(actualizado.chatbotId) : null;
+
+      // Vinculaciones
+      const alumnosIds = (actualizado.alumnos || []).map(a => String(a._id || a));
+      if (newId && newId !== oldId) {
+        await Promise.all(alumnosIds.map(aid => linkAlumnoChatbot(aid, newId, String(actualizado._id))));
+      }
+      if (oldId && oldId !== newId) {
+        await Promise.all(alumnosIds.map(aid => unlinkAlumnoChatbotForCurso(aid, oldId, String(actualizado._id))));
+      }
 
       return res.json(actualizado);
     } catch (e) {
@@ -176,10 +220,19 @@ router.post(
         return res.status(403).json({ msg: "No autorizado" });
       }
 
-      const set = new Set((curso.alumnos || []).map(String));
-      (alumnoIds || []).forEach((aid) => aid && set.add(String(aid)));
-      curso.alumnos = Array.from(set).map((aid) => new mongoose.Types.ObjectId(aid));
+      // Detectar cuáles son NUEVOS
+      const before = new Set((curso.alumnos || []).map(x => String(x)));
+      const incoming = (alumnoIds || []).filter(Boolean).map(String);
+      const added = [];
+      incoming.forEach(aid => { if (!before.has(aid)) added.push(aid); before.add(aid); });
+
+      curso.alumnos = Array.from(before).map((aid) => new mongoose.Types.ObjectId(aid));
       await curso.save();
+
+      // Vincular con el chatbot actual del curso (si existe) SOLO los nuevos
+      if (curso.chatbotId && added.length) {
+        await Promise.all(added.map(aid => linkAlumnoChatbot(aid, String(curso.chatbotId), String(curso._id))));
+      }
 
       curso = await populateAlumnos(Curso.findById(curso._id)).exec();
       return res.json(curso);
@@ -205,8 +258,15 @@ router.delete(
         return res.status(403).json({ msg: "No autorizado" });
       }
 
+      const wasIn = (curso.alumnos || []).some((x) => String(x) === String(alumnoId));
+
       curso.alumnos = (curso.alumnos || []).filter((x) => String(x) !== String(alumnoId));
       await curso.save();
+
+      // Desvincular del chatbot de este curso (si tenía) solo para este curso
+      if (wasIn && curso.chatbotId) {
+        await unlinkAlumnoChatbotForCurso(String(alumnoId), String(curso.chatbotId), String(curso._id));
+      }
 
       curso = await populateAlumnos(Curso.findById(curso._id)).exec();
       return res.json(curso);

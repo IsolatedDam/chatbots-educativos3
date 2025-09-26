@@ -1,5 +1,6 @@
 // routes/alumno.js
 const express = require('express');
+const mongoose = require('mongoose');
 const Alumno = require('../models/Alumno');
 const { verificarToken, autorizarRoles, puede } = require('../middlewares/auth');
 
@@ -36,7 +37,7 @@ router.get(
       const base = buildSearchFilter(q);
 
       const rol = String(req.usuario?.rol || req.user?.rol || '').toLowerCase();
-      const me  = String(req.usuario?.id || req.user?.id || '');
+      const me  = String(req.usuario?.id  || req.user?.id  || '');
 
       const filter = (rol === 'profesor')
         ? { ...base, createdBy: me }
@@ -47,6 +48,66 @@ router.get(
     } catch (err) {
       console.error('listar alumnos error:', err);
       res.status(500).json({ msg: 'Error al obtener alumnos' });
+    }
+  }
+);
+
+/* ===== GET /api/alumnos/me =====
+   Devuelve el alumno correspondiente al id del token
+*/
+router.get(
+  '/me',
+  verificarToken,
+  autorizarRoles('alumno', 'profesor', 'admin', 'superadmin'),
+  async (req, res) => {
+    try {
+      const id = String(req.usuario?.id || '');
+      if (!mongoose.isValidObjectId(id)) {
+        return res.status(404).json({ msg: 'Alumno no encontrado' });
+      }
+      const alumno = await Alumno.findById(id).lean();
+      if (!alumno) return res.status(404).json({ msg: 'Alumno no encontrado' });
+      res.json(alumno);
+    } catch (err) {
+      console.error('GET /alumnos/me error:', err);
+      res.status(500).json({ msg: 'Error al cargar alumno' });
+    }
+  }
+);
+
+/* ===== GET /api/alumnos/:id =====
+   - Alumno: solo puede ver su propio registro
+   - Profesor: solo puede ver alumnos que él creó
+   - Admin/Superadmin: pueden ver cualquier alumno
+*/
+router.get(
+  '/:id',
+  verificarToken,
+  autorizarRoles('alumno', 'profesor', 'admin', 'superadmin'),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!mongoose.isValidObjectId(id)) {
+        return res.status(400).json({ msg: 'ID inválido' });
+      }
+
+      const alumno = await Alumno.findById(id).lean();
+      if (!alumno) return res.status(404).json({ msg: 'Alumno no encontrado' });
+
+      const rol = String(req.usuario?.rol || '').toLowerCase();
+      const me  = String(req.usuario?.id || '');
+
+      if (rol === 'alumno' && me !== String(alumno._id)) {
+        return res.status(403).json({ msg: 'No autorizado' });
+      }
+      if (rol === 'profesor' && String(alumno.createdBy) !== me) {
+        return res.status(403).json({ msg: 'No autorizado' });
+      }
+
+      res.json(alumno);
+    } catch (err) {
+      console.error('GET /alumnos/:id error:', err);
+      res.status(500).json({ msg: 'Error al cargar alumno' });
     }
   }
 );
@@ -97,8 +158,8 @@ router.put(
       const actual = await Alumno.findById(req.params.id);
       if (!actual) return res.status(404).json({ msg: 'Alumno no encontrado' });
 
-      const rol = String(req.usuario?.rol || req.user?.rol || '').toLowerCase();
-      const me  = String(req.usuario?.id || req.user?.id || '');
+      const rol = String(req.usuario?.rol || '').toLowerCase();
+      const me  = String(req.usuario?.id  || '');
       if (rol === 'profesor' && String(actual.createdBy) !== me) {
         return res.status(403).json({ msg: 'No puedes editar este alumno' });
       }
@@ -133,8 +194,8 @@ router.delete('/:id', verificarToken, puede('alumnos:eliminar'), async (req, res
     const actual = await Alumno.findById(req.params.id);
     if (!actual) return res.status(404).json({ msg: 'Alumno no encontrado' });
 
-    const rol = String(req.usuario?.rol || req.user?.rol || '').toLowerCase();
-    const me  = String(req.usuario?.id || req.user?.id || '');
+    const rol = String(req.usuario?.rol || '').toLowerCase();
+    const me  = String(req.usuario?.id  || '');
     if (rol === 'profesor' && String(actual.createdBy) !== me) {
       return res.status(403).json({ msg: 'No puedes eliminar este alumno' });
     }
@@ -155,8 +216,8 @@ router.post('/bulk-delete', verificarToken, puede('alumnos:eliminar'), async (re
     const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
     if (!ids.length) return res.status(400).json({ msg: 'Sin IDs' });
 
-    const rol = String(req.usuario?.rol || req.user?.rol || '').toLowerCase();
-    const me  = String(req.usuario?.id || req.user?.id || '');
+    const rol = String(req.usuario?.rol || '').toLowerCase();
+    const me  = String(req.usuario?.id  || '');
 
     let filter = { _id: { $in: ids } };
     if (rol === 'profesor') filter.createdBy = me;

@@ -82,7 +82,6 @@
 .mgm-field{ display:flex; flex-direction:column; gap:6px; }
 .mgm-field > label{ font-size:13px; font-weight:600; color:#334155; }
 .mgm-search-row{ display:flex; gap:8px; align-items:center; }
-.mgm-spacer{ }
 
 .mgm-block{ padding:14px 22px; display:flex; flex-direction:column; gap:10px; }
 .mgm-block + .mgm-block{ border-top:1px dashed #f1f5f9; }
