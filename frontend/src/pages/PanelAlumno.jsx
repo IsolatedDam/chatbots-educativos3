@@ -16,20 +16,9 @@ const API_ROOT = (() => {
 })();
 const API_BASE = `${API_ROOT}/api`;
 
-/* ===== Embed del chatbot ===== */
-const EMBED_BASE = (() => {
-  const vite = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_CHATBOT_EMBED_BASE : undefined;
-  const cra  = typeof process !== 'undefined' ? process.env?.REACT_APP_CHATBOT_EMBED_BASE : undefined;
-  const val  = vite || cra || 'https://aipoweredchatbot-production.up.railway.app';
-  return String(val).replace(/\/+$/, '');
-})();
-const EMBED_KEY = (() => {
-  const vite = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_CHATBOT_EMBED_KEY : undefined;
-  const cra  = typeof process !== 'undefined' ? process.env?.REACT_APP_CHATBOT_EMBED_KEY : undefined;
-  return vite || cra || 'PDykle3B8BEfzdIjR8XN__jQ4UPgU6x-JjAKt_SdWAnYrFHslUNeZH5NHZgOAh2M';
-})();
-const buildEmbedUrl = (chatbotId) =>
-  `${EMBED_BASE}/chatbot/${encodeURIComponent(chatbotId)}${EMBED_KEY ? `?key=${encodeURIComponent(EMBED_KEY)}` : ''}`;
+/* ===== IFRAME: usar SIEMPRE este source ===== */
+const FIXED_EMBED_URL =
+  'https://aipoweredchatbot-production.up.railway.app/chatbot/68d1694d375d7acbb68821ff?key=PDykle3B8BEfzdIjR8XN__jQ4UPgU6x-JjAKt_SdWAnYrFHslUNeZH5NHZgOAh2M';
 
 export default function PanelAlumno() {
   const navigate = useNavigate();
@@ -122,7 +111,8 @@ export default function PanelAlumno() {
           _id: String(x.chatbotId),
           nombre: x.nombre || 'Chatbot',
           categoria: x.categoria || 'General',
-          embedUrl: buildEmbedUrl(String(x.chatbotId)),
+          // ⬇️ usar SIEMPRE el mismo iframe que pediste:
+          embedUrl: FIXED_EMBED_URL,
           cursosCount: Number(x.cursosCount || 0),
         }))
         .sort((a,b)=> (a.categoria||'').localeCompare(b.categoria||'', 'es')
@@ -304,7 +294,6 @@ export default function PanelAlumno() {
                         {categoria} <span className="chip">{items.length}</span>
                       </div>
 
-                      {/* 🟢 centrado y ancho completo: 1 columna si hay 1; 2 si hay 2 o más */}
                       <div className={`cb-cards ${viewMode} ${items.length >= 2 ? 'two' : 'one'}`}>
                         {items.map(cb => {
                           const isExpanded = !!expanded[cb._id];
@@ -325,7 +314,7 @@ export default function PanelAlumno() {
                                 </div>
 
                                 <div className="cb-actions">
-                                  <a className="btn btn-ghost" href={cb.embedUrl} target="_blank" rel="noreferrer">↗ Abrir</a>
+                                  <a className="btn btn-ghost" href={FIXED_EMBED_URL} target="_blank" rel="noreferrer">↗ Abrir</a>
                                   <button className="btn btn-ghost" onClick={() => toggleExpand(cb._id)}>
                                     {isExpanded ? '⤢ Contraer' : '⤢ Pantalla completa'}
                                   </button>
@@ -334,7 +323,7 @@ export default function PanelAlumno() {
 
                               <div className="cb-frame-wrap" style={{height: h}}>
                                 <iframe
-                                  src={cb.embedUrl}
+                                  src={FIXED_EMBED_URL}
                                   title={`Chatbot ${cb.nombre}`}
                                   width="100%"
                                   height="100%"

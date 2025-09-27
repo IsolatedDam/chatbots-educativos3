@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { encryptLocalPassword } from '../utils/localVault';
@@ -7,11 +7,11 @@ import '../styles/Login.css';
 function Login() {
   const [rut, setRut] = useState('');
   const [contrasena, setContrasena] = useState('');
-  const [rol, setRol] = useState('alumno');
+  const [rol, setRol] = useState('alumno');           // 'alumno' | 'profesor'
   const [mensaje, setMensaje] = useState('');
   const [verPwd, setVerPwd] = useState(false);
 
-  // recovery side-panel state
+  // recovery side-panel state (solo para profesor/admin)
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [recEmail, setRecEmail] = useState('');
   const [recSending, setRecSending] = useState(false);
@@ -22,6 +22,16 @@ function Login() {
   const SESSION_MS = 30 * 60 * 1000; // 30 min
 
   const normalizarRut = (v) => v.replace(/\./g, '').replace(/\s+/g, '').toUpperCase();
+
+  // Si cambias a "Alumno", cierra el panel de recuperación y limpia password
+  useEffect(() => {
+    if (rol === 'alumno') {
+      setRecoveryOpen(false);
+      setRecEmail('');
+      setRecResult(null);
+      setContrasena('');
+    }
+  }, [rol]);
 
   /* ---------------- LOGIN ---------------- */
   const handleSubmit = async (e) => {
@@ -95,6 +105,8 @@ function Login() {
 
   /* ---------------- RECOVERY (side-panel) ---------------- */
   const openRecovery = (initialEmail = '') => {
+    // Solo para profesor/admin
+    if (rol === 'alumno') return;
     setRecEmail(initialEmail);
     setRecResult(null);
     setRecoveryOpen(true);
@@ -122,7 +134,7 @@ function Login() {
       setRecSending(true);
       setRecResult(null);
 
-      // FIX: ruta correcta del backend y payload { correo }
+      // Ruta correcta del backend y payload { correo }
       const res = await axios.post(`${API_BASE}/password/forgot`, {
         correo: recEmail
       });
@@ -154,7 +166,7 @@ function Login() {
             <input
               type="radio"
               name="rol"
-              value="alumnos"
+              value="alumno"
               checked={rol === 'alumno'}
               onChange={() => setRol('alumno')}
             />{' '}
@@ -206,11 +218,14 @@ function Login() {
           <button type="submit">Ingresar</button>
         </form>
 
-        <div style={{ marginTop: 12 }}>
-          <button className="login-link" onClick={() => openRecovery('')}>
-            ¿Olvidaste tu contraseña?
-          </button>
-        </div>
+        {/* Link de recuperación: SOLO profesor/admin */}
+        {rol !== 'alumno' && (
+          <div style={{ marginTop: 12 }}>
+            <button className="login-link" onClick={() => openRecovery('')}>
+              ¿Olvidaste tu contraseña?
+            </button>
+          </div>
+        )}
 
         {mensaje && <p className="login-msg">{mensaje}</p>}
 
@@ -219,8 +234,8 @@ function Login() {
         </button>
       </div>
 
-      {/* ===== Side-panel: Recuperar contraseña ===== */}
-      {recoveryOpen && (
+      {/* ===== Side-panel: Recuperar contraseña (solo profesor/admin) ===== */}
+      {rol !== 'alumno' && recoveryOpen && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal" aria-labelledby="recuperar-title">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
