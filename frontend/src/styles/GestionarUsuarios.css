@@ -25,7 +25,6 @@
   gap: 18px;
   margin: 4px 0 14px;
 }
-
 .tipo-selector label {
   background: #fff;
   padding: 8px 14px;
@@ -39,7 +38,6 @@
   gap: 8px;
   cursor: pointer;
 }
-
 .tipo-selector input[type="radio"] {
   accent-color: #00AEEF;
 }
@@ -53,7 +51,6 @@
   flex-wrap: wrap;
   margin: 6px 0 14px;
 }
-
 .filtro-input,
 .filtro-select {
   height: 42px;
@@ -65,10 +62,8 @@
   outline: none;
   transition: box-shadow .2s ease, transform .08s ease;
 }
-
 .filtro-input { min-width: 320px; }
 .filtro-select { min-width: 180px; }
-
 .filtro-input:focus,
 .filtro-select:focus {
   box-shadow: 0 0 0 3px rgba(0,174,239,.18);
@@ -86,14 +81,12 @@
   cursor: pointer;
   transition: transform .08s ease, box-shadow .15s ease, background .2s ease;
 }
-
 .btn-prim {
   background: #00AEEF;
   color: #fff;
   box-shadow: 0 6px 16px rgba(0,174,239,.25);
 }
 .btn-prim:hover { background: #008ec9; transform: translateY(-1px); }
-
 .btn-sec {
   background: #eaf2f8;
   color: #0b6fae;
@@ -121,32 +114,25 @@
   overflow: hidden; /* el scroll va dentro de .tabla-scroll */
   margin-top: 12px;
 }
-
-/* Contenedor con scroll interno */
 .tabla-scroll {
-  max-height: calc(100vh - 260px); /* ajusta según tu layout */
+  max-height: calc(100vh - 260px);
   overflow: auto;
-  padding-bottom: 2px; /* evita que la tabla choque con el borde redondeado */
+  padding-bottom: 2px;
 }
-
-/* Tabla */
 .tabla {
   width: 100%;
-  min-width: 980px; /* evita que colapsen columnas */
+  min-width: 980px;
   border-collapse: collapse;
   table-layout: auto;
   font-size: 14px;
 }
-
 .tabla thead th,
 .tabla tbody td {
   padding: 12px 16px;
   border-bottom: 1px solid #eef2f6;
-  white-space: nowrap; /* filas compactas */
+  white-space: nowrap;
   text-align: left;
 }
-
-/* Encabezado fijo */
 .tabla thead th {
   position: sticky;
   top: 0;
@@ -155,8 +141,6 @@
   font-weight: 800;
   z-index: 2;
 }
-
-/* Filas */
 .tabla tbody tr:hover td { background: #f9fcff; }
 
 /* Botón Editar */
@@ -176,38 +160,58 @@
 .tabla tbody td[colspan] { text-align: center; padding: 22px 12px; color: #6e7a86; }
 .tabla-loading { padding: 28px; text-align: center; color: #6e7a86; }
 
-/* ===== Modal ===== */
-.modal {
+/* ===== Modal NUEVO — centrado real ===== */
+.gu-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.4);
+  z-index: 1000;
+  display: grid;
+  place-items: center;          /* centro exacto */
+  background: rgba(0,0,0,.45);
+  padding: 24px;                /* margen respirable en móviles */
+}
+.gu-dialog {
+  width: min(760px, calc(100vw - 48px));
+  max-height: min(90vh, calc(100vh - 48px));
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(0,0,0,.2);
+  overflow: auto;               /* scroll interno si se necesita */
+  padding: 18px 20px;
+}
+.gu-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 16px;
-  z-index: 50;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
 }
-
-/* ⬇️ Tamaño controlado + scroll interno */
-.modal-contenido {
-  width: 100%;
-  max-width: 680px;       /* más angosto */
-  max-height: 85vh;       /* no supera el alto de la pantalla */
-  overflow-y: auto;       /* scroll si el contenido se extiende */
-  background: #fff;
-  border-radius: 14px;
-  padding: 20px 22px;
-  box-shadow: 0 18px 40px rgba(0,0,0,.18);
-}
-
-.modal-contenido h3 {
-  margin-top: 0;
+.gu-title {
+  margin: 0;
+  font-size: 18px;
   color: #0b6fae;
-  font-size: 20px;
+}
+.gu-close {
+  border: none;
+  background: #eef3f8;
+  color: #0b6fae;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 34px;
+}
+.gu-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
 }
 
-.modal-contenido input,
-.modal-contenido select {
+/* Inputs del modal */
+.gu-dialog input,
+.gu-dialog select {
   width: 100%;
   margin: 6px 0;
   padding: 10px 12px;
@@ -215,50 +219,11 @@
   border-radius: 10px;
   background: #fff;
   box-shadow: inset 0 2px 7px rgba(0,0,0,.05);
-  font-size: 14px;        /* compacto */
+  font-size: 14px;
 }
 
-.modal-botones {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.modal-botones button:first-child {
-  background: #00AEEF;
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-weight: 700;
-}
-.modal-botones button:last-child {
-  background: #eaf2f8;
-  color: #0b6fae;
-  border: none;
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-weight: 700;
-}
-
-/* ===== Permisos en el modal (compacto y responsivo) ===== */
-
-/* Botón “Seleccionar/Quitar todos” dentro del modal */
-.modal-contenido .btn-ghost,
-.modal-contenido .btn-ghost:where(button) {
-  background: #eef3f8;
-  color: #0b6fae;
-  border: 1px solid #e6eef5;
-  border-radius: 10px;
-  padding: 8px 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
+/* Permisos (mismo look & feel) */
 .perm-wrap { margin-top: 12px; }
-
-/* Grupo */
 .perm-group {
   border: 1px dashed #e6eef5;
   padding: 8px;
@@ -270,39 +235,45 @@
   font-size: 12px;
   color: #6b7280;
 }
-
-/* Grid de items: 3 columnas desktop, 2 en tablet, 1 en móvil */
-.perm-grid {
+.perm-grid{
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 12px;
 }
-@media (max-width: 1024px){
-  .perm-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
-}
-@media (max-width: 560px){
-  .perm-grid { grid-template-columns: 1fr; }
-}
-
-.perm-item {
+@media (max-width: 1024px){ .perm-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width: 560px){ .perm-grid{ grid-template-columns: 1fr; } }
+.perm-item{
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  background: #fff;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
   border: 1px solid #e6eef5;
   border-radius: 10px;
-  padding: 8px 10px;
-  font-size: 13px; /* compacto */
+  background: #fff;
 }
-.perm-item input { transform: translateY(1px); }
+.perm-item input[type="checkbox"]{
+  flex: 0 0 auto;
+}
+.perm-item span{
+  line-height: 1.25;
+  color: #334155;
+  font-size: 13px;
+}
 
-/* ===== Extras ===== */
-/* que el mensaje "Sin resultados" herede el estilo centrado */
-.tabla tbody td[colspan] { text-align: center; }
+/* boton fantasma en modal */
+.gu-dialog .btn-ghost{
+  background: #eef3f8;
+  color: #0b6fae;
+  border: 1px solid #e6eef5;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
 
-/* === Fix: no estilizar los checkboxes como inputs de texto === */
-.modal-contenido input[type="checkbox"],
-.modal-contenido input[type="radio"]{
+/* por las dudas, evita que checkboxes se estilen como inputs de texto */
+.gu-dialog input[type="checkbox"],
+.gu-dialog input[type="radio"]{
   width: auto;
   height: 16px;
   padding: 0;
@@ -310,41 +281,4 @@
   border: none;
   box-shadow: none;
   background: transparent;
-}
-
-/* Permisos más ordenados */
-.perm-grid{
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0,1fr));
-  gap: 12px;               /* un poco más de aire */
-}
-
-.perm-item{
-  display: flex;
-  align-items: center;      /* centra verticalmente checkbox + texto */
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid #e6eef5;
-  border-radius: 10px;
-  background: #fff;
-  cursor: pointer;          /* todo el item clickeable */
-}
-
-.perm-item input[type="checkbox"]{
-  flex: 0 0 auto;           /* no se estira */
-  transform: translateY(0); /* quita corrección previa */
-}
-
-.perm-item span{
-  line-height: 1.25;
-  color: #334155;
-  font-size: 13px;
-}
-
-/* Responsivo */
-@media (max-width: 1024px){
-  .perm-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-}
-@media (max-width: 560px){
-  .perm-grid{ grid-template-columns: 1fr; }
 }

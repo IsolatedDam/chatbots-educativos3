@@ -1,4 +1,3 @@
-// src/components/GestionarUsuarios.jsx
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
@@ -43,8 +42,8 @@ function calcRiesgoFE(vence) {
   return 'verde';
 }
 function deriveRiesgo(a) {
-  const r =
-    (a?.riesgo ?? a?.color_riesgo ?? a?.riesgo_color ?? calcRiesgoFE(a?.suscripcionVenceEl) ?? '').toString().toLowerCase();
+  const r = (a?.riesgo ?? a?.color_riesgo ?? a?.riesgo_color ?? calcRiesgoFE(a?.suscripcionVenceEl) ?? '')
+    .toString().toLowerCase();
   let rr = ['verde','amarillo','rojo'].includes(r) ? r : '';
   if (a?.habilitado === false) rr = 'rojo';
   return rr;
@@ -55,22 +54,15 @@ function riesgoMensajeFE(r) {
   if (r === 'verde') return 'Suscripción activa';
   return '—';
 }
-
-/* Helpers varios */
-const getApellido = (u) =>
-  u?.apellido ?? u?.apellidos ?? u?.lastName ?? u?.lastname ?? '';
-
+const getApellido = (u) => u?.apellido ?? u?.apellidos ?? u?.lastName ?? u?.lastname ?? '';
 const formatDate = (v) => {
   if (!v) return '';
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return '';
   return d.toISOString().slice(0,10);
 };
-// ⏱️ Fecha de creación (con fallbacks)
-const getFechaCreacion = (u) =>
-  formatDate(u?.fechaCreacion || u?.createdAt || u?.fecha_creacion);
+const getFechaCreacion = (u) => formatDate(u?.fechaCreacion || u?.createdAt || u?.fecha_creacion);
 
-/* Badge de riesgo (tabla alumnos) */
 const RiesgoBadge = ({ value }) => {
   const v = String(value || '').toLowerCase();
   const map = {
@@ -80,10 +72,7 @@ const RiesgoBadge = ({ value }) => {
   };
   const sty = map[v] || { bg: '#eef2f7', color: '#334155', label: v || '-' };
   return (
-    <span style={{
-      background: sty.bg, color: sty.color,
-      padding: '4px 8px', borderRadius: 999, fontSize: 12, fontWeight: 700
-    }}>
+    <span style={{ background: sty.bg, color: sty.color, padding: '4px 8px', borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
       {sty.label}
     </span>
   );
@@ -95,9 +84,9 @@ function GestionarUsuarios() {
   const [filtroTexto, setFiltroTexto] = useState('');
 
   // Filtros
-  const [filtroJornada, setFiltroJornada] = useState('');   // solo alumnos
-  const [filtroSemestre, setFiltroSemestre] = useState(''); // solo alumnos
-  const [filtroAnio, setFiltroAnio] = useState('');         // alumnos y profesores
+  const [filtroJornada, setFiltroJornada] = useState('');
+  const [filtroSemestre, setFiltroSemestre] = useState('');
+  const [filtroAnio, setFiltroAnio] = useState('');
 
   const [usuarioEditando, setUsuarioEditando] = useState(null);
   const [formulario, setFormulario] = useState({});
@@ -105,18 +94,15 @@ function GestionarUsuarios() {
   const [error, setError] = useState('');
 
   const token = localStorage.getItem('token') || '';
-
-  // Permisos del usuario actual
   const usuarioActual = JSON.parse(localStorage.getItem('usuario') || '{}');
   const esSuper = String(usuarioActual?.rol || '').toLowerCase() === 'superadmin';
   const esAdmin = String(usuarioActual?.rol || '').toLowerCase() === 'admin';
   const permisosActual = Array.isArray(usuarioActual?.permisos) ? usuarioActual.permisos : [];
-
   const puedeEditarRiesgo = esSuper || esAdmin || permisosActual.includes('alertas:editar_riesgo');
   const puedeEliminarAlumnos = esSuper || esAdmin || permisosActual.includes('alumnos:eliminar');
 
-  // Selección múltiple (ALUMNOS)
-  const [seleccion, setSeleccion] = useState([]); // array de IDs
+  // Selección múltiple (alumnos)
+  const [seleccion, setSeleccion] = useState([]);
   const [eliminandoMasivo, setEliminandoMasivo] = useState(false);
 
   const toggleSelect = (id) => {
@@ -124,7 +110,6 @@ function GestionarUsuarios() {
   };
   const clearSelection = () => setSeleccion([]);
 
-  // helpers de año (usa anio || fechaIngreso || fechaCreacion || createdAt)
   const getAnio = (u) => {
     if (u?.anio != null) return u.anio;
     const d = u?.fechaIngreso ? new Date(u.fechaIngreso)
@@ -135,22 +120,16 @@ function GestionarUsuarios() {
 
   const obtenerUsuarios = useCallback(async () => {
     try {
-      setCargando(true);
-      setError('');
-
+      setCargando(true); setError('');
       const endpointPath = tipoUsuario === 'alumnos' ? '/alumnos' : '/admin/profesores';
       const { data } = await axios.get(`${API_BASE}${endpointPath}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-
       const lista = Array.isArray(data) ? data : (data?.items || []);
       setUsuarios(lista);
-      setSeleccion([]); // reset selección al recargar
+      setSeleccion([]);
     } catch (err) {
-      console.error('Error al obtener usuarios',
-        err?.response?.status,
-        err?.response?.data || err.message
-      );
+      console.error('Error al obtener usuarios', err?.response?.status, err?.response?.data || err.message);
       setUsuarios([]);
       setError(err?.response?.data?.msg || 'No se pudieron cargar los usuarios.');
     } finally {
@@ -164,23 +143,19 @@ function GestionarUsuarios() {
     setFiltroJornada('');
     setFiltroSemestre('');
     setFiltroAnio('');
-    setSeleccion([]); // limpia selección al cambiar tipo
+    setSeleccion([]);
   }, [obtenerUsuarios]);
 
-  // Opciones de semestre detectadas (solo alumnos)
   const opcionesSemestre = useMemo(() => {
     if (tipoUsuario !== 'alumnos') return [];
     const set = new Set(
-      (usuarios || [])
-        .map(u => (u.semestre ?? '').toString().trim())
-        .filter(Boolean)
+      (usuarios || []).map(u => (u.semestre ?? '').toString().trim()).filter(Boolean)
     );
     const arr = Array.from(set);
     arr.sort((a, b) => Number(a) - Number(b));
     return arr;
   }, [usuarios, tipoUsuario]);
 
-  // Opciones de año (derivadas con fallback) — para ambos tipos
   const opcionesAnio = useMemo(() => {
     const set = new Set(
       (usuarios || []).map(u => {
@@ -197,47 +172,31 @@ function GestionarUsuarios() {
     const texto = filtroTexto.toLowerCase().trim();
     return (usuarios || []).filter(u => {
       const base = [
-        u.correo,
-        u.nombre,
-        getApellido(u),
-        ...(tipoUsuario === 'alumnos' ? [u.numero_documento] : []), // ← no buscamos por Nº doc en profesores
-        u.rut,
-        u.cargo,
-        u.telefono
+        u.correo, u.nombre, getApellido(u),
+        ...(tipoUsuario === 'alumnos' ? [u.numero_documento] : []),
+        u.rut, u.cargo, u.telefono
       ].filter(Boolean).join(' ').toLowerCase();
 
       if (texto && !base.includes(texto)) return false;
 
-      // Filtro por Año (aplica a alumnos y profesores)
       if (filtroAnio) {
         const anio = getAnio(u);
         if (String(anio) !== String(filtroAnio)) return false;
       }
-
-      // Filtros específicos de alumnos
       if (tipoUsuario === 'alumnos') {
-        if (filtroJornada && String(u.jornada || '').toLowerCase() !== filtroJornada.toLowerCase()) {
-          return false;
-        }
-        if (filtroSemestre && String(u.semestre) !== String(filtroSemestre)) {
-          return false;
-        }
+        if (filtroJornada && String(u.jornada || '').toLowerCase() !== filtroJornada.toLowerCase()) return false;
+        if (filtroSemestre && String(u.semestre) !== String(filtroSemestre)) return false;
       }
       return true;
     });
   }, [usuarios, tipoUsuario, filtroTexto, filtroJornada, filtroSemestre, filtroAnio]);
 
-  // Checkbox maestro (seleccionar todos los filtrados — solo alumnos)
   const allFilteredIds = useMemo(() => (
-    tipoUsuario === 'alumnos'
-      ? usuariosFiltrados.map(u => u._id)
-      : []
+    tipoUsuario === 'alumnos' ? usuariosFiltrados.map(u => u._id) : []
   ), [usuariosFiltrados, tipoUsuario]);
-
   const allFilteredSelected = useMemo(() => (
     allFilteredIds.length > 0 && allFilteredIds.every(id => seleccion.includes(id))
   ), [allFilteredIds, seleccion]);
-
   const toggleSelectAllFiltered = () => {
     if (allFilteredSelected) {
       setSeleccion(prev => prev.filter(id => !allFilteredIds.includes(id)));
@@ -267,7 +226,6 @@ function GestionarUsuarios() {
     setFormulario(next);
   };
 
-  // Toggle de permisos (profesores)
   const togglePerm = (key) => {
     setFormulario((prev) => {
       const cur = Array.isArray(prev.permisos) ? prev.permisos : [];
@@ -279,12 +237,7 @@ function GestionarUsuarios() {
     () => (Array.isArray(formulario.permisos) ? formulario.permisos.length === ALL_KEYS.length : false),
     [formulario.permisos]
   );
-  const toggleAll = () => {
-    setFormulario(prev => ({
-      ...prev,
-      permisos: allSelected ? [] : [...ALL_KEYS]
-    }));
-  };
+  const toggleAll = () => setFormulario(prev => ({ ...prev, permisos: allSelected ? [] : [...ALL_KEYS] }));
 
   const guardarCambios = async () => {
     try {
@@ -292,15 +245,10 @@ function GestionarUsuarios() {
       const payload = { ...formulario };
 
       if (tipoUsuario === 'alumnos') {
-        if (payload.semestre !== undefined && payload.semestre !== '') {
-          payload.semestre = Number(payload.semestre);
-        }
-        if (payload.anio !== undefined && payload.anio !== '') {
-          payload.anio = Number(payload.anio);
-        }
+        if (payload.semestre !== undefined && payload.semestre !== '') payload.semestre = Number(payload.semestre);
+        if (payload.anio !== undefined && payload.anio !== '') payload.anio = Number(payload.anio);
       } else {
-        // Profesores: no enviar Nº documento (lo ocultamos en UI)
-        delete payload.numero_documento;
+        delete payload.numero_documento; // no editar Nº doc en profesores
       }
 
       await axios.put(`${API_BASE}${endpointPath}/${formulario._id}`, payload,
@@ -310,14 +258,11 @@ function GestionarUsuarios() {
       obtenerUsuarios();
     } catch (err) {
       console.error('❌ Error al actualizar usuario:',
-        err?.response?.status,
-        err?.response?.data || err.message
-      );
+        err?.response?.status, err?.response?.data || err.message);
       alert(err?.response?.data?.msg || 'No se pudo actualizar.');
     }
   };
 
-  /* === ELIMINAR individual === */
   const eliminarUsuario = async (u) => {
     const tipo = tipoUsuario === 'alumnos' ? 'alumno' : 'profesor';
     const { isConfirmed } = await Swal.fire({
@@ -332,9 +277,7 @@ function GestionarUsuarios() {
 
     try {
       const endpointPath = tipoUsuario === 'alumnos' ? '/alumnos' : '/admin/profesores';
-      await axios.delete(`${API_BASE}${endpointPath}/${u._id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.delete(`${API_BASE}${endpointPath}/${u._id}`, { headers: { Authorization: `Bearer ${token}` } });
       await Swal.fire('Eliminado', `${tipo.charAt(0).toUpperCase() + tipo.slice(1)} eliminado correctamente.`, 'success');
       obtenerUsuarios();
     } catch (err1) {
@@ -342,9 +285,7 @@ function GestionarUsuarios() {
       const notFoundish = status === 404 || status === 405 || status === 400;
       if (tipoUsuario === 'profesores' && notFoundish) {
         try {
-          await axios.delete(`${API_BASE}/admin/${u._id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          await axios.delete(`${API_BASE}/admin/${u._id}`, { headers: { Authorization: `Bearer ${token}` } });
           await Swal.fire('Eliminado', 'Profesor eliminado correctamente (compat).', 'success');
           obtenerUsuarios();
           return;
@@ -354,13 +295,11 @@ function GestionarUsuarios() {
           return;
         }
       }
-
       console.error('❌ Error al eliminar:', err1?.response?.status, err1?.response?.data || err1.message);
       Swal.fire('Error', err1?.response?.data?.msg || 'No se pudo eliminar.', 'error');
     }
   };
 
-  /* === ELIMINACIÓN MASIVA DE ALUMNOS === */
   const eliminarAlumnosSeleccionados = async () => {
     if (tipoUsuario !== 'alumnos') return;
     if (!puedeEliminarAlumnos) {
@@ -383,9 +322,7 @@ function GestionarUsuarios() {
     try {
       setEliminandoMasivo(true);
       const headers = { Authorization: `Bearer ${token}` };
-      const promises = seleccion.map(id =>
-        axios.delete(`${API_BASE}/alumnos/${id}`, { headers })
-      );
+      const promises = seleccion.map(id => axios.delete(`${API_BASE}/alumnos/${id}`, { headers }));
       const results = await Promise.allSettled(promises);
 
       const ok = results.filter(r => r.status === 'fulfilled').length;
@@ -405,7 +342,6 @@ function GestionarUsuarios() {
           }
         });
       }
-
       clearSelection();
       obtenerUsuarios();
     } catch (e) {
@@ -477,10 +413,17 @@ function GestionarUsuarios() {
 
   const isProf = tipoUsuario === 'profesores';
   const isAlum = tipoUsuario === 'alumnos';
+  const colSpanProf = 10;
+  const colSpanAlum = 11;
 
-  // columnas para fila “sin resultados”
-  const colSpanProf = 10; // Correo, Nombre, Apellido, TipoDoc, RUT, Teléfono, FechaCreación, Año, Cargo, Acciones
-  const colSpanAlum = 11; // checkbox maestro + 10 columnas
+  /* 👉 Bloquea el scroll del body cuando el modal está abierto */
+  useEffect(() => {
+    if (usuarioEditando) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = prev; };
+    }
+  }, [usuarioEditando]);
 
   return (
     <div className="gestionar-usuarios">
@@ -520,51 +463,33 @@ function GestionarUsuarios() {
 
         {isAlum && (
           <>
-            <select
-              value={filtroJornada}
-              onChange={(e) => setFiltroJornada(e.target.value)}
-              className="filtro-select"
-            >
+            <select value={filtroJornada} onChange={(e) => setFiltroJornada(e.target.value)} className="filtro-select">
               <option value="">Jornada: Todas</option>
               {JORNADAS.map(j => <option key={j} value={j}>{j}</option>)}
             </select>
 
-            <select
-              value={filtroSemestre}
-              onChange={(e) => setFiltroSemestre(e.target.value)}
-              className="filtro-select"
-            >
+            <select value={filtroSemestre} onChange={(e) => setFiltroSemestre(e.target.value)} className="filtro-select">
               <option value="">Semestre: Todos</option>
-              {opcionesSemestre.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
+              {opcionesSemestre.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </>
         )}
 
-        {/* Año visible para alumnos y profesores */}
-        <select
-          value={filtroAnio}
-          onChange={(e) => setFiltroAnio(e.target.value)}
-          className="filtro-select"
-        >
+        <select value={filtroAnio} onChange={(e) => setFiltroAnio(e.target.value)} className="filtro-select">
           <option value="">Año: Todos</option>
-          {opcionesAnio.map((a) => (
-            <option key={a} value={a}>{a}</option>
-          ))}
+          {opcionesAnio.map((a) => <option key={a} value={a}>{a}</option>)}
         </select>
 
         <button className="btn-sec" onClick={limpiarFiltros}>Limpiar</button>
         <button className="btn-prim" onClick={exportarExcel}>Descargar Excel (filtrado)</button>
 
-        {/* === Acciones masivas (solo alumnos) === */}
         {isAlum && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 'auto' }}>
             <span style={{ fontSize: 12, opacity: .8 }}>
               Seleccionados: <b>{seleccion.length}</b>
             </span>
             <button
-              className="btn-del"
+              className="btn-edit"
               onClick={eliminarAlumnosSeleccionados}
               disabled={!puedeEliminarAlumnos || !seleccion.length || eliminandoMasivo}
               title={!puedeEliminarAlumnos ? 'No tienes permiso para eliminar alumnos' : undefined}
@@ -583,7 +508,6 @@ function GestionarUsuarios() {
             <table className="tabla">
               <thead>
                 <tr>
-                  {/* Checkbox maestro solo en alumnos */}
                   {isAlum && (
                     <th style={{ width: 32, textAlign: 'center' }}>
                       <input
@@ -624,14 +548,9 @@ function GestionarUsuarios() {
                   const r = deriveRiesgo(u);
                   return (
                     <tr key={u._id}>
-                      {/* Checkbox por fila (solo alumnos) */}
                       {isAlum && (
                         <td style={{ textAlign: 'center' }}>
-                          <input
-                            type="checkbox"
-                            checked={seleccion.includes(u._id)}
-                            onChange={() => toggleSelect(u._id)}
-                          />
+                          <input type="checkbox" checked={seleccion.includes(u._id)} onChange={() => toggleSelect(u._id)} />
                         </td>
                       )}
                       <td>{u.correo || '-'}</td>
@@ -653,20 +572,12 @@ function GestionarUsuarios() {
                           <td>{u.jornada || '-'}</td>
                           <td>{getAnio(u) || '-'}</td>
                           <td>{u.telefono || '-'}</td>
-                          <td title={riesgoMensajeFE(r)}>
-                            <RiesgoBadge value={r} />
-                          </td>
+                          <td title={riesgoMensajeFE(r)}><RiesgoBadge value={r} /></td>
                         </>
                       )}
                       <td>
-                        <button className="btn-edit" onClick={() => handleEditar(u)}>
-                          Editar
-                        </button>
-                        <button
-                          className="btn-del"
-                          onClick={() => eliminarUsuario(u)}
-                          style={{ marginLeft: 8 }}
-                        >
+                        <button className="btn-edit" onClick={() => handleEditar(u)}>Editar</button>
+                        <button className="btn-sec" onClick={() => eliminarUsuario(u)} style={{ marginLeft: 8 }}>
                           Eliminar
                         </button>
                       </td>
@@ -675,9 +586,7 @@ function GestionarUsuarios() {
                 })}
                 {!usuariosFiltrados.length && (
                   <tr>
-                    <td colSpan={isProf ? colSpanProf : colSpanAlum}>
-                      Sin resultados.
-                    </td>
+                    <td colSpan={isProf ? colSpanProf : colSpanAlum}>Sin resultados.</td>
                   </tr>
                 )}
               </tbody>
@@ -686,19 +595,30 @@ function GestionarUsuarios() {
         )}
       </div>
 
+      {/* ===== MODAL CENTRADO ===== */}
       {usuarioEditando && (
-        <div className="modal">
-          <div className="modal-contenido">
-            <h3>Editar Usuario</h3>
+        <div
+          className="gu-modal"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={() => setUsuarioEditando(null)} /* click fuera cierra */
+        >
+          <div
+            className="gu-dialog"
+            onMouseDown={(e) => e.stopPropagation()}    /* evita cerrar al clickear dentro */
+          >
+            <div className="gu-header">
+              <h3 className="gu-title">Editar {isProf ? 'Profesor' : 'Alumno'}</h3>
+              <button className="gu-close" onClick={() => setUsuarioEditando(null)} aria-label="Cerrar">✕</button>
+            </div>
 
             {/* Campos comunes */}
             <input name="correo" value={formulario.correo || ''} onChange={handleFormularioChange} />
             <input name="nombre" value={formulario.nombre || ''} onChange={handleFormularioChange} />
             <input name="apellido" value={formulario.apellido || ''} onChange={handleFormularioChange} />
 
-            {tipoUsuario === 'profesores' ? (
+            {isProf ? (
               <>
-                {/* Profesores: datos personales (sin Nº documento) */}
                 <select name="tipo_documento" value={formulario.tipo_documento || ''} onChange={handleFormularioChange}>
                   <option value="">Tipo de documento</option>
                   <option value="RUT">RUT</option>
@@ -717,30 +637,22 @@ function GestionarUsuarios() {
                 <input name="cargo" value={formulario.cargo || ''} onChange={handleFormularioChange} placeholder="Cargo" />
 
                 {/* Permisos profesor */}
-                <div style={{ marginTop: 12, padding: 12, border: '1px solid #e8eef5', borderRadius: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <div className="perm-wrap">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                     <strong>Permisos</strong>
-                    <button type="button" className="btn btn-ghost" onClick={toggleAll}>
+                    <button type="button" className="btn-ghost" onClick={toggleAll}>
                       {allSelected ? 'Quitar todos' : 'Seleccionar todos'}
                     </button>
                   </div>
-
                   {PERMISOS.map((g) => (
-                    <fieldset key={g.grupo} style={{ border: '1px dashed #e3e8ef', borderRadius: 8, padding: 10, marginBottom: 10 }}>
-                      <legend style={{ fontSize: 12, color: '#6b7280', padding: '0 6px' }}>{g.grupo}</legend>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 8 }}>
+                    <fieldset key={g.grupo} className="perm-group">
+                      <legend>{g.grupo}</legend>
+                      <div className="perm-grid">
                         {g.items.map((p) => {
                           const checked = Array.isArray(formulario.permisos) && formulario.permisos.includes(p.key);
                           return (
-                            <label key={p.key} style={{
-                              display: 'flex', gap: 8, alignItems: 'flex-start',
-                              border: '1px solid #e8eef5', borderRadius: 10, padding: '8px 10px', background: '#fff'
-                            }}>
-                              <input
-                                type="checkbox"
-                                checked={!!checked}
-                                onChange={() => togglePerm(p.key)}
-                              />
+                            <label key={p.key} className="perm-item">
+                              <input type="checkbox" checked={!!checked} onChange={() => togglePerm(p.key)} />
                               <span>{p.label}</span>
                             </label>
                           );
@@ -765,57 +677,39 @@ function GestionarUsuarios() {
                 </select>
                 <input name="telefono" value={formulario.telefono || ''} onChange={handleFormularioChange} placeholder="Teléfono" />
 
-                {/* Preview de riesgo si tiene permiso */}
-                {(() => {
-                  if (!puedeEditarRiesgo) return null;
-                  return (
-                    <>
-                      <label style={{ display: 'block', marginTop: 8 }}>
-                        <span style={{ display: 'block', fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Color de riesgo</span>
-                        <select
-                          name="riesgo"
-                          value={formulario.riesgo || ''}
-                          onChange={handleFormularioChange}
-                        >
-                          <option value="">Riesgo (sin definir)</option>
-                          <option value="verde">Verde</option>
-                          <option value="amarillo">Amarillo</option>
-                          <option value="rojo">Rojo</option>
-                        </select>
-                      </label>
-                      <div style={{ marginTop: 8 }}>
-                        {(() => {
-                          const r = (formulario.riesgo || deriveRiesgo(formulario) || '').toLowerCase();
-                          const bg = r === 'verde' ? '#27ae60' : r === 'amarillo' ? '#f1c40f' : r === 'rojo' ? '#c0392b' : '#95a5a6';
-                          return (
-                            <>
-                              <div
-                                style={{
-                                  display: 'inline-block',
-                                  padding: '4px 10px',
-                                  borderRadius: 999,
-                                  background: bg,
-                                  color: '#fff',
-                                  fontWeight: 700,
-                                  marginRight: 8
-                                }}
-                              >
-                                {(r || '—').toString().toUpperCase()}
-                              </div>
-                              <small style={{ opacity: 0.8 }}>{riesgoMensajeFE(r)}</small>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </>
-                  );
-                })()}
+                {puedeEditarRiesgo && (
+                  <>
+                    <label style={{ display: 'block', marginTop: 8 }}>
+                      <span style={{ display: 'block', fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Color de riesgo</span>
+                      <select name="riesgo" value={formulario.riesgo || ''} onChange={handleFormularioChange}>
+                        <option value="">Riesgo (sin definir)</option>
+                        <option value="verde">Verde</option>
+                        <option value="amarillo">Amarillo</option>
+                        <option value="rojo">Rojo</option>
+                      </select>
+                    </label>
+                    <div style={{ marginTop: 8 }}>
+                      {(() => {
+                        const r = (formulario.riesgo || deriveRiesgo(formulario) || '').toLowerCase();
+                        const bg = r === 'verde' ? '#27ae60' : r === 'amarillo' ? '#f1c40f' : r === 'rojo' ? '#c0392b' : '#95a5a6';
+                        return (
+                          <>
+                            <div style={{ display: 'inline-block', padding: '4px 10px', borderRadius: 999, background: bg, color: '#fff', fontWeight: 700, marginRight: 8 }}>
+                              {(r || '—').toString().toUpperCase()}
+                            </div>
+                            <small style={{ opacity: 0.8 }}>{riesgoMensajeFE(r)}</small>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </>
+                )}
               </>
             )}
 
-            <div className="modal-botones">
-              <button onClick={guardarCambios}>Guardar</button>
-              <button onClick={() => setUsuarioEditando(null)}>Cancelar</button>
+            <div className="gu-actions">
+              <button className="btn-prim" onClick={guardarCambios}>Guardar</button>
+              <button className="btn-sec" onClick={() => setUsuarioEditando(null)}>Cancelar</button>
             </div>
           </div>
         </div>
