@@ -31,10 +31,11 @@ export default function PanelAlumno() {
   const [loadingCB, setLoadingCB] = useState(false);
   const [lastLoadedAt, setLastLoadedAt] = useState(null);
 
-  // UI state
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
-  const [frameHeight, setFrameHeight] = useState(560);
-  const [expanded, setExpanded] = useState({}); // { [id]: true }
+  // Estado de acordeón por categoría
+  const [expandedCat, setExpandedCat] = useState({}); // { [categoria]: true }
+
+  // Altura fija razonable para el iframe
+  const FRAME_HEIGHT = 560;
 
   /* ===== Montaje ===== */
   useEffect(() => {
@@ -111,8 +112,7 @@ export default function PanelAlumno() {
           _id: String(x.chatbotId),
           nombre: x.nombre || 'Chatbot',
           categoria: x.categoria || 'General',
-          // ⬇️ usar SIEMPRE el mismo iframe que pediste:
-          embedUrl: FIXED_EMBED_URL,
+          embedUrl: FIXED_EMBED_URL, // fijo por requisitos
           cursosCount: Number(x.cursosCount || 0),
         }))
         .sort((a,b)=> (a.categoria||'').localeCompare(b.categoria||'', 'es')
@@ -156,6 +156,10 @@ export default function PanelAlumno() {
     riesgo === 'amarillo' ? 'badge badge-amarillo' :
     riesgo === 'rojo' ? 'badge badge-rojo' : 'badge';
 
+  // Etiqueta dinámica según riesgo
+  const deudaLabel =
+    riesgo === 'amarillo' ? 'Suspensión en 10 días' : 'Deudas al día';
+
   /* ===== Agrupar chatbots por categoría ===== */
   const grupos = useMemo(() => {
     const map = new Map();
@@ -168,7 +172,8 @@ export default function PanelAlumno() {
       .sort((a,b)=> a[0].localeCompare(b[0], 'es'));
   }, [permitidos]);
 
-  const toggleExpand = (id) => setExpanded((s) => ({ ...s, [id]: !s[id] }));
+  const toggleCat = (categoria) =>
+    setExpandedCat(s => ({ ...s, [categoria]: !s[categoria] }));
 
   /* ===== UI ===== */
   return (
@@ -237,14 +242,14 @@ export default function PanelAlumno() {
               </section>
 
               <section className="card span-2">
-                <h3 className="card-title">Información Académica</h3>
+                <h3 className="card-title">Información de deuda</h3>
                 <div className="kv-grid">
                   <div className="kv">
                     <span className="k">Estado de cuenta</span>
                     <span className={`v ${estadoCuentaTexto === 'Suspendido' ? 'status-bad' : 'status-ok'}`}>{estadoCuentaTexto}</span>
                   </div>
                   <div className="kv">
-                    <span className="k">Color de riesgo</span>
+                    <span className="k">{deudaLabel}</span>
                     <span className="v"><span className={riskClass}>{(riesgo || '—').toUpperCase()}</span></span>
                   </div>
                 </div>
@@ -256,88 +261,60 @@ export default function PanelAlumno() {
             <section className="card">
               <div className="card-head">
                 <h3 className="card-title">Chatbots Asignados</h3>
-
-                <div className="cb-toolbar">
-                  <div className="cb-left">
-                    <button className="btn btn-primary" onClick={fetchChatbotsPermitidos} title="Recargar">⟳ Recargar</button>
-                    <div className="divider" />
-                    <button className={`btn ${viewMode==='grid' ? 'btn-active' : 'btn-ghost'}`} onClick={() => setViewMode('grid')} title="Vista de tarjetas">⬚ Grid</button>
-                    <button className={`btn ${viewMode==='list' ? 'btn-active' : 'btn-ghost'}`} onClick={() => setViewMode('list')} title="Vista de lista">☰ Lista</button>
-                  </div>
-
-                  <div className="cb-right">
-                    <label className="slider-label">
-                      Alto del chat <span className="mono">{frameHeight}px</span>
-                      <input type="range" min="320" max="720" step="20" value={frameHeight} onChange={(e)=>setFrameHeight(Number(e.target.value))}/>
-                    </label>
-                    {lastLoadedAt && <span className="hint small">Actualizado: {lastLoadedAt.toLocaleTimeString()}</span>}
-                  </div>
-                </div>
+                {/* ❌ Se removieron: Recargar, Grid/List, Slider de altura, Pantalla completa */}
+                {lastLoadedAt && <span className="hint small">Actualizado: {lastLoadedAt.toLocaleTimeString()}</span>}
               </div>
 
               {loadingCB ? (
-                <div className={`cb-groups ${viewMode}`}>
-                  {[1,2].map(g => (
-                    <div className="cb-group" key={g}>
-                      <div className="cb-group-title skeleton" style={{width:180}} />
-                      <div className={`cb-cards ${viewMode} one`}>
-                        {[1].map(i => <div className="cb-card skeleton" key={i} />)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (permitidos.length ? (
-                <div className={`cb-groups ${viewMode}`}>
-                  {grupos.map(([categoria, items]) => (
-                    <div className="cb-group" key={categoria}>
-                      <div className="cb-group-title">
-                        {categoria} <span className="chip">{items.length}</span>
-                      </div>
-
-                      <div className={`cb-cards ${viewMode} ${items.length >= 2 ? 'two' : 'one'}`}>
-                        {items.map(cb => {
-                          const isExpanded = !!expanded[cb._id];
-                          const h = isExpanded ? Math.max(frameHeight + 220, 540) : frameHeight;
-                          return (
-                            <div className={`cb-card ${isExpanded ? 'is-expanded' : ''}`} key={cb._id}>
-                              <div className="cb-card-head">
-                                <div className="cb-card-meta">
-                                  <div className="cb-avatar">🧠</div>
-                                  <div className="cb-info">
-                                    <div className="cb-name">{cb.nombre}</div>
-                                    <div className="cb-sub">
-                                      <span className="chip">{cb.categoria}</span>
-                                      <span className="sep">•</span>
-                                      <span className="muted">{cb.cursosCount} curso{cb.cursosCount===1?'':'s'}</span>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="cb-actions">
-                                  <a className="btn btn-ghost" href={FIXED_EMBED_URL} target="_blank" rel="noreferrer">↗ Abrir</a>
-                                  <button className="btn btn-ghost" onClick={() => toggleExpand(cb._id)}>
-                                    {isExpanded ? '⤢ Contraer' : '⤢ Pantalla completa'}
-                                  </button>
-                                </div>
-                              </div>
-
-                              <div className="cb-frame-wrap" style={{height: h}}>
-                                <iframe
-                                  src={FIXED_EMBED_URL}
-                                  title={`Chatbot ${cb.nombre}`}
-                                  width="100%"
-                                  height="100%"
-                                  frameBorder="0"
-                                  style={{ borderRadius: 12 }}
-                                  allow="clipboard-write; microphone; camera"
-                                />
-                              </div>
+                <p className="empty">Cargando chatbots…</p>
+              ) : (grupos.length ? (
+                <div className="cb-groups list">
+                  {grupos.map(([categoria, items]) => {
+                    const open = !!expandedCat[categoria];
+                    return (
+                      <div className="cb-group" key={categoria} style={{marginBottom:16}}>
+                        {/* Encabezado de categoría */}
+                        <div className="cb-group-title" style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:12}}>
+                          <div>
+                            <strong>{categoria}</strong> <span className="chip">{items.length}</span>
+                            {/* Muestra los nombres de chatbots asignados como subtítulo */}
+                            <div className="muted small" style={{marginTop:4}}>
+                              {items.map(x => x.nombre).join(' • ')}
                             </div>
-                          );
-                        })}
+                          </div>
+                          <button className="btn btn-primary" onClick={() => toggleCat(categoria)}>
+                            {open ? 'Cerrar' : 'Acceder'}
+                          </button>
+                        </div>
+
+                        {/* Contenido desplegable */}
+                        <div
+                          className={`cb-accordion ${open ? 'open' : ''}`}
+                          style={{
+                            overflow: 'hidden',
+                            transition: 'max-height 300ms ease, opacity 200ms ease',
+                            maxHeight: open ? FRAME_HEIGHT + 40 : 0,
+                            opacity: open ? 1 : 0.2,
+                            borderRadius: 12
+                          }}
+                        >
+                          {open && (
+                            <div className="cb-frame-wrap" style={{height: FRAME_HEIGHT, marginTop:12}}>
+                              <iframe
+                                src={FIXED_EMBED_URL}
+                                title={`Chatbot ${categoria}`}
+                                width="100%"
+                                height="100%"
+                                frameBorder="0"
+                                style={{ borderRadius: 12 }}
+                                allow="clipboard-write; microphone; camera"
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="empty">No tienes chatbots asignados aún.</p>
