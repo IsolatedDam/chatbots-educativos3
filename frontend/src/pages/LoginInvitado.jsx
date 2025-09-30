@@ -58,7 +58,7 @@ function LoginInvitado() {
   function onPhoneBlur() {
     const { valid, e164 } = normalizeChileMobile(phoneInput);
     if (!valid) {
-      setPhoneError('Ingresa 9 dígitos chilenos (ej: 9 1234 5678)');
+      setPhoneError('Ingresa un número de teléfono válido (ej: 9 1234 5678)');
     } else {
       setPhoneError('');
       setVisita((p) => ({ ...p, whatsapp: e164 }));
