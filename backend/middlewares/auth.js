@@ -1,4 +1,4 @@
-// middlewares/auth.js
+// backend/middlewares/auth.js
 const jwt = require("jsonwebtoken");
 const Admin = require("../models/Admin");   // superadmin, admin, profesor
 const Alumno = require("../models/Alumno"); // alumnos
@@ -16,7 +16,6 @@ async function verificarToken(req, res, next) {
     if (!token) return res.status(401).json({ msg: "Token no enviado" });
 
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    // payload esperado idealmente: { id, rol }
     const claimedRole = String(payload.rol || "").toLowerCase();
     const claimedId   = String(payload.id || payload.userId || payload.alumnoId || payload.adminId || "");
 
@@ -50,7 +49,7 @@ async function verificarToken(req, res, next) {
       }
     }
 
-    // 3) Como fallback, probamos Alumno aunque el token no traiga rol claro
+    // 3) Fallback: Alumno aunque el token no traiga rol claro
     if (claimedId) {
       const a2 = await Alumno.findById(claimedId).lean();
       if (a2 && a2.habilitado !== false) {
@@ -66,7 +65,7 @@ async function verificarToken(req, res, next) {
     }
 
     return res.status(401).json({ msg: "Usuario no válido" });
-  } catch (e) {
+  } catch {
     return res.status(401).json({ msg: "Token inválido" });
   }
 }
@@ -91,8 +90,8 @@ function autorizarRoles(...rolesPermitidos) {
 
 // === Autoriza por permisos ===
 function puede(..._permisosNecesarios) {
-  return (req, res, next) => {
-    const rol = String(req.usuario?.rol || "").toLowerCase();
+  return (_req, res, next) => {
+    const rol = String(_req.usuario?.rol || "").toLowerCase();
     if (rol === "superadmin" || rol === "admin" || rol === "profesor") return next();
     return res.status(403).json({ msg: "No autorizado" });
   };

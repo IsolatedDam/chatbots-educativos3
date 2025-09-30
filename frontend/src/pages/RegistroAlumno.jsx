@@ -21,12 +21,23 @@ function RegistroAlumno() {
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-  function generarContrasenaAleatoria(longitud = 10) {
-    const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$';
-    let clave = '';
-    for (let i = 0; i < longitud; i++) clave += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
-    return clave;
-  }
+  // Validación simple de sintaxis de email (la validación de dominio real la hace el backend)
+  const isEmailSyntaxValid = (email = '') =>
+    /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(String(email).trim());
+
+  // === NUEVO: whitelist de dominios permitidos ===
+  const ALLOWED_EMAIL_DOMAINS = new Set([
+    'gmail.com',
+    'hotmail.com', 'hotmail.cl',
+    'outlook.com', 'outlook.cl',
+    'live.com',
+    'yahoo.com',
+    'icloud.com',
+    // agrega tus dominios institucionales/empresa:
+    // 'duocuc.cl', 'uc.cl', 'usach.cl', 'miempresa.cl'
+  ]);
+  const getDomain = (email = '') => String(email).trim().toLowerCase().split('@')[1] || '';
+  const isAllowedEmailDomain = (email = '') => ALLOWED_EMAIL_DOMAINS.has(getDomain(email));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,12 +53,26 @@ function RegistroAlumno() {
       return;
     }
 
+    if (!isEmailSyntaxValid(form.correo)) {
+      setMensaje('Correo con formato inválido.');
+      setTimeout(() => setMensaje(''), 2500);
+      return;
+    }
+
+    // === NUEVO: validar dominio permitido ===
+    if (!isAllowedEmailDomain(form.correo)) {
+      setMensaje('Dominio de correo no permitido. Usa: ' + [...ALLOWED_EMAIL_DOMAINS].join(', '));
+      setTimeout(() => setMensaje(''), 3500);
+      return;
+    }
+
     if (!['1', '2'].includes(String(form.semestre))) {
       setMensaje('Semestre debe ser 1 o 2.');
       setTimeout(() => setMensaje(''), 3000);
       return;
     }
 
+    // Debe coincidir con lo que valida el backend (8–12 dígitos, puede iniciar con +)
     const telOK = /^\+?\d{8,12}$/.test(String(form.telefono).trim());
     if (!telOK) {
       setMensaje('Teléfono no válido. Usa 8–12 dígitos (puede iniciar con +).');
@@ -61,8 +86,7 @@ function RegistroAlumno() {
       return;
     }
 
-    const contrasenaGenerada = generarContrasenaAleatoria();
-
+    // Payload SIN contraseña: el backend genera/gestiona internamente
     const alumno = {
       correo: form.correo.trim(),
       nombre: form.nombre,
@@ -72,9 +96,9 @@ function RegistroAlumno() {
       fechaIngreso: form.fechaIngreso,
       telefono: String(form.telefono).trim(),
       semestre: Number(form.semestre),
-      jornada: form.jornada,
-      contrasena: contrasenaGenerada
+      jornada: form.jornada
       // 'anio' y 'rut' los resuelve el backend
+      // 'contrasena' ya no se envía
     };
 
     try {
@@ -95,13 +119,11 @@ function RegistroAlumno() {
         headers: { Authorization: `Bearer ${token}` }
       });
 
+      // ✅ Ya no mostramos la contraseña
       Swal.fire({
         icon: 'success',
         title: 'Alumno registrado',
-        html: `
-          <p><strong>Usuario:</strong> ${form.correo}</p>
-          <p><strong>Contraseña generada:</strong> ${contrasenaGenerada}</p>
-        `,
+        text: 'El alumno fue creado exitosamente.',
         confirmButtonText: 'Entendido'
       });
 
@@ -125,6 +147,7 @@ function RegistroAlumno() {
           window.location.href = '/login';
         }, 1200);
       } else {
+        // Mostramos el mensaje del backend (incluye errores de dominio no válido)
         setMensaje(err.response?.data?.msg || 'Error al registrar alumno');
         setTimeout(() => setMensaje(''), 3000);
       }
@@ -137,7 +160,15 @@ function RegistroAlumno() {
     <div className="registro-container">
       <h2>Registrar Alumno</h2>
       <form onSubmit={handleSubmit}>
-        <input type="email" name="correo" placeholder="Correo" value={form.correo} onChange={handleChange} className="input-field" />
+        <input
+          type="email"
+          name="correo"
+          placeholder="Correo"
+          value={form.correo}
+          onChange={handleChange}
+          className="input-field"
+          title={`Dominios permitidos: ${[...ALLOWED_EMAIL_DOMAINS].join(', ')}`}
+        />
         <input type="text" name="nombre" placeholder="Nombre(s)" value={form.nombre} onChange={handleChange} className="input-field" />
         <input type="text" name="apellido" placeholder="Apellido(s)" value={form.apellido} onChange={handleChange} className="input-field" />
 

@@ -29,6 +29,21 @@ function generarContrasenaAleatoria(longitud = 10) {
 const JORNADAS = ['Mañana', 'Tarde', 'Vespertino', 'Viernes', 'Sábados'];
 const TEL_RE = /^\+?\d{8,12}$/;
 
+// === NUEVO: whitelist de dominios permitidos ===
+const ALLOWED_EMAIL_DOMAINS = new Set([
+  'gmail.com',
+  'hotmail.com', 'hotmail.cl',
+  'outlook.com', 'outlook.cl',
+  'live.com',
+  'yahoo.com',
+  'icloud.com',
+  // agrega aquí tus dominios institucionales:
+  // 'duocuc.cl', 'uc.cl', 'usach.cl', 'miempresa.cl'
+]);
+function getDomainFromEmail(email = '') {
+  return String(email).trim().toLowerCase().split('@')[1] || '';
+}
+
 /* ===========================================================
    POST /api/login  (Alumno)
    - Permite login con RUT (o con contraseña si existe)
@@ -112,6 +127,15 @@ router.post(
 
       // Normalizaciones
       const correoN = normalizarCorreo(correo);
+      const emailDomain = getDomainFromEmail(correoN);
+
+      // 🚫 Validar dominio permitido
+      if (!ALLOWED_EMAIL_DOMAINS.has(emailDomain)) {
+        return res.status(400).json({
+          msg: `Dominio de correo no permitido. Usa: ${[...ALLOWED_EMAIL_DOMAINS].join(', ')}`
+        });
+      }
+
       const tipoN = String(tipo_documento).toUpperCase();
       const numeroDocN = normalizarNumeroDoc(tipoN, numero_documento);
       const rut = tipoN === 'RUT' ? numeroDocN : null;
@@ -164,7 +188,7 @@ router.post(
       const contrasenaFinal = contrasena || generarContrasenaAleatoria();
       const hash = await bcrypt.hash(contrasenaFinal, 10);
 
-      // 🔑 DUEÑO: quien crea (middleware suele exponer req.usuario)
+      // 🔑 DUEÑO: quien crea
       const meId = String(req.usuario?.id || req.user?.id || '');
       if (!meId) return res.status(401).json({ msg: 'No autorizado' });
 
@@ -179,14 +203,14 @@ router.post(
         telefono: tel,
         semestre: semestreNum,
         jornada,
-        fechaIngreso: fIngreso, // 'anio' se deriva en el modelo
+        fechaIngreso: fIngreso,
         rol: 'alumno',
         habilitado: true,
         aviso_suspension: false,
         rehabilitar_acceso: false,
         conteo_ingresos: 0,
         color_riesgo: 'verde',
-        createdBy: meId,             // 👈 clave para que cada profe vea solo sus alumnos
+        createdBy: meId,
       });
 
       await nuevo.save();
