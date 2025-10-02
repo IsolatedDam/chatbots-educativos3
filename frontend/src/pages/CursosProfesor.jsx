@@ -96,7 +96,7 @@ function CrearCursoModal({ onClose, onCreate }) {
 
 /* =======================
    MODAL: Gestionar Curso
-   (estado local -> no pierde foco)
+   (sin buscador; toggle habilitar/deshabilitar)
 ======================= */
 function GestionarCursoModal({
   curso, onClose,
@@ -109,22 +109,15 @@ function GestionarCursoModal({
     return found?.categoria || "";
   });
 
-  // Search state LOCAL al modal
-  const [busqAlumno, setBusqAlumno] = useState("");
-  const [resultAlumnos, setResultAlumnos] = useState([]);
-  const [buscando, setBuscando] = useState(false);
-  const inputRef = useRef(null);
+  // Todos mis alumnos (los creados por este profe)
+  const [misAlumnos, setMisAlumnos] = useState([]);
+  const [cargandoAlumnos, setCargandoAlumnos] = useState(false);
+  const [toggling, setToggling] = useState({}); // { [alumnoId]: true }
 
   useEffect(() => {
     document.body.classList.add("cp-no-scroll");
     return () => document.body.classList.remove("cp-no-scroll");
   }, []);
-
-  useEffect(() => {
-    // autoFocus seguro (si se pierde)
-    const el = inputRef.current;
-    if (el && document.activeElement !== el) el.focus({ preventScroll: true });
-  }, [busqAlumno]);
 
   const readErr = async (res) => {
     const txt = await res.text().catch(()=> "");
@@ -132,45 +125,60 @@ function GestionarCursoModal({
     catch { return txt || `HTTP ${res.status}`; }
   };
 
-  const buscarAlumnos = useCallback(async () => {
-    if (!curso?._id) return;
-    setBuscando(true);
+  // Cargar todos los alumnos del profe (sin buscador)
+  const fetchMisAlumnos = useCallback(async () => {
+    setCargandoAlumnos(true);
     try {
-      const url = `${API_BASE}/alumnos${busqAlumno ? `?q=${encodeURIComponent(busqAlumno)}` : ""}`;
+      const url = `${API_BASE}/alumnos`; // sin ?q => trae los del profe
       const res = await fetch(url, { headers: { Authorization: authHdrs.Authorization } });
       if (!res.ok) throw new Error(await readErr(res));
       const data = await res.json();
-      const ya = new Set((curso.alumnos || []).map((x)=> typeof x === "string" ? x : x._id));
-      setResultAlumnos((Array.isArray(data) ? data : []).filter((a)=> !ya.has(a._id)));
+      const list = Array.isArray(data) ? data : [];
+      // Ordenar por nombre
+      list.sort((a,b)=> nombreDe(a).localeCompare(nombreDe(b), "es"));
+      setMisAlumnos(list);
     } catch (e) {
-      alert(e.message || "No se pudo buscar alumnos");
+      alert(e.message || "No se pudieron cargar alumnos");
+      setMisAlumnos([]);
     } finally {
-      setBuscando(false);
+      setCargandoAlumnos(false);
     }
-  }, [curso?._id, busqAlumno, authHdrs.Authorization]);
+  }, [authHdrs.Authorization]);
 
+  useEffect(() => { fetchMisAlumnos(); }, [fetchMisAlumnos]);
+
+  // Inscribir (habilitar) / Quitar (deshabilitar)
   const agregarAlumnos = useCallback(async (alumnoIds) => {
     if (!alumnoIds?.length) return;
+    const id = alumnoIds[0];
+    setToggling((s)=>({ ...s, [id]: true }));
     try {
       const res = await fetch(`${API_BASE}/cursos/${curso._id}/alumnos`, {
         method: "POST", headers: authHdrs, body: JSON.stringify({ alumnoIds }),
       });
       if (!res.ok) throw new Error(await readErr(res));
       await fetchCursoDetallado(curso._id);
-      setBusqAlumno(""); setResultAlumnos([]);
-      inputRef.current?.focus({ preventScroll: true });
-    } catch (e) { alert(e.message || "Error al inscribir"); }
+    } catch (e) { alert(e.message || "Error al habilitar"); }
+    finally { setToggling((s)=>{ const n={...s}; delete n[id]; return n; }); }
   }, [curso?._id, authHdrs, fetchCursoDetallado]);
 
   const quitarAlumno = useCallback(async (alumnoId) => {
+    setToggling((s)=>({ ...s, [alumnoId]: true }));
     try {
       const res = await fetch(`${API_BASE}/cursos/${curso._id}/alumnos/${alumnoId}`, {
         method: "DELETE", headers: authHdrs,
       });
       if (!res.ok) throw new Error(await readErr(res));
       await fetchCursoDetallado(curso._id);
-    } catch (e) { alert(e.message || "Error al quitar alumno"); }
+    } catch (e) { alert(e.message || "Error al deshabilitar"); }
+    finally { setToggling((s)=>{ const n={...s}; delete n[alumnoId]; return n; }); }
   }, [curso?._id, authHdrs, fetchCursoDetallado]);
+
+  // Set de inscritos para este curso (para decidir el botón)
+  const inscritosSet = useMemo(() => {
+    const ids = (curso?.alumnos || []).map(x => typeof x === "string" ? x : x._id);
+    return new Set(ids);
+  }, [curso?.alumnos]);
 
   return (
     <div className="mgm-backdrop" onMouseDown={(e)=>{ if(e.target===e.currentTarget) onClose(); }} role="dialog" aria-modal="true">
@@ -184,6 +192,7 @@ function GestionarCursoModal({
           </div>
         </div>
 
+        {/* Filtros mínimos de chatbot (sin buscador de alumnos) */}
         <div className="mgm-toolbar">
           <div className="mgm-field">
             <label>Categoría</label>
@@ -225,94 +234,59 @@ function GestionarCursoModal({
           </div>
 
           <div className="mgm-spacer" />
-
-          <div className="mgm-field mgm-search">
-            <label>Buscar/Agregar alumno</label>
-            <div className="mgm-search-row">
-              <input
-                ref={inputRef}
-                className="cp-input"
-                type="text"
-                inputMode="numeric"
-                autoComplete="off"
-                autoCapitalize="off"
-                spellCheck={false}
-                placeholder="RUT/DNI, nombre o apellido…"
-                value={busqAlumno}
-                onChange={(e)=>setBusqAlumno(e.target.value)}
-                onKeyDown={(e)=>{ if(e.key==='Enter') buscarAlumnos(); }}
-                autoFocus
-              />
-              <button className="btn btn-primary" type="button" onClick={buscarAlumnos} disabled={buscando}>
-                Buscar
-              </button>
-            </div>
-          </div>
         </div>
 
-        {/* Resultados y Alumnos inscritos */}
-        <div className="mgm-block">
-          <div className="mgm-block-title">Resultados</div>
-          <div className="cp-table-clip">
-            <table className="cp-table">
-              <colgroup>
-                <col className="cp-col-doc" /><col className="cp-col-name" /><col className="cp-col-min" />
-              </colgroup>
-              <thead><tr><th>RUT/DNI</th><th>Nombre</th><th>Acción</th></tr></thead>
-              <tbody>
-                {buscando ? (
-                  <tr><td colSpan="99">Buscando…</td></tr>
-                ) : (resultAlumnos?.length ? (
-                  resultAlumnos.map((a)=>(
-                    <tr key={a._id}>
-                      <td>{docDe(a)}</td>
-                      <td title={nombreDe(a)}>{nombreDe(a)}</td>
-                      <td>
-                        <button className="btn btn-primary cp-btn-block"
-                                onClick={()=>agregarAlumnos([a._id])}>
-                          Agregar
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr><td colSpan="99">Sin resultados</td></tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
+        {/* Única tabla: Resultados (todos mis alumnos) con acción Habilitar/Deshabilitar */}
         <div className="mgm-block">
           <div className="mgm-block-title">
-            Alumnos inscritos <span className="mgm-count">{curso?.alumnos?.length ?? 0}</span>
+            Resultados <span className="mgm-count">{misAlumnos.length}</span>
           </div>
           <div className="cp-table-clip">
             <table className="cp-table">
               <colgroup>
-                <col className="cp-col-doc" /><col className="cp-col-name" /><col className="cp-col-min" />
+                <col className="cp-col-doc" /><col className="cp-col-name" /><col className="cp-col-min" /><col className="cp-col-min" />
               </colgroup>
-              <thead><tr><th>RUT/DNI</th><th>Nombre</th><th>Acción</th></tr></thead>
+              <thead><tr><th>RUT/DNI</th><th>Nombre</th><th>Estado</th><th>Acción</th></tr></thead>
               <tbody>
-                {Array.isArray(curso?.alumnos) && curso.alumnos.length ? (
-                  curso.alumnos.map((al) => {
-                    const a = typeof al === "string" ? { _id: al } : al;
+                {cargandoAlumnos ? (
+                  <tr><td colSpan="99">Cargando alumnos…</td></tr>
+                ) : (misAlumnos.length ? (
+                  misAlumnos.map((a)=> {
+                    const id = a._id;
+                    const inscrito = inscritosSet.has(id);
+                    const btnBusy = !!toggling[id];
                     return (
-                      <tr key={a._id}>
+                      <tr key={id}>
                         <td>{docDe(a)}</td>
                         <td title={nombreDe(a)} className="cp-ellipsis">{nombreDe(a)}</td>
+                        <td>{inscrito ? "Habilitado" : "Deshabilitado"}</td>
                         <td>
-                          <button className="btn btn-danger cp-btn-block"
-                                  onClick={()=>quitarAlumno(a._id)}>
-                            Quitar
-                          </button>
+                          {inscrito ? (
+                            <button
+                              className="btn btn-danger cp-btn-block"
+                              onClick={()=>quitarAlumno(id)}
+                              disabled={btnBusy}
+                              title="Deshabilitar acceso a este curso"
+                            >
+                              {btnBusy ? "…" : "Deshabilitar"}
+                            </button>
+                          ) : (
+                            <button
+                              className="btn btn-primary cp-btn-block"
+                              onClick={()=>agregarAlumnos([id])}
+                              disabled={btnBusy}
+                              title="Habilitar acceso a este curso"
+                            >
+                              {btnBusy ? "…" : "Habilitar"}
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
                   })
                 ) : (
-                  <tr><td colSpan="99">Sin alumnos inscritos</td></tr>
-                )}
+                  <tr><td colSpan="99">No tienes alumnos creados aún.</td></tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -538,7 +512,6 @@ export default function CursosProfesor() {
                         className="btn btn-primary"
                         onClick={async()=>{
                           await Promise.all([fetchCursoDetallado(c._id), fetchChatbots()]);
-                          // El modal ya maneja su propio estado de búsqueda
                           setShowGestionar(true);
                         }}
                       >

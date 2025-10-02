@@ -29,8 +29,8 @@ function generarContrasenaAleatoria(longitud = 10) {
 const JORNADAS = ['Mañana', 'Tarde', 'Vespertino', 'Viernes', 'Sábados'];
 const TEL_RE = /^\+?\d{8,12}$/;
 
-// === NUEVO: whitelist de dominios permitidos ===
-const ALLOWED_EMAIL_DOMAINS = new Set([
+/* ========== Whitelist de dominios permitidos (con soporte ENV) ========== */
+const DEFAULT_ALLOWED_DOMAINS = [
   'gmail.com',
   'hotmail.com', 'hotmail.cl',
   'outlook.com', 'outlook.cl',
@@ -39,7 +39,15 @@ const ALLOWED_EMAIL_DOMAINS = new Set([
   'icloud.com',
   // agrega aquí tus dominios institucionales:
   // 'duocuc.cl', 'uc.cl', 'usach.cl', 'miempresa.cl'
-]);
+];
+
+const fromEnv = (process.env.ALLOWED_EMAIL_DOMAINS || '')
+  .split(',')
+  .map(s => s.trim().toLowerCase())
+  .filter(Boolean);
+
+const ALLOWED_EMAIL_DOMAINS = new Set((fromEnv.length ? fromEnv : DEFAULT_ALLOWED_DOMAINS));
+
 function getDomainFromEmail(email = '') {
   return String(email).trim().toLowerCase().split('@')[1] || '';
 }
@@ -188,7 +196,7 @@ router.post(
       const contrasenaFinal = contrasena || generarContrasenaAleatoria();
       const hash = await bcrypt.hash(contrasenaFinal, 10);
 
-      // 🔑 DUEÑO: quien crea
+      // 🔑 DUEÑO: quien crea (middleware suele exponer req.usuario)
       const meId = String(req.usuario?.id || req.user?.id || '');
       if (!meId) return res.status(401).json({ msg: 'No autorizado' });
 
@@ -203,14 +211,14 @@ router.post(
         telefono: tel,
         semestre: semestreNum,
         jornada,
-        fechaIngreso: fIngreso,
+        fechaIngreso: fIngreso, // 'anio' se deriva en el modelo
         rol: 'alumno',
         habilitado: true,
         aviso_suspension: false,
         rehabilitar_acceso: false,
         conteo_ingresos: 0,
         color_riesgo: 'verde',
-        createdBy: meId,
+        createdBy: meId,             // 👈 clave para que cada profe vea solo sus alumnos
       });
 
       await nuevo.save();

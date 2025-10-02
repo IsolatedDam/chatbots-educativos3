@@ -26,6 +26,12 @@
 .cp-col-num { width:8%;  }
 .cp-col-act { width:10%; }
 
+/* columnas mínimas para “Estado/Acción” en el modal */
+.cp-col-min { width:150px; }
+@media (max-width:560px){
+  .cp-col-min { width:120px; }
+}
+
 .cp-cell-actions{ display:flex; gap:8px; align-items:center; }
 
 .cp-empty{ text-align:center; padding:20px; }
@@ -47,11 +53,15 @@
   width:100%; padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; background:#fff;
   min-height:80px; resize:vertical;
 }
-.cp-btn-block{ width:100%; height:34px; padding:0 10px; }
+/* Botón bloque (ancho completo) con centrado */
+.cp-btn-block{
+  width:100%; height:34px; padding:0 10px;
+  display:inline-flex; justify-content:center; align-items:center;
+}
 
-/* ===== Clip con scroll ===== */
+/* ===== Clip con scroll (más alto en el modal para ver más alumnos) ===== */
 .cp-table-clip{
-  max-height:280px; overflow:auto; border:1px solid #e5e7eb; border-radius:10px;
+  max-height:360px; overflow:auto; border:1px solid #e5e7eb; border-radius:10px;
 }
 
 /* ===== MODAL: bloquear scroll del body ===== */
@@ -75,13 +85,18 @@
 .mgm-title{ margin:0; font-size:18px; font-weight:700; color:#0f172a; }
 .mgm-meta{ margin-left:auto; display:flex; gap:10px; color:#475569; font-size:13px; }
 
+/* Toolbar flexible (sin buscador), se adapta a ancho disponible */
 .mgm-toolbar{
-  display:grid; grid-template-columns:280px 1fr 420px; gap:14px;
-  padding:14px 22px; border-bottom:1px solid #f1f5f9;
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap:14px;
+  padding:14px 22px;
+  border-bottom:1px solid #f1f5f9;
+  align-items:end;
 }
 .mgm-field{ display:flex; flex-direction:column; gap:6px; }
 .mgm-field > label{ font-size:13px; font-weight:600; color:#334155; }
-.mgm-search-row{ display:flex; gap:8px; align-items:center; }
+.mgm-search-row{ display:flex; gap:8px; align-items:center; } /* (no pasa nada si queda) */
 
 .mgm-block{ padding:14px 22px; display:flex; flex-direction:column; gap:10px; }
 .mgm-block + .mgm-block{ border-top:1px dashed #f1f5f9; }
@@ -140,6 +155,12 @@
 .btn-ghost{ background:#fff; border:1px solid #e5e7eb; }
 .btn-danger{ background:#ef4444; color:#fff; }
 
+/* Botones deshabilitados (cuando se procesa el toggle) */
+.btn[disabled]{ opacity:.6; cursor:not-allowed; }
+
+/* Hover sutil en filas de tablas */
+.cp-table tbody tr:hover td{ background:#fafafa; }
+
 /* Responsive */
 @media (max-width: 860px){
   .mgm-toolbar{ grid-template-columns:1fr; }
@@ -187,3 +208,24 @@
 
 /* tooltips legibles en opciones largas */
 .cp-compact option { font-size: var(--cp-fz); }
+
+/* === Encabezados centrados (con excepciones útiles) === */
+.cp-head-center .cp-table thead th { 
+  text-align: center;
+  padding-left: 10px;   /* pequeño ajuste óptico para que no se sientan corridos */
+}
+
+.cp-head-center .cp-table thead th:first-child,
+.cp-head-center .cp-table thead th.cp-col-nameCourse {
+  text-align: left;     /* el nombre del curso queda mejor alineado a la izquierda */
+}
+
+.cp-head-center .cp-table thead th.cp-col-num,
+.cp-head-center .cp-table thead th.cp-col-act {
+  text-align: center;   /* # y Acciones al centro: más limpio */
+}
+
+/* Mantén el contenido alineado como antes */
+.cp-head-center .cp-table tbody td { 
+  padding-left: 12px;
+}

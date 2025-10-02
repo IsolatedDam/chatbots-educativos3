@@ -155,7 +155,7 @@ function CargarAlumno() {
     }
   }
 
-  // 🚀 Descargar plantilla (sin contraseña)
+  // 🚀 Descargar plantilla (sin contraseña) — usa dominio permitido
   function downloadTemplate() {
     const headers = [
       "correo",
@@ -171,7 +171,7 @@ function CargarAlumno() {
 
     const ejemplo = [
       [
-        "alumno1@ejemplo.com",
+        "alumno1@gmail.com", // dominio permitido
         "Juan",
         "Pérez",
         "RUT",
@@ -271,7 +271,10 @@ function CargarAlumno() {
       jornada: String(r.jornada).trim(),
     };
 
-    const { data } = await axios.post(`${API_BASE}/registro`, payload);
+    const token = localStorage.getItem("token") || "";
+    const { data } = await axios.post(`${API_BASE}/registro`, payload, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return data;
   }
 
@@ -362,7 +365,47 @@ function CargarAlumno() {
         </div>
       </form>
 
-      <hr />
+      {!!error && (
+        <p style={{ color: "#b91c1c", marginTop: 12 }}>
+          {error}
+        </p>
+      )}
+
+      {!!badRows.length && (
+        <div style={{ marginTop: 12, color: "#92400e" }}>
+          <b>Validaciones previas:</b>
+          <ul style={{ marginTop: 6 }}>
+            {badRows.slice(0, 10).map((b, i) => (
+              <li key={i}>
+                Fila {b.index + 2}: {b.errores}
+              </li>
+            ))}
+            {badRows.length > 10 && <li>… y {badRows.length - 10} más</li>}
+          </ul>
+        </div>
+      )}
+
+      {resultado && (
+        <div style={{ marginTop: 12 }}>
+          <b>Resultado:</b>{" "}
+          <span style={{ color: "#065f46" }}>exitosos {resultado.exitosos}</span>{" "}
+          — <span style={{ color: "#7c2d12" }}>fallidos {resultado.fallidos}</span>
+          {resultado.errores?.length ? (
+            <details style={{ marginTop: 8 }}>
+              <summary>Ver errores</summary>
+              <ul style={{ marginTop: 6 }}>
+                {resultado.errores.map((e, i) => (
+                  <li key={i}>
+                    Fila {e.fila}: {e.error}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
+        </div>
+      )}
+
+      <hr style={{ margin: "16px 0" }} />
 
       <h3>📋 Lista de alumnos registrados</h3>
       <div className="tabla-alumnos">
