@@ -67,7 +67,7 @@ router.post('/forgot', forgotLimiter, async (req, res) => {
   try {
     const user = await findUserByEmail(correo);
 
-    if (!user) {
+    if (!user || user.rol !== 'profesor') {
       if (STRICT_FORGOT) return res.status(404).json({ msg: 'Correo no registrado' });
       return res.json({ msg: 'Si el correo existe, se envió un enlace de recuperación.' });
     }
@@ -135,7 +135,7 @@ router.post('/reset', async (req, res) => {
     const user = await Admin.findById(id)
       .select('+resetPasswordTokenHash +resetPasswordExpires');
 
-    if (!user || !user.resetPasswordTokenHash || !user.resetPasswordExpires) {
+    if (!user || user.rol !== 'profesor' || !user.resetPasswordTokenHash || !user.resetPasswordExpires) {
       return res.status(400).json({ msg: 'Token inválido o expirado' });
     }
 

@@ -12,6 +12,7 @@ import VisitasRegistradas from './pages/VisitasRegistradas';
 import BienvenidaVisita from './pages/BienvenidaVisita';
 import PaginaPrincipal from './pages/PaginaPrincipal';
 import LoginInvitado from './pages/LoginInvitado';
+import ResetPassword from './pages/ResetPassword';
 
 
 // 🔐 Ruta protegida
@@ -34,6 +35,7 @@ function App() {
           <Route path="/inicio" element={<Inicio />} />
           <Route path="/bienvenida-visita" element={<BienvenidaVisita />} />
           <Route path="/login-invitado" element={<LoginInvitado />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Rutas protegidas */}
           <Route
