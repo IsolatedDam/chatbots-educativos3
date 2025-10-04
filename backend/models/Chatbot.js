@@ -24,6 +24,10 @@ const ChatbotSchema = new Schema(
       trim: true,
       maxlength: 500,
     },
+    iframeUrl: {
+      type: String,
+      trim: true,
+    },
     activo: {
       type: Boolean,
       default: true,

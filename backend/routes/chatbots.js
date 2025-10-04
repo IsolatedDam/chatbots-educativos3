@@ -138,7 +138,7 @@ router.post(
   autorizarRoles("profesor", "admin", "superadmin"),
   async (req, res) => {
     try {
-      const { nombre, categoria, descripcion = "" } = req.body || {};
+      const { nombre, categoria, descripcion = "", iframeUrl } = req.body || {};
       const nom = (nombre || "").trim();
       const cat = (categoria || "").trim();
       const desc = (descripcion || "").trim();
@@ -152,6 +152,7 @@ router.post(
         nombre: nom,
         categoria: cat,
         descripcion: desc,
+        iframeUrl,
         activo: true,
         //middleware verificarToken
         createdBy: req.usuario?.id || req.usuario?._id,
@@ -165,7 +166,9 @@ router.post(
       return res.status(201).json(withUser);
     } catch (e) {
       if (e && e.code === 11000) {
-        return res.status(409).json({ msg: "Ya existe un chatbot con ese nombre en esa categoría" });
+        return res
+          .status(409)
+          .json({ msg: "Ya existe un chatbot con ese nombre en esa categoría" });
       }
       console.error("POST /chatbots error:", e);
       return res.status(500).json({ msg: "No se pudo crear el chatbot" });
@@ -186,10 +189,16 @@ router.patch(
     try {
       const { id } = req.params;
       const payload = {};
-      if (typeof req.body.nombre === "string") payload.nombre = req.body.nombre.trim();
-      if (typeof req.body.categoria === "string") payload.categoria = req.body.categoria.trim();
-      if (typeof req.body.descripcion === "string") payload.descripcion = req.body.descripcion.trim();
-      if (typeof req.body.activo === "boolean") payload.activo = req.body.activo;
+      if (typeof req.body.nombre === "string")
+        payload.nombre = req.body.nombre.trim();
+      if (typeof req.body.categoria === "string")
+        payload.categoria = req.body.categoria.trim();
+      if (typeof req.body.descripcion === "string")
+        payload.descripcion = req.body.descripcion.trim();
+      if (typeof req.body.iframeUrl === "string")
+        payload.iframeUrl = req.body.iframeUrl.trim();
+      if (typeof req.body.activo === "boolean")
+        payload.activo = req.body.activo;
 
       const upd = await Chatbot.findByIdAndUpdate(
         id,
@@ -203,7 +212,9 @@ router.patch(
       res.json(upd);
     } catch (e) {
       if (e && e.code === 11000) {
-        return res.status(409).json({ msg: "Conflicto: nombre ya usado en esa categoría" });
+        return res
+          .status(409)
+          .json({ msg: "Conflicto: nombre ya usado en esa categoría" });
       }
       console.error("PATCH /chatbots/:id error:", e);
       res.status(500).json({ msg: "No se pudo actualizar el chatbot" });
