@@ -28,6 +28,10 @@ const ChatbotSchema = new Schema(
       type: String,
       trim: true,
     },
+    youtubeUrl: {
+      type: String,
+      trim: true,
+    },
     activo: {
       type: Boolean,
       default: true,

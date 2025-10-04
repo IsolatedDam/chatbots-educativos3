@@ -138,7 +138,7 @@ router.post(
   autorizarRoles("profesor", "admin", "superadmin"),
   async (req, res) => {
     try {
-      const { nombre, categoria, descripcion = "", iframeUrl } = req.body || {};
+      const { nombre, categoria, descripcion = "", iframeUrl, youtubeUrl } = req.body || {};
       const nom = (nombre || "").trim();
       const cat = (categoria || "").trim();
       const desc = (descripcion || "").trim();
@@ -153,6 +153,7 @@ router.post(
         categoria: cat,
         descripcion: desc,
         iframeUrl,
+        youtubeUrl,
         activo: true,
         //middleware verificarToken
         createdBy: req.usuario?.id || req.usuario?._id,
@@ -197,6 +198,8 @@ router.patch(
         payload.descripcion = req.body.descripcion.trim();
       if (typeof req.body.iframeUrl === "string")
         payload.iframeUrl = req.body.iframeUrl.trim();
+      if (typeof req.body.youtubeUrl === "string")
+        payload.youtubeUrl = req.body.youtubeUrl.trim();
       if (typeof req.body.activo === "boolean")
         payload.activo = req.body.activo;
 

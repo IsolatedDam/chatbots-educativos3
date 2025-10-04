@@ -36,6 +36,7 @@ export default function AccesoChatbots() {
 
   const [nuevoBot, setNuevoBot] = useState("");
   const [iframeUrl, setIframeUrl] = useState(""); // Estado para la URL del iframe
+  const [youtubeUrl, setYoutubeUrl] = useState("");
   const [creandoBot, setCreandoBot] = useState(false);
 
   const didInitRef = useRef(false);
@@ -138,7 +139,7 @@ export default function AccesoChatbots() {
     setCreandoBot(true);
     try {
       const res = await fetch(`${API_BASE}/chatbots`, {
-        method: "POST", headers, body: JSON.stringify({ nombre, categoria, iframeUrl }),
+        method: "POST", headers, body: JSON.stringify({ nombre, categoria, iframeUrl, youtubeUrl }),
       });
       if (!res.ok) {
         const txt = await res.text().catch(()=> "");
@@ -146,6 +147,7 @@ export default function AccesoChatbots() {
       }
       setNuevoBot("");
       setIframeUrl("");
+      setYoutubeUrl("");
       await Promise.all([cargarBots(categoria), cargarCategorias()]);
     } catch (e) {
       alert(e.message || "No se pudo crear el chatbot");
@@ -215,15 +217,12 @@ export default function AccesoChatbots() {
         <button className="btn btn-secondary mb-3" onClick={() => setSelectedBot(null)}>
           &larr; Volver a la lista
         </button>
-        <h3 className="cb-title">{selectedBot.nombre}</h3>
         {selectedBot.iframeUrl ? (
           <div className="iframe-container">
             <iframe
               src={selectedBot.iframeUrl}
-              title={selectedBot.nombre}
               width="100%"
-              height="600px"
-              frameBorder="0"
+              height="900px"
               sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
               loading="lazy"
             />
@@ -239,7 +238,7 @@ export default function AccesoChatbots() {
     <div className="cb-simple-page">
       <h3 className="cb-title">Acceso a chatbots</h3>
 
-      {/* ARRIBA: crear categoría */} 
+      {/* ARRIBA: crear categoría */}
       <section className="cb-card">
         <div className="cb-card-title">Crear categoría</div>
         <div className="cb-row">
@@ -260,9 +259,9 @@ export default function AccesoChatbots() {
         </div>
       </section>
 
-      {/* ABAJO: dos columnas */} 
+      {/* ABAJO: dos columnas */}
       <div className="cb-grid">
-        {/* Izquierda: categorías */} 
+        {/* Izquierda: categorías */}
         <aside className="cb-card">
           <div className="cb-card-title">Categorías</div>
           <div className="cb-catlist">
@@ -296,7 +295,7 @@ export default function AccesoChatbots() {
           <div className="cb-hint">Solo puedes eliminar categorías vacías.</div>
         </aside>
 
-        {/* Derecha: crear chatbot + tabla */} 
+        {/* Derecha: crear chatbot + tabla */}
         <main className="cb-card">
           <div className="cb-card-title">
             {selCat ? `Chatbots — ${selCat}` : "Selecciona una categoría"}
@@ -317,6 +316,13 @@ export default function AccesoChatbots() {
                   placeholder="URL del Iframe (opcional)"
                   value={iframeUrl}
                   onChange={(e) => setIframeUrl(e.target.value)}
+                  onKeyDown={(e)=>{ if(e.key==="Enter") crearChatbot(); }}
+                />
+                <input
+                  className="cb-input"
+                  placeholder="URL de YouTube (opcional)"
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
                   onKeyDown={(e)=>{ if(e.key==="Enter") crearChatbot(); }}
                 />
                 <button
