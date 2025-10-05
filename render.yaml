@@ -1,0 +1,35 @@
+services:
+  # Servicio para el Backend (Node.js)
+  - type: web
+    name: chatbots-backend
+    env: node
+    region: oregon
+    plan: free
+    rootDir: ./backend
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # IMPORTANTE: Agrega aquí tus variables de entorno (secrets) desde el dashboard de Render.
+      # Por ejemplo, la URL de tu base de datos, claves de APIs (SendGrid), etc.
+      # - key: DATABASE_URL
+      #   value: TU_URL_DE_BASE_DE_DATOS
+      # - key: SENDGRID_API_KEY
+      #   fromSecret: true
+      # - key: JWT_SECRET
+      #   fromSecret: true
+
+  # Servicio para el Frontend (React)
+  - type: static
+    name: chatbots-frontend
+    env: static
+    region: oregon
+    plan: free
+    rootDir: ./frontend
+    buildCommand: npm install && npm run build
+    publishDir: build
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
