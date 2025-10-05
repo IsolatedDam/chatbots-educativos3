@@ -4,7 +4,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../styles/ResetPassword.css';
 
-const API_BASE = process.env.REACT_APP_API_BASE || 'https://chatbots-educativos3.onrender.com/api';
+const API_BASE = process.env.REACT_APP_API_BASE || 'https://chatbots-educativos3-vhfq.onrender.com/api';
 
 export default function ResetPassword() {
   const [sp] = useSearchParams();

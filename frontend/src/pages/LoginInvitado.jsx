@@ -16,7 +16,7 @@ function LoginInvitado() {
   const [phoneError, setPhoneError] = useState('');
 
   const navigate = useNavigate();
-  const API_BASE = 'https://chatbots-educativos3.onrender.com/api';
+  const API_BASE = 'https://chatbots-educativos3-vhfq.onrender.com/api';
 
   /* ---------------- Helpers ---------------- */
   const isValidEmail = (v = '') =>

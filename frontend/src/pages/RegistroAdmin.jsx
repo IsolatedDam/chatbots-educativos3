@@ -32,7 +32,7 @@ const PERMISOS_BLOQUEADOS = new Set([
   'chatbots:subir_material',
 ]);
 
-const API_BASE   = 'https://chatbots-educativos3.onrender.com/api';
+const API_BASE   = 'https://chatbots-educativos3-vhfq.onrender.com/api';
 const EP_CREATE  = `${API_BASE}/admin/profesores`;
 const EP_LIST    = `${API_BASE}/admin/profesores`;
 const TEL_RE     = /^\+?\d{8,12}$/;

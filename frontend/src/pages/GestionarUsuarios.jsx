@@ -3,7 +3,7 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 import '../styles/GestionarUsuarios.css';
 
-const API_BASE = 'https://chatbots-educativos3.onrender.com/api';
+const API_BASE = 'https://chatbots-educativos3-vhfq.onrender.com/api';
 const JORNADAS = ['Mañana', 'Tarde', 'Vespertino', 'Viernes', 'Sábados'];
 
 /* === Catálogo de permisos para PROFESORES (para el editor) === */

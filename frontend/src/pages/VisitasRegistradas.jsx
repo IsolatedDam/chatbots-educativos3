@@ -3,7 +3,7 @@ import axios from 'axios';
 import * as XLSX from 'xlsx';              // 👈 importar SheetJS
 import '../styles/VisitasRegistradas.css';
 
-const API_BASE = 'https://chatbots-educativos3.onrender.com';
+const API_BASE = 'https://chatbots-educativos3-vhfq.onrender.com';
 
 function VisitasRegistradas() {
   const [visitas, setVisitas] = useState([]);

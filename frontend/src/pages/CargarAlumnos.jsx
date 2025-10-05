@@ -4,7 +4,7 @@ import axios from "axios";
 import * as XLSX from "xlsx";
 import "../styles/CargarAlumnos.css";
 
-const API_BASE = "https://chatbots-educativos3.onrender.com/api";
+const API_BASE = "https://chatbots-educativos3-vhfq.onrender.com/api";
 
 // Columnas requeridas
 const REQUIRED = [

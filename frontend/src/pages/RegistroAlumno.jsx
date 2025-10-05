@@ -103,7 +103,7 @@ function RegistroAlumno() {
 
     try {
       setEnviando(true);
-      const API_BASE = 'https://chatbots-educativos3.onrender.com';
+      const API_BASE = 'https://chatbots-educativos3-vhfq.onrender.com';
       const token = localStorage.getItem('token');
 
       if (!token) {
