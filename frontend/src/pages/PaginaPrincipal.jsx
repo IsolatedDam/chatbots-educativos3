@@ -1,64 +1,48 @@
 import { useNavigate } from 'react-router-dom';
-import Slider from 'react-slick';
 import '../styles/PaginaPrincipal.css';
 
 function PaginaPrincipal() {
   const navigate = useNavigate();
 
-  const carruselConfig = {
-    dots: true,
-    infinite: true,
-    speed: 500,
-    slidesToShow: 1,
-    slidesToScroll: 1,
-    autoplay: true,
-    autoplaySpeed: 4000
-  };
-
   return (
     <div className="pagina-principal">
-      <header className="encabezado">
-        <h1>Centro de Aula Virtual</h1>
-      </header>
-
       <div className="contenido">
-        {/* Menú lateral */}
-        <aside className="menu-lateral">
+        <div className="botones-centrales">
           <a
             href="https://www.masoterapiachile.cl/intranet-2/"
             target="_blank"
             rel="noopener noreferrer"
+            className="boton-icono"
           >
             <img
               src="/masoterapia.jpg"
               alt="Masoterapia Chile"
-              className="boton-img-lateral"
+              className="icono"
             />
           </a>
 
-          <img
-            src="/logopagina.png"
-            alt="Ingreso Alumno"
-            className="boton-img-lateral"
+          <div
+            className="boton-icono"
             onClick={() => navigate('/login')}
-          />
+          >
+            <img
+              src="/logopagina.png"
+              alt="Ingreso Alumno"
+              className="icono"
+            />
+          </div>
 
-          <img
-            src="/logoinvitado.png"
-            alt="Ingreso Invitado"
-            className="boton-img-lateral"
+          <div
+            className="boton-icono"
             onClick={() => navigate('/login-invitado')}
-          />
-        </aside>
-
-        {/* Carrusel en la zona central */}
-        <section className="zona-central">
-          <Slider {...carruselConfig}>
-            <div className="slide">Slide 1</div>
-            <div className="slide">Slide 2</div>
-            <div className="slide">Slide 3</div>
-          </Slider>
-        </section>
+          >
+            <img
+              src="/logoinvitado.png"
+              alt="Ingreso Invitado"
+              className="icono"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

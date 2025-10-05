@@ -1,10 +1,9 @@
 .pagina-principal {
   height: 100vh;
-  background: #EFEFEF; /* Color claro */
-  color: #232323; /* Color oscuro */
-  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); /* Gradiente sutil */
   display: flex;
-  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 /* Encabezado con color principal */
@@ -19,8 +18,9 @@
 }
 
 .contenido {
-  flex: 1;
   display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 /* Menú lateral */
@@ -78,4 +78,27 @@
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.botones-centrales {
+  display: flex;
+  gap: 4rem; /* Más separados */
+  justify-content: center;
+  align-items: center;
+}
+
+.boton-icono {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.boton-icono:hover {
+  transform: scale(1.1);
+}
+
+.icono {
+  width: 250px; /* Más grandes */
+  height: 250px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
