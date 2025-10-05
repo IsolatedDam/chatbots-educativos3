@@ -1,6 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "../styles/AccesoChatbots.css";
-import { API_BASE } from "../utils/apiConfig";
+
+/* ========= API base ========= */
+const API_ROOT = (() => {
+  const vite = typeof import.meta !== "undefined" ? import.meta.env?.VITE_API_ROOT : undefined;
+  const cra  = typeof process !== "undefined" ? process.env?.REACT_APP_API_ROOT : undefined;
+  if (vite) return vite;
+  if (cra)  return cra;
+  if (typeof window !== "undefined") {
+    const { hostname } = window.location;
+    if (hostname === "localhost" || hostname === "127.0.0.1") return "http://localhost:5000";
+  }
+  return "https://chatbots-educativos3.onrender.com";
+})();
+const API_BASE = `${API_ROOT}/api`;
 
 export default function AccesoChatbots() {
   const token = localStorage.getItem("token");
@@ -163,7 +176,7 @@ export default function AccesoChatbots() {
 
   async function eliminarCategoria(nombre) {
     if (!nombre) return;
-    if (!window.confirm(`¿Eliminar la categoría "${nombre}"?\nSolo se permite eliminar categorías vacías.`)) return;
+    if (!window.confirm(`¿Eliminar la categoría \"${nombre}\"?\nSolo se permite eliminar categorías vacías.`)) return;
     try {
       const res = await fetch(`${API_BASE}/chatbot-categorias/${encodeURIComponent(nombre)}`, {
         method: "DELETE",
