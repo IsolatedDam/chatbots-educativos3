@@ -8,17 +8,16 @@ services:
     rootDir: ./backend
     buildCommand: npm install
     startCommand: node index.js
+    # IMPORTANTE: Agrega las variables de entorno secretas (como la URL de la base de datos,
+    # claves de API, etc.) directamente en el dashboard de Render, en la sección "Environment"
+    # del servicio 'chatbots-backend'.
     envVars:
       - key: NODE_ENV
         value: production
-      # IMPORTANTE: Agrega aquí tus variables de entorno (secrets) desde el dashboard de Render.
-      # Por ejemplo, la URL de tu base de datos, claves de APIs (SendGrid), etc.
-      # - key: DATABASE_URL
-      #   value: TU_URL_DE_BASE_DE_DATOS
       # - key: SENDGRID_API_KEY
       #   fromSecret: true
       # - key: JWT_SECRET
-      #   fromSecret: true
+      #   generateValue: true
 
         # Servicio para el Frontend (React)
         - type: static_site
