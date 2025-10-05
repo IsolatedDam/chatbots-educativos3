@@ -26,6 +26,7 @@ export default function AccesoChatbots() {
   const [cats, setCats] = useState([]);     // [{nombre, count}]
   const [selCat, setSelCat] = useState(""); // nombre de la categoría seleccionada
   const [bots, setBots] = useState([]);     // chatbots de esa categoría
+  const [selectedBot, setSelectedBot] = useState(null); // chatbot seleccionado para ver
 
   const [cargandoCats, setCargandoCats] = useState(false);
   const [cargandoBots, setCargandoBots] = useState(false);
@@ -34,6 +35,8 @@ export default function AccesoChatbots() {
   const [creandoCat, setCreandoCat] = useState(false);
 
   const [nuevoBot, setNuevoBot] = useState("");
+  const [iframeUrl, setIframeUrl] = useState(""); // Estado para la URL del iframe
+  const [youtubeUrl, setYoutubeUrl] = useState("");
   const [creandoBot, setCreandoBot] = useState(false);
 
   const didInitRef = useRef(false);
@@ -47,7 +50,6 @@ export default function AccesoChatbots() {
   async function cargarCategorias() {
     setCargandoCats(true);
     try {
-      // 1) Intento con endpoint de categorías (incluye vacías)
       const r = await fetch(`${API_BASE}/chatbots/categories`, { headers });
       if (r.ok) {
         const data = (await jsonSeguro(r)) || [];
@@ -57,10 +59,9 @@ export default function AccesoChatbots() {
 
         setCats(list);
         if (!selCat && list.length) setSelCat(list[0].nombre);
-        return; // el finally corre igual
+        return;
       }
 
-      // 2) Fallback si no hay endpoint
       const r2 = await fetch(`${API_BASE}/chatbots`, { headers });
       const data = r2.ok ? (await jsonSeguro(r2)) || [] : [];
       const map = new Map();
@@ -138,13 +139,15 @@ export default function AccesoChatbots() {
     setCreandoBot(true);
     try {
       const res = await fetch(`${API_BASE}/chatbots`, {
-        method: "POST", headers, body: JSON.stringify({ nombre, categoria }),
+        method: "POST", headers, body: JSON.stringify({ nombre, categoria, iframeUrl, youtubeUrl }),
       });
       if (!res.ok) {
         const txt = await res.text().catch(()=> "");
         throw new Error(txt || "No se pudo crear el chatbot");
       }
       setNuevoBot("");
+      setIframeUrl("");
+      setYoutubeUrl("");
       await Promise.all([cargarBots(categoria), cargarCategorias()]);
     } catch (e) {
       alert(e.message || "No se pudo crear el chatbot");
@@ -184,7 +187,6 @@ export default function AccesoChatbots() {
         const msg = (body && (body.msg || body.error)) || "No se pudo eliminar la categoría";
         throw new Error(msg);
       }
-      // actualizar listas
       await cargarCategorias();
       if (selCat === nombre) {
         const next = cats.find(c => c.nombre !== nombre)?.nombre || "";
@@ -207,6 +209,30 @@ export default function AccesoChatbots() {
     const d = new Date(v);
     return isNaN(d) ? "—" : d.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" });
   };
+
+  // Si un chatbot está seleccionado, muestra el iframe
+  if (selectedBot) {
+    return (
+      <div className="cb-simple-page">
+        <button className="btn btn-secondary mb-3" onClick={() => setSelectedBot(null)}>
+          &larr; Volver a la lista
+        </button>
+        {selectedBot.iframeUrl ? (
+          <div className="iframe-container">
+            <iframe
+              src={selectedBot.iframeUrl}
+              width="100%"
+              height="900px"
+              sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+              loading="lazy"
+            />
+          </div>
+        ) : (
+          <div className="cb-empty">Este chatbot no tiene un iframe configurado.</div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="cb-simple-page">
@@ -285,6 +311,20 @@ export default function AccesoChatbots() {
                   onChange={(e)=>setNuevoBot(e.target.value)}
                   onKeyDown={(e)=>{ if(e.key==="Enter") crearChatbot(); }}
                 />
+                <input
+                  className="cb-input"
+                  placeholder="URL del Iframe (opcional)"
+                  value={iframeUrl}
+                  onChange={(e) => setIframeUrl(e.target.value)}
+                  onKeyDown={(e)=>{ if(e.key==="Enter") crearChatbot(); }}
+                />
+                <input
+                  className="cb-input"
+                  placeholder="URL de YouTube (opcional)"
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  onKeyDown={(e)=>{ if(e.key==="Enter") crearChatbot(); }}
+                />
                 <button
                   className="btn btn-primary"
                   onClick={crearChatbot}
@@ -316,7 +356,11 @@ export default function AccesoChatbots() {
                     ) : bots.length ? (
                       bots.map(b => (
                         <tr key={b._id || b.id}>
-                          <td className="cb-ellipsis" title={b.nombre || ""}>{b.nombre || "—"}</td>
+                          <td className="cb-ellipsis">
+                            <button className="btn btn-link" onClick={() => setSelectedBot(b)}>
+                              {b.nombre || "—"}
+                            </button>
+                          </td>
                           <td>{creadoPor(b)}</td>
                           <td>{fecha(b.createdAt)}</td>
                           <td>

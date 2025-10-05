@@ -2,8 +2,9 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import '../styles/ResetPassword.css';
 
-const API_BASE = 'https://chatbots-educativos3.onrender.com/api';
+const API_BASE = process.env.REACT_APP_API_BASE || 'https://chatbots-educativos3.onrender.com/api';
 
 export default function ResetPassword() {
   const [sp] = useSearchParams();
@@ -44,22 +45,37 @@ export default function ResetPassword() {
 
   return (
     <div className="reset-wrapper">
-      <h2>Restablecer contraseña</h2>
-      <form onSubmit={onSubmit}>
-        <input type="password" placeholder="Nueva contraseña" value={pwd1} onChange={e=>setPwd1(e.target.value)} />
-        <input type="password" placeholder="Repetir contraseña" value={pwd2} onChange={e=>setPwd2(e.target.value)} />
-        <button disabled={sending || !id || !token}>{sending ? 'Enviando...' : 'Guardar'}</button>
-      </form>
-      {msg && (
-        <p style={{
-          marginTop: 10,
-          padding: '8px 10px',
-          borderRadius: 8,
-          background: msg.ok ? '#e6ffef' : '#fff4f4',
-          color: msg.ok ? '#046a2f' : '#991b1b',
-          border: msg.ok ? '1px solid #b7f2cf' : '1px solid #f1b0b0'
-        }}>{msg.text}</p>
-      )}
+      <div className="reset-container">
+        <h2>Restablecer contraseña</h2>
+        <form className="reset-form" onSubmit={onSubmit}>
+          <input
+            type="password"
+            placeholder="Nueva contraseña"
+            value={pwd1}
+            onChange={e => setPwd1(e.target.value)}
+            className="reset-input"
+          />
+          <input
+            type="password"
+            placeholder="Repetir contraseña"
+            value={pwd2}
+            onChange={e => setPwd2(e.target.value)}
+            className="reset-input"
+          />
+          <button
+            type="submit"
+            disabled={sending || !id || !token}
+            className="reset-button"
+          >
+            {sending ? 'Enviando...' : 'Guardar'}
+          </button>
+        </form>
+        {msg && (
+          <p className={`reset-message ${msg.ok ? 'success' : 'error'}`}>
+            {msg.text}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

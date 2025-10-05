@@ -130,7 +130,7 @@ router.get(
       }
 
       const links = await AlumnoChatbot.find({ alumnoId })
-        .populate("chatbotId", "nombre categoria activo")
+        .populate("chatbotId", "nombre categoria activo iframeUrl youtubeUrl")
         .lean();
 
       if (!links.length) return res.json([]);
@@ -150,6 +150,8 @@ router.get(
           nombre: l.chatbotId.nombre,
           categoria: l.chatbotId.categoria,
           activo: !!l.chatbotId.activo,
+          iframeUrl: l.chatbotId.iframeUrl,
+          youtubeUrl: l.chatbotId.youtubeUrl,
           cursos: (l.cursoIds || [])
             .map(id => cursoMap.get(String(id)))
             .filter(Boolean)

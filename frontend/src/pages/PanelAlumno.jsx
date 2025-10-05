@@ -16,9 +16,11 @@ const API_ROOT = (() => {
 })();
 const API_BASE = `${API_ROOT}/api`;
 
-/* ===== IFRAME: usar SIEMPRE este source ===== */
-const FIXED_EMBED_URL =
-  'https://aipoweredchatbot-production.up.railway.app/chatbot/68d1694d375d7acbb68821ff?key=PDykle3B8BEfzdIjR8XN__jQ4UPgU6x-JjAKt_SdWAnYrFHslUNeZH5NHZgOAh2M';
+function getYouTubeID(url) {
+  if (!url) return '';
+  const arr = url.split(/(vi\/|v=|\/v\/|youtu\.be\/|\/embed\/)/);
+  return (arr[2] !== undefined) ? arr[2].split(/[^0-9a-z_\-]/i)[0] : arr[0];
+}
 
 export default function PanelAlumno() {
   const navigate = useNavigate();
@@ -26,16 +28,16 @@ export default function PanelAlumno() {
   const [usuario, setUsuario] = useState(null);
   const [seccion, setSeccion] = useState('perfil');
 
-  // chatbots permitidos
+  // Items permitidos (chatbots y videos)
   const [permitidos, setPermitidos] = useState([]);
-  const [loadingCB, setLoadingCB] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [lastLoadedAt, setLastLoadedAt] = useState(null);
 
   // Estado de acordeón por categoría
   const [expandedCat, setExpandedCat] = useState({}); // { [categoria]: true }
 
   // Altura fija razonable para el iframe
-  const FRAME_HEIGHT = 560;
+  const FRAME_HEIGHT = 900;
 
   /* ===== Montaje ===== */
   useEffect(() => {
@@ -52,17 +54,11 @@ export default function PanelAlumno() {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
-  // refresca en cada cambio de sección
+  // Carga todo al tener usuario
   useEffect(() => {
-    if (seccion === 'perfil' || seccion === 'chatbots') refetchUsuario();
+    if (usuario?._id) fetchPermitidos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seccion]);
-
-  // carga chatbots al entrar a la sección
-  useEffect(() => {
-    if (seccion === 'chatbots' && usuario?._id) fetchChatbotsPermitidos();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seccion, usuario?._id]);
+  }, [usuario?._id]);
 
   /* ===== Fetchers ===== */
   async function refetchUsuario() {
@@ -88,8 +84,8 @@ export default function PanelAlumno() {
     } catch { /* noop */ }
   }
 
-  async function fetchChatbotsPermitidos() {
-    setLoadingCB(true);
+  async function fetchPermitidos() {
+    setLoading(true);
     try {
       const token = localStorage.getItem('token');
       if (!token) { navigate('/login'); return; }
@@ -112,8 +108,8 @@ export default function PanelAlumno() {
           _id: String(x.chatbotId),
           nombre: x.nombre || 'Chatbot',
           categoria: x.categoria || 'General',
-          embedUrl: FIXED_EMBED_URL, // fijo por requisitos
-          cursosCount: Number(x.cursosCount || 0),
+          embedUrl: x.iframeUrl,
+          youtubeUrl: x.youtubeUrl,
         }))
         .sort((a,b)=> (a.categoria||'').localeCompare(b.categoria||'', 'es')
                       || (a.nombre||'').localeCompare(b.nombre||'', 'es'));
@@ -123,7 +119,7 @@ export default function PanelAlumno() {
     } catch {
       setPermitidos([]);
     } finally {
-      setLoadingCB(false);
+      setLoading(false);
     }
   }
 
@@ -160,17 +156,30 @@ export default function PanelAlumno() {
   const deudaLabel =
     riesgo === 'amarillo' ? 'Suspensión en 10 días' : 'Deudas al día';
 
-  /* ===== Agrupar chatbots por categoría ===== */
-  const grupos = useMemo(() => {
+  /* ===== Listas Derivadas ===== */
+  const chatbots = useMemo(() => permitidos.filter(p => p.embedUrl), [permitidos]);
+  const videos = useMemo(() => permitidos.filter(p => p.youtubeUrl), [permitidos]);
+
+  /* ===== Agrupar por categoría ===== */
+  const gruposChatbots = useMemo(() => {
     const map = new Map();
-    for (const cb of permitidos) {
+    for (const cb of chatbots) {
       const k = cb.categoria || 'General';
       if (!map.has(k)) map.set(k, []);
       map.get(k).push(cb);
     }
-    return Array.from(map.entries())
-      .sort((a,b)=> a[0].localeCompare(b[0], 'es'));
-  }, [permitidos]);
+    return Array.from(map.entries()).sort((a,b)=> a[0].localeCompare(b[0], 'es'));
+  }, [chatbots]);
+
+  const gruposVideos = useMemo(() => {
+    const map = new Map();
+    for (const v of videos) {
+      const k = v.categoria || 'General';
+      if (!map.has(k)) map.set(k, []);
+      map.get(k).push(v);
+    }
+    return Array.from(map.entries()).sort((a,b)=> a[0].localeCompare(b[0], 'es'));
+  }, [videos]);
 
   const toggleCat = (categoria) =>
     setExpandedCat(s => ({ ...s, [categoria]: !s[categoria] }));
@@ -261,15 +270,14 @@ export default function PanelAlumno() {
             <section className="card">
               <div className="card-head">
                 <h3 className="card-title">Chatbots Asignados</h3>
-                {/* ❌ Se removieron: Recargar, Grid/List, Slider de altura, Pantalla completa */}
                 {lastLoadedAt && <span className="hint small">Actualizado: {lastLoadedAt.toLocaleTimeString()}</span>}
               </div>
 
-              {loadingCB ? (
+              {loading ? (
                 <p className="empty">Cargando chatbots…</p>
-              ) : (grupos.length ? (
+              ) : (gruposChatbots.length ? (
                 <div className="cb-groups list">
-                  {grupos.map(([categoria, items]) => {
+                  {gruposChatbots.map(([categoria, items]) => {
                     const open = !!expandedCat[categoria];
                     return (
                       <div className="cb-group" key={categoria} style={{marginBottom:16}}>
@@ -277,7 +285,6 @@ export default function PanelAlumno() {
                         <div className="cb-group-title" style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:12}}>
                           <div>
                             <strong>{categoria}</strong> <span className="chip">{items.length}</span>
-                            {/* Muestra los nombres de chatbots asignados como subtítulo */}
                             <div className="muted small" style={{marginTop:4}}>
                               {items.map(x => x.nombre).join(' • ')}
                             </div>
@@ -294,22 +301,26 @@ export default function PanelAlumno() {
                             overflow: 'hidden',
                             transition: 'max-height 300ms ease, opacity 200ms ease',
                             maxHeight: open ? FRAME_HEIGHT + 40 : 0,
-                            opacity: open ? 1 : 0.2,
-                            borderRadius: 12
+                            opacity: open ? 1 : 0.2
                           }}
                         >
                           {open && (
-                            <div className="cb-frame-wrap" style={{height: FRAME_HEIGHT, marginTop:12}}>
-                              <iframe
-                                src={FIXED_EMBED_URL}
-                                title={`Chatbot ${categoria}`}
-                                width="100%"
-                                height="100%"
-                                frameBorder="0"
-                                style={{ borderRadius: 12 }}
-                                allow="clipboard-write; microphone; camera"
-                              />
-                            </div>
+                            items[0]?.embedUrl ? (
+                              <div className="cb-frame-wrap" style={{height: FRAME_HEIGHT}}>
+                                <iframe
+                                  src={items[0].embedUrl}
+                                  width="100%"
+                                  height="900px"
+                                  frameBorder="0"
+                                  allow="clipboard-write; microphone; camera"
+                                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                                />
+                              </div>
+                            ) : (
+                              <div className="empty" style={{marginTop: 12}}>
+                                Este chatbot no tiene un iframe configurado.
+                              </div>
+                            )
                           )}
                         </div>
                       </div>
@@ -324,8 +335,38 @@ export default function PanelAlumno() {
 
           {seccion === 'otros' && (
             <section className="card">
-              <h3 className="card-title">Otras opciones</h3>
-              <p className="empty">Aquí irán más herramientas o configuraciones.</p>
+              <h3 className="card-title">Videos Educativos</h3>
+              
+              {loading ? (
+                <p className="empty">Cargando videos…</p>
+              ) : (gruposVideos.length ? (
+                <div className="cb-groups list">
+                  {gruposVideos.map(([categoria, items]) => (
+                    <div className="cb-group" key={categoria} style={{marginBottom: 24}}>
+                      <div className="cb-group-title">
+                        <strong>{categoria}</strong> <span className="chip">{items.length}</span>
+                      </div>
+                      {items.map(video => (
+                        <div key={video._id} style={{marginTop: 16}}>
+                          <h4 style={{marginBottom: 8}}>{video.nombre}</h4>
+                          <div style={{position: 'relative', paddingTop: '56.25%'}}>
+                            <iframe
+                              style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}
+                              src={`https://www.youtube.com/embed/${getYouTubeID(video.youtubeUrl)}`}
+                              title={video.nombre}
+                              frameBorder="0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="empty">No tienes videos asignados aún.</p>
+              ))}
             </section>
           )}
         </main>

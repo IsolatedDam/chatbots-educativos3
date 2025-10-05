@@ -18,7 +18,7 @@ function Login() {
   const [recResult, setRecResult] = useState(null);
 
   const navigate = useNavigate();
-  const API_BASE = 'https://chatbots-educativos3.onrender.com/api';
+  const API_BASE = process.env.REACT_APP_API_BASE || 'https://chatbots-educativos3.onrender.com/api';
   const SESSION_MS = 30 * 60 * 1000; // 30 min
 
   const normalizarRut = (v) => v.replace(/\./g, '').replace(/\s+/g, '').toUpperCase();
