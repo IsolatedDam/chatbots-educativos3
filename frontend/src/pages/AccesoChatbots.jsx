@@ -11,7 +11,7 @@ const API_ROOT = (() => {
     const { hostname } = window.location;
     if (hostname === "localhost" || hostname === "127.0.0.1") return "http://localhost:5000";
   }
-  return "https://chatbots-educativos3-vhfq.onrender.com/";
+  return "https://chatbots-educativos3-vhfq.onrender.com";
 })();
 const API_BASE = `${API_ROOT}/api`;
 
