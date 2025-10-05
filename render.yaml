@@ -20,12 +20,10 @@ services:
       # - key: JWT_SECRET
       #   fromSecret: true
 
-  # Servicio para el Frontend (React)
-  - type: static
-    name: chatbots-frontend
-    env: static
-    region: oregon
-    plan: free
+        # Servicio para el Frontend (React)
+        - type: static_site
+          name: chatbots-frontend
+          region: oregon    plan: free
     rootDir: ./frontend
     buildCommand: npm install && npm run build
     publishDir: build
