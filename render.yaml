@@ -8,9 +8,6 @@ services:
     rootDir: ./backend
     buildCommand: "npm install"
     startCommand: "node index.js"
-    # IMPORTANTE: Agrega las variables de entorno secretas (como la URL de la base de datos,
-    # claves de API, etc.) directamente en el dashboard de Render, en la sección "Environment"
-    # del servicio 'chatbots-backend'.
     envVars:
       - key: NODE_ENV
         value: production
@@ -22,8 +19,8 @@ services:
     plan: free
     rootDir: ./frontend
     buildCommand: "npm install && npm run build"
-    publishDir: "build"
+    publishDir: build
     routes:
       - type: rewrite
-        source: "/*"
-        destination: "/index.html"
+        source: /*
+        destination: /index.html
