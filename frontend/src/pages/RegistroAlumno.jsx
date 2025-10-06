@@ -13,7 +13,7 @@ function RegistroAlumno() {
     fechaIngreso: '',  // YYYY-MM-DD
     telefono: '',
     semestre: '',      // 1 | 2
-    jornada: ''        // Mañana, Tarde, Vespertino, Viernes, Sábados
+    jornada: ''        // Mañana, Tarde, Vespertino, Viernes, Sábados, Blearning, Online, Otras
   });
 
   const [mensaje, setMensaje] = useState('');
@@ -224,6 +224,9 @@ function RegistroAlumno() {
           <option value="Vespertino">Vespertino</option>
           <option value="Viernes">Viernes</option>
           <option value="Sábados">Sábados</option>
+          <option value="Blearning">Blearning</option>
+          <option value="Online">Online</option>
+          <option value="Otras">Otras</option>
         </select>
 
         <button type="submit" disabled={enviando}>

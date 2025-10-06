@@ -49,7 +49,7 @@ const AlumnoSchema = new mongoose.Schema(
 
     jornada: {
       type: String,
-      enum: ['Mañana', 'Tarde', 'Vespertino', 'Viernes', 'Sábados'],
+      enum: ['Mañana', 'Tarde', 'Vespertino', 'Viernes', 'Sábados', 'Blearning', 'Online', 'Otras'],
       required: true,
     },
 
