@@ -17,7 +17,7 @@ function riesgoMensajeFE(r) {
   return "Suscripción activa";
 }
 
-const JORNADAS = ["Mañana","Tarde","Vespertino","Viernes","Sábados"];
+const JORNADAS = ["Mañana","Tarde","Vespertino","Viernes","Sábados", 'Blearning', 'Online', 'Otras'];
 
 export default function EditAlumnoModal({
   draft,

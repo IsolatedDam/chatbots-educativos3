@@ -4,7 +4,7 @@ import EditAlumnoModal from "./EditAlumnoModal.jsx";
 
 const API_ROOT = "https://chatbots-educativos3-vhfq.onrender.com";
 const API_BASE = `${API_ROOT}/api`;
-const JORNADAS = ["Mañana","Tarde","Vespertino","Viernes","Sábados"];
+const JORNADAS = ["Mañana","Tarde","Vespertino","Viernes","Sábados", "Blearning", "Online", "Otras"];
 
 /* Helpers */
 function calcRiesgoFE(vence){ if(!vence) return null; const hoy=new Date();hoy.setHours(0,0,0,0); const end=new Date(vence);end.setHours(0,0,0,0); const diff=(end-hoy)/86400000; if(diff<0) return "rojo"; if(diff<=10) return "amarillo"; return "verde"; }

@@ -16,7 +16,7 @@ const API_ROOT = (() => {
 })();
 const API_BASE = `${API_ROOT}/api`;
 
-const JORNADAS = ["Mañana", "Tarde", "Vespertino", "Viernes", "Sábados"];
+const JORNADAS = ["Mañana", "Tarde", "Vespertino", "Viernes", "Sábados", "Blearning", "Online", "Otras"];
 
 /* ===== Helpers presentacionales ===== */
 const docDe = (a) => a?.numero_documento ?? a?.rut ?? "—";
@@ -113,6 +113,7 @@ function GestionarCursoModal({
   const [misAlumnos, setMisAlumnos] = useState([]);
   const [cargandoAlumnos, setCargandoAlumnos] = useState(false);
   const [toggling, setToggling] = useState({}); // { [alumnoId]: true }
+  const [jornadaFilter, setJornadaFilter] = useState(""); // Filtro por jornada
 
   useEffect(() => {
     document.body.classList.add("cp-no-scroll");
@@ -146,6 +147,11 @@ function GestionarCursoModal({
   }, [authHdrs.Authorization]);
 
   useEffect(() => { fetchMisAlumnos(); }, [fetchMisAlumnos]);
+
+  // Filtrar alumnos por jornada
+  const alumnosFiltrados = useMemo(() => {
+    return misAlumnos.filter(a => !jornadaFilter || a.jornada === jornadaFilter);
+  }, [misAlumnos, jornadaFilter]);
 
   // Inscribir (habilitar) / Quitar (deshabilitar)
   const agregarAlumnos = useCallback(async (alumnoIds) => {
@@ -239,19 +245,31 @@ function GestionarCursoModal({
         {/* Única tabla: Resultados (todos mis alumnos) con acción Habilitar/Deshabilitar */}
         <div className="mgm-block">
           <div className="mgm-block-title">
-            Resultados <span className="mgm-count">{misAlumnos.length}</span>
+            Resultados <span className="mgm-count">{alumnosFiltrados.length}</span>
+            <select
+              className="cp-select"
+              value={jornadaFilter}
+              onChange={(e) => setJornadaFilter(e.target.value)}
+              style={{ marginLeft: '10px', width: 'auto' }}
+            >
+              <option value="">Todas las jornadas</option>
+              {JORNADAS.map((j) => <option key={j} value={j}>{j}</option>)}
+            </select>
+            <button className="btn btn-secondary" onClick={fetchMisAlumnos} style={{ marginLeft: '10px' }}>
+              Refrescar alumnos
+            </button>
           </div>
           <div className="cp-table-clip">
             <table className="cp-table">
               <colgroup>
-                <col className="cp-col-doc" /><col className="cp-col-name" /><col className="cp-col-min" /><col className="cp-col-min" />
+                <col className="cp-col-doc" /><col className="cp-col-name" /><col className="cp-col-min" /><col className="cp-col-min" /><col className="cp-col-min" />
               </colgroup>
-              <thead><tr><th>RUT/DNI</th><th>Nombre</th><th>Estado</th><th>Acción</th></tr></thead>
+              <thead><tr><th>RUT/DNI</th><th>Nombre</th><th>Semestre</th><th>Jornada</th><th>Acción</th></tr></thead>
               <tbody>
                 {cargandoAlumnos ? (
-                  <tr><td colSpan="99">Cargando alumnos…</td></tr>
-                ) : (misAlumnos.length ? (
-                  misAlumnos.map((a)=> {
+                  <tr><td colSpan="5">Cargando alumnos…</td></tr>
+                ) : (alumnosFiltrados.length ? (
+                  alumnosFiltrados.map((a)=> {
                     const id = a._id;
                     const inscrito = inscritosSet.has(id);
                     const btnBusy = !!toggling[id];
@@ -259,7 +277,8 @@ function GestionarCursoModal({
                       <tr key={id}>
                         <td>{docDe(a)}</td>
                         <td title={nombreDe(a)} className="cp-ellipsis">{nombreDe(a)}</td>
-                        <td>{inscrito ? "Habilitado" : "Deshabilitado"}</td>
+                        <td>{a.semestre ?? "—"}</td>
+                        <td>{a.jornada ?? "—"}</td>
                         <td>
                           {inscrito ? (
                             <button
@@ -285,7 +304,7 @@ function GestionarCursoModal({
                     );
                   })
                 ) : (
-                  <tr><td colSpan="99">No tienes alumnos creados aún.</td></tr>
+                  <tr><td colSpan="5">No tienes alumnos creados aún.</td></tr>
                 ))}
               </tbody>
             </table>
