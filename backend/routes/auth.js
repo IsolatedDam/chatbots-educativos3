@@ -26,7 +26,7 @@ function generarContrasenaAleatoria(longitud = 10) {
   return clave;
 }
 
-const JORNADAS = ['Mañana', 'Tarde', 'Vespertino', 'Viernes', 'Sábados'];
+const JORNADAS = ['Mañana', 'Tarde', 'Vespertino', 'Viernes', 'Sábados', 'Blearning', 'Online', 'Otras'];
 const TEL_RE = /^\+?\d{8,12}$/;
 
 /* ========== Whitelist de dominios permitidos (con soporte ENV) ========== */

@@ -18,7 +18,7 @@ const REQUIRED = [
   "semestre",
   "jornada",
 ];
-const JORNADAS = ["Mañana", "Tarde", "Vespertino", "Viernes", "Sábados"];
+const JORNADAS = ["Mañana", "Tarde", "Vespertino", "Viernes", "Sábados", "Blearning", "Online", "Otras"];
 const TEL_RE = /^\+?\d{8,12}$/;
 
 // Helpers ---------------------------------------------------------
@@ -193,7 +193,7 @@ function CargarAlumno() {
       ["- Formato fechaIngreso: YYYY-MM-DD (ej: 2025-03-01)"],
       ["- telefono: 8–12 dígitos, puede iniciar con + (ej: +56912345678)"],
       ["- semestre: 1 o 2"],
-      ["- jornada: Mañana | Tarde | Vespertino | Viernes | Sábados"],
+      ["- jornada: Mañana | Tarde | Vespertino | Viernes | Sábados | Blearning | Online | Otras"],
     ]);
     XLSX.utils.book_append_sheet(wb, ayuda, "ayuda");
 

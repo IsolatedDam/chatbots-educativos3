@@ -3,6 +3,18 @@ import axios from 'axios';
 import '../styles/RegistroAlumno.css';
 import Swal from 'sweetalert2';
 
+const ALLOWED_EMAIL_DOMAINS = new Set([
+  'gmail.com',
+  'hotmail.com', 'hotmail.cl',
+  'outlook.com', 'outlook.cl',
+  'live.com',
+  'yahoo.com',
+  'icloud.com',
+  // agrega tus dominios institucionales/empresa:
+  // 'duocuc.cl', 'uc.cl', 'usach.cl', 'miempresa.cl'
+]);
+const JORNADAS = ["Mañana", "Tarde", "Vespertino", "Viernes", "Sábados", "Blearning", "Online", "Otras"];
+
 function RegistroAlumno() {
   const [form, setForm] = useState({
     correo: '',
@@ -24,18 +36,6 @@ function RegistroAlumno() {
   // Validación simple de sintaxis de email (la validación de dominio real la hace el backend)
   const isEmailSyntaxValid = (email = '') =>
     /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(String(email).trim());
-
-  // === NUEVO: whitelist de dominios permitidos ===
-  const ALLOWED_EMAIL_DOMAINS = new Set([
-    'gmail.com',
-    'hotmail.com', 'hotmail.cl',
-    'outlook.com', 'outlook.cl',
-    'live.com',
-    'yahoo.com',
-    'icloud.com',
-    // agrega tus dominios institucionales/empresa:
-    // 'duocuc.cl', 'uc.cl', 'usach.cl', 'miempresa.cl'
-  ]);
   const getDomain = (email = '') => String(email).trim().toLowerCase().split('@')[1] || '';
   const isAllowedEmailDomain = (email = '') => ALLOWED_EMAIL_DOMAINS.has(getDomain(email));
 
@@ -217,16 +217,9 @@ function RegistroAlumno() {
           <option value="2">2</option>
         </select>
 
-        <select name="jornada" value={form.jornada} onChange={handleChange} className="input-field">
-          <option value="" disabled>Selecciona jornada</option>
-          <option value="Mañana">Mañana</option>
-          <option value="Tarde">Tarde</option>
-          <option value="Vespertino">Vespertino</option>
-          <option value="Viernes">Viernes</option>
-          <option value="Sábados">Sábados</option>
-          <option value="Blearning">Blearning</option>
-          <option value="Online">Online</option>
-          <option value="Otras">Otras</option>
+        <select value={form.jornada} onChange={(e) => setForm({ ...form, jornada: e.target.value })}>
+          <option value="">Seleccionar jornada</option>
+          {JORNADAS.map(j => <option key={j} value={j}>{j}</option>)}
         </select>
 
         <button type="submit" disabled={enviando}>
