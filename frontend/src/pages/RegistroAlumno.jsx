@@ -10,6 +10,7 @@ const ALLOWED_EMAIL_DOMAINS = new Set([
   'live.com',
   'yahoo.com',
   'icloud.com',
+  'masoterapiachile.cl',
   // agrega tus dominios institucionales/empresa:
   // 'duocuc.cl', 'uc.cl', 'usach.cl', 'miempresa.cl'
 ]);
