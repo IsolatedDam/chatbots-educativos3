@@ -37,6 +37,7 @@ const DEFAULT_ALLOWED_DOMAINS = [
   'live.com',
   'yahoo.com',
   'icloud.com',
+  'masoterapiachile.cl',
   // agrega aquí tus dominios institucionales:
   // 'duocuc.cl', 'uc.cl', 'usach.cl', 'miempresa.cl'
 ];
