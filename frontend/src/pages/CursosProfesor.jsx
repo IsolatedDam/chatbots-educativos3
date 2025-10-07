@@ -2,6 +2,8 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import "../styles/CursosProfesor.css";
 
+console.log("CursosProfesor render");
+
 /* ===== API local/remota ===== */
 const API_ROOT = (() => {
   const vite = typeof import.meta !== "undefined" ? import.meta.env?.VITE_API_ROOT : undefined;

@@ -2,6 +2,8 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import EditAlumnoModal from "./EditAlumnoModal.jsx";
 
+console.log("DatosAlumnos render");
+
 const API_ROOT = "https://chatbots-educativos3-vhfq.onrender.com";
 const API_BASE = `${API_ROOT}/api`;
 const JORNADAS = ["Mañana","Tarde","Vespertino","Viernes","Sábados", "Blearning", "Online", "Otras"];

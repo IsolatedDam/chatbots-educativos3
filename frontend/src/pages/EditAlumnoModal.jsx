@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import "../styles/EditAlumnoModal.css";
 
+console.log("EditAlumnoModal render");
 /* Helpers locales (autónomos) */
 function calcRiesgoFE(vence) {
   if (!vence) return null;
