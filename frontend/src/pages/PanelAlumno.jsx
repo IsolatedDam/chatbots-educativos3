@@ -295,7 +295,7 @@ export default function PanelAlumno() {
                   height="100%"
                   frameBorder="0"
                   allow="clipboard-write; microphone; camera"
-                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                  // sandbox="allow-same-origin allow-scripts allow-popups allow-forms"  // Removido para probar
                   key={activeIframeSrc} // Cambia solo si cambia el src
                 />
                 <button
