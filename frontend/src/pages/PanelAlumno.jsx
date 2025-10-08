@@ -36,6 +36,12 @@ export default function PanelAlumno() {
   // Estado de acordeón por categoría
   const [expandedCat, setExpandedCat] = useState({}); // { [categoria]: true }
 
+  // Estado para el iframe activo (para evitar recargas)
+  const [activeIframeSrc, setActiveIframeSrc] = useState(() => {
+    // Cargar desde localStorage al inicializar
+    return localStorage.getItem('activeIframeSrc') || null;
+  });
+
   // Altura fija razonable para el iframe
   const FRAME_HEIGHT = 900;
 
@@ -126,6 +132,8 @@ export default function PanelAlumno() {
   const cerrarSesion = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('usuario');
+    // Opcional: limpiar activeIframeSrc si no quieres persistir entre sesiones
+    // localStorage.removeItem('activeIframeSrc');
     navigate('/login');
   };
 
@@ -181,8 +189,31 @@ export default function PanelAlumno() {
     return Array.from(map.entries()).sort((a,b)=> a[0].localeCompare(b[0], 'es'));
   }, [videos]);
 
-  const toggleCat = (categoria) =>
-    setExpandedCat(s => ({ ...s, [categoria]: !s[categoria] }));
+  const toggleCat = (categoria) => {
+    const open = !expandedCat[categoria];
+    setExpandedCat(s => ({ ...s, [categoria]: open }));
+    // Si abres, establece el iframe activo (solo el primero de la categoría)
+    if (open) {
+      const items = gruposChatbots.find(([cat]) => cat === categoria)?.[1] || [];
+      const first = items[0];
+      if (first?.embedUrl) {
+        setActiveIframeSrc(first.embedUrl);
+      }
+    } else {
+      // Si cierras, no cambies el src para mantener la conversación
+      // Solo oculta visualmente
+    }
+  };
+
+  // Función para actualizar activeIframeSrc y guardar en localStorage
+  const updateActiveIframeSrc = (src) => {
+    setActiveIframeSrc(src);
+    if (src) {
+      localStorage.setItem('activeIframeSrc', src);
+    } else {
+      localStorage.removeItem('activeIframeSrc');
+    }
+  };
 
   /* ===== UI ===== */
   return (
@@ -229,6 +260,62 @@ export default function PanelAlumno() {
               <p className="subtitle">Tu información personal, académica y accesos.</p>
             </div>
           </header>
+
+          {/* Iframe persistente: siempre renderizado, visible solo en chatbots con acordeón abierto */}
+          {activeIframeSrc && (
+            <div
+              className="persistent-iframe"
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                zIndex: 1000,
+                display: (seccion === 'chatbots' && Object.values(expandedCat).some(Boolean)) ? 'block' : 'none',
+                background: 'rgba(0,0,0,0.5)',
+                padding: '20px',
+                boxSizing: 'border-box'
+              }}
+            >
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  maxWidth: '1200px',
+                  margin: '0 auto',
+                  background: 'white',
+                  borderRadius: '8px',
+                  overflow: 'hidden'
+                }}
+              >
+                <iframe
+                  src={activeIframeSrc}
+                  width="100%"
+                  height="100%"
+                  frameBorder="0"
+                  allow="clipboard-write; microphone; camera"
+                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                  key={activeIframeSrc} // Cambia solo si cambia el src
+                />
+                <button
+                  onClick={() => setExpandedCat({})} // Cierra todos los acordeones
+                  style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    background: 'red',
+                    color: 'white',
+                    border: 'none',
+                    padding: '5px 10px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          )}
 
           {seccion === 'perfil' && usuario && (
             <div className="cards-grid">
@@ -294,35 +381,12 @@ export default function PanelAlumno() {
                           </button>
                         </div>
 
-                        {/* Contenido desplegable */}
-                        <div
-                          className={`cb-accordion ${open ? 'open' : ''}`}
-                          style={{
-                            overflow: 'hidden',
-                            transition: 'max-height 300ms ease, opacity 200ms ease',
-                            maxHeight: open ? FRAME_HEIGHT + 40 : 0,
-                            opacity: open ? 1 : 0.2
-                          }}
-                        >
-                          {open && (
-                            items[0]?.embedUrl ? (
-                              <div className="cb-frame-wrap" style={{height: FRAME_HEIGHT}}>
-                                <iframe
-                                  src={items[0].embedUrl}
-                                  width="100%"
-                                  height="900px"
-                                  frameBorder="0"
-                                  allow="clipboard-write; microphone; camera"
-                                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-                                />
-                              </div>
-                            ) : (
-                              <div className="empty" style={{marginTop: 12}}>
-                                Este chatbot no tiene un iframe configurado.
-                              </div>
-                            )
-                          )}
-                        </div>
+                        {/* El iframe ahora es persistente, así que aquí solo mostramos un placeholder o nada */}
+                        {!open && (
+                          <div className="muted small" style={{marginTop: 8}}>
+                            Haz clic en "Acceder" para abrir el chatbot.
+                          </div>
+                        )}
                       </div>
                     );
                   })}
