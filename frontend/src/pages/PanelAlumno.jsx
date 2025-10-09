@@ -42,6 +42,9 @@ export default function PanelAlumno() {
     return localStorage.getItem('activeIframeSrc') || null;
   });
 
+  // Estado para videos expandidos
+  const [expandedVideoCat, setExpandedVideoCat] = useState({}); // { [categoria]: true }
+
   // Altura fija razonable para el iframe
   const FRAME_HEIGHT = 900;
 
@@ -115,7 +118,7 @@ export default function PanelAlumno() {
           nombre: x.nombre || 'Chatbot',
           categoria: x.categoria || 'General',
           embedUrl: x.iframeUrl,
-          youtubeUrl: x.youtubeUrl,
+          videos: x.videos || [], // Agregar el array videos
         }))
         .sort((a,b)=> (a.categoria||'').localeCompare(b.categoria||'', 'es')
                       || (a.nombre||'').localeCompare(b.nombre||'', 'es'));
@@ -166,7 +169,15 @@ export default function PanelAlumno() {
 
   /* ===== Listas Derivadas ===== */
   const chatbots = useMemo(() => permitidos.filter(p => p.embedUrl), [permitidos]);
-  const videos = useMemo(() => permitidos.filter(p => p.youtubeUrl), [permitidos]);
+  const videos = useMemo(() => 
+    permitidos.flatMap(p => 
+      (p.videos || []).map(v => ({
+        ...v, // nombre, url
+        categoria: p.categoria,
+        chatbotNombre: p.nombre,
+        chatbotId: p._id,
+      }))
+    ), [permitidos]);
 
   /* ===== Agrupar por categoría ===== */
   const gruposChatbots = useMemo(() => {
@@ -387,6 +398,20 @@ export default function PanelAlumno() {
                             Haz clic en "Acceder" para abrir el chatbot.
                           </div>
                         )}
+
+                        {/* Opcional: Videos asociados dentro del acordeón abierto */}
+                        {open && items[0]?.videos && items[0].videos.length > 0 && (
+                          <div className="muted small" style={{marginTop: 8}}>
+                            <strong>Videos asociados:</strong>
+                            <ul>
+                              {items[0].videos.map((v, idx) => (
+                                <li key={idx}>
+                                  <a href={v.url} target="_blank" rel="noopener noreferrer">{v.nombre}</a>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -405,28 +430,43 @@ export default function PanelAlumno() {
                 <p className="empty">Cargando videos…</p>
               ) : (gruposVideos.length ? (
                 <div className="cb-groups list">
-                  {gruposVideos.map(([categoria, items]) => (
-                    <div className="cb-group" key={categoria} style={{marginBottom: 24}}>
-                      <div className="cb-group-title">
-                        <strong>{categoria}</strong> <span className="chip">{items.length}</span>
-                      </div>
-                      {items.map(video => (
-                        <div key={video._id} style={{marginTop: 16}}>
-                          <h4 style={{marginBottom: 8}}>{video.nombre}</h4>
-                          <div style={{position: 'relative', paddingTop: '56.25%'}}>
-                            <iframe
-                              style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}
-                              src={`https://www.youtube.com/embed/${getYouTubeID(video.youtubeUrl)}`}
-                              title={video.nombre}
-                              frameBorder="0"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                            />
-                          </div>
+                  {gruposVideos.map(([categoria, items]) => {
+                    const open = !!expandedVideoCat[categoria];
+                    return (
+                      <div className="cb-group" key={categoria} style={{marginBottom: 24}}>
+                        <div className="cb-group-title">
+                          <strong>{categoria}</strong> <span className="chip">{items.length}</span>
                         </div>
-                      ))}
-                    </div>
-                  ))}
+                        {!open && (
+                          <button className="btn btn-primary" onClick={() => setExpandedVideoCat(s => ({ ...s, [categoria]: true }))}>
+                            Acceder
+                          </button>
+                        )}
+                        {open && (
+                          <>
+                            <button className="btn btn-secondary" onClick={() => setExpandedVideoCat(s => ({ ...s, [categoria]: false }))}>
+                              Esconder
+                            </button>
+                            {items.map(video => (
+                              <div key={`${video.chatbotId}-${video.nombre}`} style={{marginTop: 16}}>
+                                <h4 style={{marginBottom: 8}}>{video.nombre} (de {video.chatbotNombre})</h4>
+                                <div style={{position: 'relative', paddingTop: '56.25%'}}>
+                                  <iframe
+                                    style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}
+                                    src={`https://www.youtube.com/embed/${getYouTubeID(video.url)}`}
+                                    title={video.nombre}
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="empty">No tienes videos asignados aún.</p>

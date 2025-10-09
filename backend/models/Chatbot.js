@@ -28,10 +28,22 @@ const ChatbotSchema = new Schema(
       type: String,
       trim: true,
     },
-    youtubeUrl: {
-      type: String,
-      trim: true,
-    },
+    // Reemplazado youtubeUrl por videos (array de objetos)
+    videos: [
+      {
+        nombre: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: 120,
+        },
+        url: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+      },
+    ],
     activo: {
       type: Boolean,
       default: true,

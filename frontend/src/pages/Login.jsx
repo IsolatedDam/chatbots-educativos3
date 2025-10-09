@@ -52,7 +52,7 @@ function Login() {
         res = await axios.post(`${API_BASE}/login`, { rut: rutLimpio });
       } else {
         if (!rutLimpio || !contrasenaLimpia) {
-          setMensaje('Completa usuario/RUT y contraseña.');
+          setMensaje('Ingresa RUT y contraseña.');
           setTimeout(() => setMensaje(''), 2500);
           return;
         }
@@ -187,7 +187,7 @@ function Login() {
         <form className="login-form" onSubmit={handleSubmit}>
           <input
             type="text"
-            placeholder={rol === 'alumno' ? 'RUT (Ej: 12345678-9)' : 'Usuario o RUT/Correo'}
+            placeholder={rol === 'alumno' ? 'RUT (Ej: 12345678-9)' : 'RUT (Ej: 12345678-9)'}
             value={rut}
             onChange={(e) => setRut(e.target.value)}
             autoComplete="username"

@@ -129,7 +129,8 @@ router.get(
 /**
  * POST /api/chatbots
  * Crea un chatbot dentro de una categoría.
- * body: { nombre, categoria, descripcion? }
+ * body: { nombre, categoria, descripcion?, iframeUrl?, videos? }
+ * videos: [{ nombre, url }, ...]
  * Guarda createdBy con el Admin autenticado y devuelve el documento poblado.
  */
 router.post(
@@ -138,7 +139,7 @@ router.post(
   autorizarRoles("profesor", "admin", "superadmin"),
   async (req, res) => {
     try {
-      const { nombre, categoria, descripcion = "", iframeUrl, youtubeUrl } = req.body || {};
+      const { nombre, categoria, descripcion = "", iframeUrl, videos } = req.body || {};
       const nom = (nombre || "").trim();
       const cat = (categoria || "").trim();
       const desc = (descripcion || "").trim();
@@ -148,12 +149,25 @@ router.post(
       if (nom.length > 120) return res.status(400).json({ msg: "El nombre es demasiado largo (máx. 120)" });
       if (cat.length > 120) return res.status(400).json({ msg: "La categoría es demasiado larga (máx. 120)" });
 
+      // Validar videos si se proporciona
+      let videosValidados = [];
+      if (videos) {
+        if (!Array.isArray(videos)) return res.status(400).json({ msg: "Videos debe ser un array" });
+        videosValidados = videos
+          .filter(v => v && typeof v === "object" && v.nombre && v.url)
+          .map(v => ({
+            nombre: String(v.nombre).trim(),
+            url: String(v.url).trim(),
+          }))
+          .filter(v => v.nombre && v.url);
+      }
+
       const nuevo = await Chatbot.create({
         nombre: nom,
         categoria: cat,
         descripcion: desc,
-        iframeUrl,
-        youtubeUrl,
+        iframeUrl: iframeUrl ? String(iframeUrl).trim() : undefined,
+        videos: videosValidados,
         activo: true,
         //middleware verificarToken
         createdBy: req.usuario?.id || req.usuario?._id,
@@ -179,7 +193,7 @@ router.post(
 
 /**
  * PATCH /api/chatbots/:id
- * Actualiza nombre/categoria/descripcion/activo
+ * Actualiza nombre/categoria/descripcion/activo/iframeUrl/videos
  * Devuelve el chatbot actualizado (poblado).
  */
 router.patch(
@@ -198,10 +212,21 @@ router.patch(
         payload.descripcion = req.body.descripcion.trim();
       if (typeof req.body.iframeUrl === "string")
         payload.iframeUrl = req.body.iframeUrl.trim();
-      if (typeof req.body.youtubeUrl === "string")
-        payload.youtubeUrl = req.body.youtubeUrl.trim();
       if (typeof req.body.activo === "boolean")
         payload.activo = req.body.activo;
+
+      // Manejar videos
+      if (req.body.videos !== undefined) {
+        if (!Array.isArray(req.body.videos)) return res.status(400).json({ msg: "Videos debe ser un array" });
+        const videosValidados = req.body.videos
+          .filter(v => v && typeof v === "object" && v.nombre && v.url)
+          .map(v => ({
+            nombre: String(v.nombre).trim(),
+            url: String(v.url).trim(),
+          }))
+          .filter(v => v.nombre && v.url);
+        payload.videos = videosValidados;
+      }
 
       const upd = await Chatbot.findByIdAndUpdate(
         id,

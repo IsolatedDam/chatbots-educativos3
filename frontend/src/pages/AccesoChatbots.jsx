@@ -36,7 +36,7 @@ export default function AccesoChatbots() {
 
   const [nuevoBot, setNuevoBot] = useState("");
   const [iframeUrl, setIframeUrl] = useState(""); // Estado para la URL del iframe
-  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [videos, setVideos] = useState([{ nombre: "", url: "" }]); // Array de videos: [{ nombre, url }]
   const [creandoBot, setCreandoBot] = useState(false);
 
   const didInitRef = useRef(false);
@@ -135,11 +135,12 @@ export default function AccesoChatbots() {
   async function crearChatbot() {
     const nombre = (nuevoBot || "").trim();
     const categoria = (selCat || "").trim();
+    const videosFiltrados = videos.filter(v => v.nombre.trim() && v.url.trim()); // Filtrar videos válidos
     if (!nombre || !categoria) return;
     setCreandoBot(true);
     try {
       const res = await fetch(`${API_BASE}/chatbots`, {
-        method: "POST", headers, body: JSON.stringify({ nombre, categoria, iframeUrl, youtubeUrl }),
+        method: "POST", headers, body: JSON.stringify({ nombre, categoria, iframeUrl, videos: videosFiltrados }),
       });
       if (!res.ok) {
         const txt = await res.text().catch(()=> "");
@@ -147,7 +148,7 @@ export default function AccesoChatbots() {
       }
       setNuevoBot("");
       setIframeUrl("");
-      setYoutubeUrl("");
+      setVideos([{ nombre: "", url: "" }]); // Resetear videos
       await Promise.all([cargarBots(categoria), cargarCategorias()]);
     } catch (e) {
       alert(e.message || "No se pudo crear el chatbot");
@@ -210,7 +211,22 @@ export default function AccesoChatbots() {
     return isNaN(d) ? "—" : d.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" });
   };
 
-  // Si un chatbot está seleccionado, muestra el iframe
+  // Funciones para manejar videos
+  const agregarVideo = () => {
+    setVideos([...videos, { nombre: "", url: "" }]);
+  };
+
+  const quitarVideo = (index) => {
+    setVideos(videos.filter((_, i) => i !== index));
+  };
+
+  const actualizarVideo = (index, campo, valor) => {
+    const nuevosVideos = [...videos];
+    nuevosVideos[index][campo] = valor;
+    setVideos(nuevosVideos);
+  };
+
+  // Si un chatbot está seleccionado, muestra el iframe y videos
   if (selectedBot) {
     return (
       <div className="cb-simple-page">
@@ -229,6 +245,18 @@ export default function AccesoChatbots() {
           </div>
         ) : (
           <div className="cb-empty">Este chatbot no tiene un iframe configurado.</div>
+        )}
+        {/* Mostrar videos asociados */}
+        {selectedBot.videos && selectedBot.videos.length > 0 && (
+          <div className="videos-section">
+            <h4>Videos asociados:</h4>
+            {selectedBot.videos.map((video, index) => (
+              <div key={index} className="video-item">
+                <strong>{video.nombre}</strong>
+                <a href={video.url} target="_blank" rel="noopener noreferrer">Ver video</a>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     );
@@ -318,35 +346,60 @@ export default function AccesoChatbots() {
                   onChange={(e) => setIframeUrl(e.target.value)}
                   onKeyDown={(e)=>{ if(e.key==="Enter") crearChatbot(); }}
                 />
-                <input
-                  className="cb-input"
-                  placeholder="URL de YouTube (opcional)"
-                  value={youtubeUrl}
-                  onChange={(e) => setYoutubeUrl(e.target.value)}
-                  onKeyDown={(e)=>{ if(e.key==="Enter") crearChatbot(); }}
-                />
-                <button
-                  className="btn btn-primary"
-                  onClick={crearChatbot}
-                  disabled={!nuevoBot.trim() || creandoBot}
-                >
-                  {creandoBot ? "Creando…" : "Crear chatbot"}
+              </div>
+              {/* Sección para videos */}
+              <div className="videos-input-section">
+                <h4>Videos asociados (opcional):</h4>
+                {videos.map((video, index) => (
+                  <div key={index} className="video-input-row">
+                    <input
+                      className="cb-input"
+                      placeholder="Nombre del video"
+                      value={video.nombre}
+                      onChange={(e) => actualizarVideo(index, 'nombre', e.target.value)}
+                    />
+                    <input
+                      className="cb-input"
+                      placeholder="URL del video (YouTube)"
+                      value={video.url}
+                      onChange={(e) => actualizarVideo(index, 'url', e.target.value)}
+                    />
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={() => quitarVideo(index)}
+                      disabled={videos.length === 1}
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                ))}
+                <button className="btn btn-secondary" onClick={agregarVideo}>
+                  Agregar video
                 </button>
               </div>
+              <button
+                className="btn btn-primary"
+                onClick={crearChatbot}
+                disabled={!nuevoBot.trim() || creandoBot}
+              >
+                {creandoBot ? "Creando…" : "Crear chatbot"}
+              </button>
 
               <div className="cb-tablewrap">
                 <table className="cb-table">
                   <colgroup>
-                    <col style={{width:"40%"}} />
-                    <col style={{width:"25%"}} />
-                    <col style={{width:"25%"}} />
-                    <col style={{width:"10%"}} />
+                    <col style={{width:"30%"}} />
+                    <col style={{width:"20%"}} />
+                    <col style={{width:"20%"}} />
+                    <col style={{width:"15%"}} />
+                    <col style={{width:"15%"}} />
                   </colgroup>
                   <thead>
                     <tr>
                       <th>Nombre</th>
                       <th>Creado por</th>
                       <th>Creado</th>
+                      <th>Videos</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -363,6 +416,7 @@ export default function AccesoChatbots() {
                           </td>
                           <td>{creadoPor(b)}</td>
                           <td>{fecha(b.createdAt)}</td>
+                          <td>{(b.videos || []).length}</td>
                           <td>
                             <button
                               className="btn btn-danger btn-sm"
