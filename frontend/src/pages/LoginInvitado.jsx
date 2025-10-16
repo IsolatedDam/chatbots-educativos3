@@ -150,34 +150,37 @@ function LoginInvitado() {
                 color: emailError ? '#b42318' : '#6b7280',
               }}
             >
-              {emailError || 'Ejemplo: nombre@dominio.com'}
+              {emailError}
             </small>
           </div>
 
-          {/* Teléfono Chile sin prefijo visible: solo 9 dígitos "9 1234 5678" */}
-          <div style={{ width: '100%' }}>
-            <input
-              type="tel"
-              inputMode="numeric"
-              placeholder="9 1234 5678"
-              value={phoneInput}
-              onChange={onPhoneChange}
-              onBlur={onPhoneBlur}
-              aria-label="WhatsApp (Chile)"
-              maxLength={11} // "9 1234 5678" (incluye espacios)
-            />
-            <small
-              style={{
-                display: 'block',
-                marginTop: 6,
-                color: phoneError ? '#b42318' : '#6b7280',
-              }}
-            >
-              {phoneError || 'Ingresa 9 dígitos (ej: 9 1234 5678)'}
-            </small>
+          <div style={{ width: '100%', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+            <label htmlFor="whatsapp-input" style={{ flexShrink: 0, fontSize: '14px', paddingTop: '12px' }}>Whatsapp</label>
+            <div style={{width: '100%'}}>
+                <input
+                  id="whatsapp-input"
+                  type="tel"
+                  inputMode="numeric"
+                  placeholder="9 1234 5678"
+                  value={phoneInput}
+                  onChange={onPhoneChange}
+                  onBlur={onPhoneBlur}
+                  aria-label="WhatsApp (Chile)"
+                  maxLength={11} // "9 1234 5678" (incluye espacios)
+                />
+                <small
+                  style={{
+                    display: 'block',
+                    marginTop: 6,
+                    color: phoneError ? '#b42318' : '#6b7280',
+                  }}
+                >
+                  {phoneError || 'Ingresa 9 dígitos (ej: 9 1234 5678)'}
+                </small>
+            </div>
           </div>
 
-          <button onClick={handleInvitado}>Ingresar</button>
+          <button type="submit" onClick={handleInvitado}>Ingresar</button>
         </div>
 
         <p className="login-link" onClick={() => navigate('/')}>

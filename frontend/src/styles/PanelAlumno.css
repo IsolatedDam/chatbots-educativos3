@@ -19,7 +19,7 @@
 
 .al-sidebar{
   background:var(--panel); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow);
-  display:flex; flex-direction:column; gap:14px; position:sticky; top:16px; height:calc(100vh - 32px);
+  display:flex; flex-direction:column; gap:14px; position:sticky; top:16px; height:calc(94vh - 32px); /* Reducido de 100vh a 85vh para achicar el navbar */
 }
 
 .brand{ display:flex; align-items:center; gap:10px; }
