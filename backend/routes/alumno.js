@@ -40,7 +40,7 @@ router.get(
       const me  = String(req.usuario?.id  || req.user?.id  || '');
 
       const filter = (rol === 'profesor')
-        ? { ...base, createdBy: me } // Ahora busca si el ID del profesor está en el array
+        ? { ...base, createdBy: { $in: [me] } } // Busca si el ID del profesor está en el array
         : base;
 
       const alumnos = await Alumno.find(filter).sort({ createdAt: -1 }).lean();
