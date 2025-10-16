@@ -65,13 +65,11 @@ const AlumnoSchema = new mongoose.Schema(
     color_riesgo: { type: String, default: 'verde' },
     rol: { type: String, default: 'alumno' },
 
-    // 🔹 DUEÑO del registro (profesor que lo creó)
-    createdBy: {
+    createdBy: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Admin',
       index: true,
-      default: null,
-    },
+    }],
   },
   { timestamps: true }
 );

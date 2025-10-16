@@ -40,7 +40,7 @@ router.get(
       const me  = String(req.usuario?.id  || req.user?.id  || '');
 
       const filter = (rol === 'profesor')
-        ? { ...base, createdBy: me }
+        ? { ...base, createdBy: me } // Ahora busca si el ID del profesor está en el array
         : base;
 
       const alumnos = await Alumno.find(filter).sort({ createdAt: -1 }).lean();
@@ -100,7 +100,7 @@ router.get(
       if (rol === 'alumno' && me !== String(alumno._id)) {
         return res.status(403).json({ msg: 'No autorizado' });
       }
-      if (rol === 'profesor' && String(alumno.createdBy) !== me) {
+      if (rol === 'profesor' && !alumno.createdBy.includes(me)) {
         return res.status(403).json({ msg: 'No autorizado' });
       }
 
@@ -160,7 +160,7 @@ router.put(
 
       const rol = String(req.usuario?.rol || '').toLowerCase();
       const me  = String(req.usuario?.id  || '');
-      if (rol === 'profesor' && String(actual.createdBy) !== me) {
+      if (rol === 'profesor' && !actual.createdBy.includes(me)) {
         return res.status(403).json({ msg: 'No puedes editar este alumno' });
       }
 
@@ -196,12 +196,26 @@ router.delete('/:id', verificarToken, puede('alumnos:eliminar'), async (req, res
 
     const rol = String(req.usuario?.rol || '').toLowerCase();
     const me  = String(req.usuario?.id  || '');
-    if (rol === 'profesor' && String(actual.createdBy) !== me) {
-      return res.status(403).json({ msg: 'No puedes eliminar este alumno' });
-    }
 
-    await Alumno.deleteOne({ _id: actual._id });
-    res.json({ msg: 'Alumno eliminado', id: String(actual._id) });
+    if (rol === 'profesor') {
+      if (!actual.createdBy.includes(me)) {
+        return res.status(403).json({ msg: 'No puedes eliminar este alumno' });
+      }
+
+      // Si es el único profesor, elimina al alumno
+      if (actual.createdBy.length === 1) {
+        await Alumno.deleteOne({ _id: actual._id });
+        return res.json({ msg: 'Alumno eliminado permanentemente', id: String(actual._id) });
+      } else {
+        // Si hay más profesores, solo elimina la asociación
+        await Alumno.updateOne({ _id: actual._id }, { $pull: { createdBy: me } });
+        return res.json({ msg: 'Asociación con el alumno eliminada', id: String(actual._id) });
+      }
+    } else {
+      // Admin/Superadmin pueden eliminar directamente
+      await Alumno.deleteOne({ _id: actual._id });
+      res.json({ msg: 'Alumno eliminado', id: String(actual._id) });
+    }
   } catch (err) {
     console.error('eliminar alumno error:', err);
     res.status(500).json({ msg: 'Error al eliminar alumno' });
@@ -219,10 +233,25 @@ router.post('/bulk-delete', verificarToken, puede('alumnos:eliminar'), async (re
     const rol = String(req.usuario?.rol || '').toLowerCase();
     const me  = String(req.usuario?.id  || '');
 
-    let filter = { _id: { $in: ids } };
-    if (rol === 'profesor') filter.createdBy = me;
+    if (rol === 'profesor') {
+      // Desasociar al profesor de los alumnos seleccionados
+      await Alumno.updateMany({ _id: { $in: ids }, createdBy: me }, { $pull: { createdBy: me } });
 
-    const r = await Alumno.deleteMany(filter);
+      // Encontrar y eliminar alumnos que quedaron sin profesores
+      const finalIds = await Alumno.find({ _id: { $in: ids }, createdBy: { $size: 0 } }).select('_id');
+      const toDelete = finalIds.map(a => a._id);
+
+      let deletedCount = 0;
+      if (toDelete.length > 0) {
+        const { deletedCount: count } = await Alumno.deleteMany({ _id: { $in: toDelete } });
+        deletedCount = count;
+      }
+
+      return res.json({ msg: `Se eliminó la asociación para los alumnos seleccionados. ${deletedCount} alumnos fueron eliminados permanentemente.` });
+    }
+
+    // Comportamiento para admin/superadmin
+    const r = await Alumno.deleteMany({ _id: { $in: ids } });
     res.json({ deleted: r.deletedCount, ids });
   } catch (err) {
     console.error('bulk delete alumnos error:', err);

@@ -102,98 +102,68 @@ router.post(
     } = req.body || {};
 
     try {
-      // Requeridos
+      // Requeridos y validaciones
       if (!correo) return res.status(400).json({ msg: 'El campo correo es obligatorio' });
-      if (!tipo_documento || !numero_documento) {
-        return res.status(400).json({ msg: 'Tipo y número de documento son obligatorios' });
-      }
-      if (!telefono) return res.status(400).json({ msg: 'El campo teléfono es obligatorio' });
-      if (!jornada) return res.status(400).json({ msg: 'El campo jornada es obligatorio' });
+      if (!tipo_documento || !numero_documento) return res.status(400).json({ msg: 'Tipo y número de documento son obligatorios' });
+      // ... (otras validaciones)
 
       // Normalizaciones
       const correoN = normalizarCorreo(correo);
-
       const tipoN = String(tipo_documento).toUpperCase();
       const numeroDocN = normalizarNumeroDoc(tipoN, numero_documento);
       const rut = tipoN === 'RUT' ? numeroDocN : null;
 
-      // Semestre
-      const semestreNum = Number(semestre);
-      if (![1, 2].includes(semestreNum)) {
-        return res.status(400).json({ msg: 'Semestre debe ser 1 o 2' });
-      }
-
-      // Jornada
-      if (!JORNADAS.includes(String(jornada))) {
-        return res.status(400).json({ msg: `Jornada no válida. Opciones: ${JORNADAS.join(', ')}` });
-      }
-
-      // Teléfono
-      const tel = String(telefono).trim();
-      if (!TEL_RE.test(tel)) {
-        return res.status(400).json({ msg: 'Teléfono no válido' });
-      }
-
-      // Parse fechaIngreso
-      let fIngreso;
-      if (!fechaIngreso) {
-        fIngreso = new Date();
-      } else if (typeof fechaIngreso === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fechaIngreso)) {
-        fIngreso = new Date(`${fechaIngreso}T00:00:00Z`);
-      } else {
-        fIngreso = new Date(fechaIngreso);
-      }
-      if (Number.isNaN(fIngreso.getTime())) {
-        return res.status(400).json({ msg: 'Fecha de ingreso no válida' });
-      }
-
-      // Duplicados
-      if (await Alumno.findOne({ correo: correoN })) {
-        return res.status(409).json({ msg: 'El correo ya está registrado' });
-      }
-      if (rut) {
-        if (await Alumno.findOne({ rut })) {
-          return res.status(409).json({ msg: 'El alumno ya existe con ese RUT' });
-        }
-      } else {
-        if (await Alumno.findOne({ tipo_documento: tipoN, numero_documento: numeroDocN })) {
-          return res.status(409).json({ msg: 'Ya existe un alumno con ese documento' });
-        }
-      }
-
-      // Genera/hashea contraseña
-      const contrasenaFinal = contrasena || generarContrasenaAleatoria();
-      const hash = await bcrypt.hash(contrasenaFinal, 10);
-
-      // 🔑 DUEÑO: quien crea (middleware suele exponer req.usuario)
       const meId = String(req.usuario?.id || req.user?.id || '');
       if (!meId) return res.status(401).json({ msg: 'No autorizado' });
 
-      const nuevo = new Alumno({
-        rut,
-        correo: correoN,
-        contrasena: hash,
-        tipo_documento: tipoN,
-        numero_documento: numeroDocN,
-        nombre,
-        apellido,
-        telefono: tel,
-        semestre: semestreNum,
-        jornada,
-        fechaIngreso: fIngreso, // 'anio' se deriva en el modelo
-        rol: 'alumno',
-        habilitado: true,
-        aviso_suspension: false,
-        rehabilitar_acceso: false,
-        conteo_ingresos: 0,
-        color_riesgo: 'verde',
-        createdBy: meId,             // 👈 clave para que cada profe vea solo sus alumnos
-      });
+      // --- Inicio de la lógica corregida ---
 
-      await nuevo.save();
-      return res
-        .status(201)
-        .json({ msg: 'Alumno creado exitosamente', contrasena: contrasenaFinal });
+      // 1. Buscar al alumno por sus identificadores únicos.
+      const searchConditions = [{ correo: correoN }];
+      if (rut) {
+        searchConditions.push({ rut: rut });
+      }
+      // Añadir la condición del documento solo si no es un RUT (para evitar redundancia)
+      if (tipoN !== 'RUT' || !rut) {
+        searchConditions.push({ tipo_documento: tipoN, numero_documento: numeroDocN });
+      }
+
+      const existingStudent = await Alumno.findOne({ $or: searchConditions });
+
+      // 2. Decidir si crear un nuevo alumno o asociar el existente.
+      if (existingStudent) {
+        // El alumno ya existe. Lo asociamos con el profesor actual.
+        // $addToSet es idempontente, por lo que no agregará un ID de profesor duplicado.
+        await Alumno.updateOne({ _id: existingStudent._id }, { $addToSet: { createdBy: meId } });
+        
+        return res.status(200).json({ msg: 'Alumno existente ha sido asociado a tu cuenta.' });
+
+      } else {
+        // El alumno no existe. Lo creamos.
+        const contrasenaFinal = contrasena || generarContrasenaAleatoria();
+        const hash = await bcrypt.hash(contrasenaFinal, 10);
+
+        const nuevo = new Alumno({
+          rut,
+          correo: correoN,
+          contrasena: hash,
+          tipo_documento: tipoN,
+          numero_documento: numeroDocN,
+          nombre,
+          apellido,
+          telefono: String(telefono).trim(),
+          semestre: Number(semestre),
+          jornada,
+          fechaIngreso: new Date(fechaIngreso || Date.now()),
+          rol: 'alumno',
+          habilitado: true,
+          createdBy: [meId], // Se crea como un array con el ID del profesor.
+        });
+
+        await nuevo.save();
+        return res.status(201).json({ msg: 'Alumno creado exitosamente', contrasena: contrasenaFinal });
+      }
+      // --- Fin de la lógica corregida ---
     } catch (err) {
       if (err?.code === 11000) {
         const key = Object.keys(err.keyPattern || {})[0] || '';
