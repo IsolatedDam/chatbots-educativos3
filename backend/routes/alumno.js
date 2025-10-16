@@ -9,7 +9,7 @@ const router = express.Router();
 /* ==== Helper búsqueda ==== */
 function buildSearchFilter(q) {
   if (!q) return {};
-  const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const safe = q.replace(/[.*+?^${}()|[\\]/g, '\\$&');
   const like = new RegExp(safe, 'i');
   return {
     $or: [
@@ -40,7 +40,7 @@ router.get(
       const me  = String(req.usuario?.id  || req.user?.id  || '');
 
       const filter = (rol === 'profesor')
-        ? { ...base, createdBy: { $in: [new mongoose.Types.ObjectId(me)] } }
+        ? { ...base, createdBy: me }
         : base;
 
       const alumnos = await Alumno.find(filter).sort({ createdAt: -1 }).lean();
