@@ -44,7 +44,7 @@ router.get(
         : base;
 
       const alumnos = await Alumno.find(filter).sort({ createdAt: -1 }).lean();
-      res.json({ data: alumnos });
+      res.json(alumnos);
     } catch (err) {
       console.error('listar alumnos error:', err);
       res.status(500).json({ msg: 'Error al obtener alumnos' });
