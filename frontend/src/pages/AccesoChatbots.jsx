@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "../styles/AccesoChatbots.css";
+import EditChatbotModal from "./EditChatbotModal";
 
 /* ========= API base ========= */
 const API_ROOT = (() => {
@@ -15,8 +16,24 @@ const API_ROOT = (() => {
 })();
 const API_BASE = `${API_ROOT}/api`;
 
+// Helper para decodificar JWT (simplificado)
+const parseJwt = (token) => {
+  try {
+    return JSON.parse(atob(token.split('.')[1]));
+  } catch (e) {
+    return null;
+  }
+};
+
 export default function AccesoChatbots() {
   const token = localStorage.getItem("token");
+  const [rol, setRol] = useState("");
+
+  useEffect(() => {
+    const usuario = token ? parseJwt(token) : null;
+    setRol(usuario?.rol || "");
+  }, [token]);
+
   const headers = useMemo(
     () => ({ Authorization: `Bearer ${token}`, "Content-Type": "application/json" }),
     [token]
@@ -27,6 +44,7 @@ export default function AccesoChatbots() {
   const [selCat, setSelCat] = useState(""); // nombre de la categoría seleccionada
   const [bots, setBots] = useState([]);     // chatbots de esa categoría
   const [selectedBot, setSelectedBot] = useState(null); // chatbot seleccionado para ver
+  const [editingBot, setEditingBot] = useState(null); // chatbot para editar
 
   const [cargandoCats, setCargandoCats] = useState(false);
   const [cargandoBots, setCargandoBots] = useState(false);
@@ -157,6 +175,24 @@ export default function AccesoChatbots() {
     }
   }
 
+  async function handleUpdateChatbot(updatedBot) {
+    const id = updatedBot._id || updatedBot.id;
+    if (!id) throw new Error("El chatbot no tiene ID");
+
+    const res = await fetch(`${API_BASE}/chatbots/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify(updatedBot),
+    });
+
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(txt || "No se pudo actualizar el chatbot");
+    }
+
+    await Promise.all([cargarBots(selCat), cargarCategorias()]);
+  }
+
   async function eliminarChatbot(id) {
     if (!id) return;
     if (!window.confirm("¿Eliminar este chatbot? Esta acción no se puede deshacer.")) return;
@@ -201,10 +237,13 @@ export default function AccesoChatbots() {
 
   /* ====== helpers ====== */
   function creadoPor(b) {
-    const u = b.createdBy || b.creadoPor || {};
+    if (!b) return "—";
+    const u = b.createdBy || b.creadoPor;
+    if (!u) return "—";
     const parts = [u.nombre, u.apellido, u.apellidos, u.name].filter(Boolean);
     return parts.length ? parts.join(" ") : (u.correo || u.email || u.username || "—");
   }
+
   const fecha = (v) => {
     if (!v) return "—";
     const d = new Date(v);
@@ -419,9 +458,17 @@ export default function AccesoChatbots() {
                           <td>{(b.videos || []).length}</td>
                           <td>
                             <button
+                              className="btn btn-info btn-sm"
+                              title="Editar chatbot"
+                              onClick={() => setEditingBot(b)}
+                            >
+                              Editar
+                            </button>
+                            <button
                               className="btn btn-danger btn-sm"
                               title="Eliminar chatbot"
                               onClick={() => eliminarChatbot(b._id || b.id)}
+                              disabled={rol !== 'admin' && rol !== 'superadmin'}
                             >
                               Eliminar
                             </button>
@@ -438,6 +485,13 @@ export default function AccesoChatbots() {
           )}
         </main>
       </div>
+      {editingBot && (
+        <EditChatbotModal
+          chatbot={editingBot}
+          onClose={() => setEditingBot(null)}
+          onSave={handleUpdateChatbot}
+        />
+      )}
     </div>
   );
 }

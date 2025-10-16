@@ -254,21 +254,16 @@ router.patch(
  * DELETE /api/chatbots/:id
  * elimina un chatbot
  */
-router.delete(
-  "/:id",
-  verificarToken,
-  autorizarRoles("admin", "superadmin"),
-  async (req, res) => {
-    try {
-      const { id } = req.params;
-      const ok = await Chatbot.deleteOne({ _id: id });
-      if (!ok?.deletedCount) return res.status(404).json({ msg: "Chatbot no encontrado" });
-      res.json({ msg: "Chatbot eliminado" });
-    } catch (e) {
-      console.error("DELETE /chatbots/:id error:", e);
-      res.status(500).json({ msg: "No se pudo eliminar el chatbot" });
-    }
+router.delete("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const ok = await Chatbot.deleteOne({ _id: id });
+    if (!ok?.deletedCount) return res.status(404).json({ msg: "Chatbot no encontrado" });
+    res.json({ msg: "Chatbot eliminado" });
+  } catch (e) {
+    console.error("DELETE /chatbots/:id error:", e);
+    res.status(500).json({ msg: "No se pudo eliminar el chatbot" });
   }
-);
+});
 
 module.exports = router;
