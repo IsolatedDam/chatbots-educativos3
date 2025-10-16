@@ -133,8 +133,25 @@ router.post(
       // 2. Decidir si crear un nuevo alumno o asociar el existente.
       if (existingStudent) {
         // El alumno ya existe. Lo asociamos con el profesor actual.
-        // $addToSet es idempontente, por lo que no agregará un ID de profesor duplicado.
-        await Alumno.updateOne({ _id: existingStudent._id }, { $addToSet: { createdBy: meId } });
+        if (Array.isArray(existingStudent.createdBy)) {
+          // Si createdBy ya es un array, usamos $addToSet para añadir el ID del profesor.
+          await Alumno.updateOne(
+            { _id: existingStudent._id },
+            { $addToSet: { createdBy: meId } }
+          );
+        } else {
+          // Si createdBy no es un array (es un solo ID), lo convertimos en un array.
+          const newCreatedBy = new Set();
+          if (existingStudent.createdBy) {
+            newCreatedBy.add(existingStudent.createdBy.toString());
+          }
+          newCreatedBy.add(meId);
+
+          await Alumno.updateOne(
+            { _id: existingStudent._id },
+            { $set: { createdBy: Array.from(newCreatedBy) } }
+          );
+        }
         
         return res.status(200).json({ msg: 'Alumno existente ha sido asociado a tu cuenta.' });
 
