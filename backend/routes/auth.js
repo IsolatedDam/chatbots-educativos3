@@ -1,6 +1,7 @@
 // routes/auth.js
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Alumno = require('../models/Alumno');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -115,6 +116,8 @@ router.post(
 
       const meId = String(req.usuario?.id || req.user?.id || '');
       if (!meId) return res.status(401).json({ msg: 'No autorizado' });
+      
+      const meObjectId = new mongoose.Types.ObjectId(meId);
 
       // --- Inicio de la lógica corregida ---
 
@@ -145,8 +148,8 @@ router.post(
                     in: {
                       $cond: {
                         if: { $isArray: "$current" },
-                        then: { $setUnion: ["$current", [meId]] },
-                        else: { $setUnion: [["$current"], [meId]] }
+                        then: { $setUnion: ["$current", [meObjectId]] },
+                        else: { $setUnion: [["$current"], [meObjectId]] }
                       }
                     }
                   }
@@ -177,7 +180,7 @@ router.post(
           fechaIngreso: new Date(fechaIngreso || Date.now()),
           rol: 'alumno',
           habilitado: true,
-          createdBy: [meId], // Se crea como un array con el ID del profesor.
+          createdBy: [meObjectId], // Se crea como un array con el ID del profesor.
         });
 
         await nuevo.save();

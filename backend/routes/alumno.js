@@ -40,19 +40,11 @@ router.get(
       const me  = String(req.usuario?.id  || req.user?.id  || '');
 
       const filter = (rol === 'profesor')
-        ? { ...base, createdBy: { $in: [me] } } // Busca si el ID del profesor está en el array
+        ? { ...base, createdBy: new mongoose.Types.ObjectId(me) }
         : base;
 
       const alumnos = await Alumno.find(filter).sort({ createdAt: -1 }).lean();
-      res.json({ 
-        debug: {
-          mensaje: "Versión de código para depuración activa.",
-          filtro: filter,
-          alumnosEncontrados: alumnos.length,
-          profesorId: me
-        },
-        data: alumnos 
-      });
+      res.json({ data: alumnos });
     } catch (err) {
       console.error('listar alumnos error:', err);
       res.status(500).json({ msg: 'Error al obtener alumnos' });

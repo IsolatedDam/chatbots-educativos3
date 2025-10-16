@@ -25,7 +25,7 @@ export default function DatosAlumnos({ canDeleteAlumno, canEditEstado, canEditRi
     try{ const token=localStorage.getItem("token"); const url=`${API_BASE}/alumnos${q?`?q=${encodeURIComponent(q)}`:""}`;
       const res=await fetch(url,{ headers:{ Authorization:`Bearer ${token}` }});
       if(!res.ok) throw new Error("No autorizado"); const data=await res.json();
-      setAlumnos(Array.isArray(data)?data:[]); setSelected(new Set());
+      setAlumnos(Array.isArray(data.data) ? data.data : []); setSelected(new Set());
     }catch(e){ alert(e.message||"No se pudieron cargar alumnos"); } finally{ setLoading(false); }
   }
   useEffect(()=>{ fetchAlumnos(""); },[]);
