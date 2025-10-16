@@ -169,9 +169,10 @@ function CargarAlumno() {
       "jornada",
     ];
 
+    // En la función downloadTemplate, cambiar el ejemplo para usar un dominio genérico
     const ejemplo = [
       [
-        "alumno1@gmail.com", // dominio permitido
+        "alumno1@ejemplo.com", // dominio libre
         "Juan",
         "Pérez",
         "RUT",
@@ -187,6 +188,7 @@ function CargarAlumno() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "alumnos");
 
+    // También, actualizar las instrucciones si es necesario
     const ayuda = XLSX.utils.aoa_to_sheet([
       ["Instrucciones"],
       ["- No cambies los encabezados."],
@@ -194,6 +196,7 @@ function CargarAlumno() {
       ["- telefono: 8–12 dígitos, puede iniciar con + (ej: +56912345678)"],
       ["- semestre: 1 o 2"],
       ["- jornada: Mañana | Tarde | Vespertino | Viernes | Sábados | Blearning | Online | Otras"],
+      ["- correo: cualquier dominio válido (ej: gmail.com, hotmail.com, institucional.cl, etc.)"], // Agregar nota sobre dominio libre
     ]);
     XLSX.utils.book_append_sheet(wb, ayuda, "ayuda");
 

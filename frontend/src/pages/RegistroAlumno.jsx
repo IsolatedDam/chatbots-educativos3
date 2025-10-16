@@ -3,17 +3,6 @@ import axios from 'axios';
 import '../styles/RegistroAlumno.css';
 import Swal from 'sweetalert2';
 
-const ALLOWED_EMAIL_DOMAINS = new Set([
-  'gmail.com',
-  'hotmail.com', 'hotmail.cl',
-  'outlook.com', 'outlook.cl',
-  'live.com',
-  'yahoo.com',
-  'icloud.com',
-  'masoterapiachile.cl',
-  // agrega tus dominios institucionales/empresa:
-  // 'duocuc.cl', 'uc.cl', 'usach.cl', 'miempresa.cl'
-]);
 const JORNADAS = ["Mañana", "Tarde", "Vespertino", "Viernes", "Sábados", "Blearning", "Online", "Otras"];
 
 function RegistroAlumno() {
@@ -37,8 +26,6 @@ function RegistroAlumno() {
   // Validación simple de sintaxis de email (la validación de dominio real la hace el backend)
   const isEmailSyntaxValid = (email = '') =>
     /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(String(email).trim());
-  const getDomain = (email = '') => String(email).trim().toLowerCase().split('@')[1] || '';
-  const isAllowedEmailDomain = (email = '') => ALLOWED_EMAIL_DOMAINS.has(getDomain(email));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,13 +44,6 @@ function RegistroAlumno() {
     if (!isEmailSyntaxValid(form.correo)) {
       setMensaje('Correo con formato inválido.');
       setTimeout(() => setMensaje(''), 2500);
-      return;
-    }
-
-    // === NUEVO: validar dominio permitido ===
-    if (!isAllowedEmailDomain(form.correo)) {
-      setMensaje('Dominio de correo no permitido. Usa: ' + [...ALLOWED_EMAIL_DOMAINS].join(', '));
-      setTimeout(() => setMensaje(''), 3500);
       return;
     }
 
@@ -168,7 +148,6 @@ function RegistroAlumno() {
           value={form.correo}
           onChange={handleChange}
           className="input-field"
-          title={`Dominios permitidos: ${[...ALLOWED_EMAIL_DOMAINS].join(', ')}`}
         />
         <input type="text" name="nombre" placeholder="Nombre(s)" value={form.nombre} onChange={handleChange} className="input-field" />
         <input type="text" name="apellido" placeholder="Apellido(s)" value={form.apellido} onChange={handleChange} className="input-field" />

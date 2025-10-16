@@ -29,30 +29,6 @@ function generarContrasenaAleatoria(longitud = 10) {
 const JORNADAS = ['Mañana', 'Tarde', 'Vespertino', 'Viernes', 'Sábados', 'Blearning', 'Online', 'Otras'];
 const TEL_RE = /^\+?\d{8,12}$/;
 
-/* ========== Whitelist de dominios permitidos (con soporte ENV) ========== */
-const DEFAULT_ALLOWED_DOMAINS = [
-  'gmail.com',
-  'hotmail.com', 'hotmail.cl',
-  'outlook.com', 'outlook.cl',
-  'live.com',
-  'yahoo.com',
-  'icloud.com',
-  'masoterapiachile.cl',
-  // agrega aquí tus dominios institucionales:
-  // 'duocuc.cl', 'uc.cl', 'usach.cl', 'miempresa.cl'
-];
-
-const fromEnv = (process.env.ALLOWED_EMAIL_DOMAINS || '')
-  .split(',')
-  .map(s => s.trim().toLowerCase())
-  .filter(Boolean);
-
-const ALLOWED_EMAIL_DOMAINS = new Set((fromEnv.length ? fromEnv : DEFAULT_ALLOWED_DOMAINS));
-
-function getDomainFromEmail(email = '') {
-  return String(email).trim().toLowerCase().split('@')[1] || '';
-}
-
 /* ===========================================================
    POST /api/login  (Alumno)
    - Permite login con RUT (o con contraseña si existe)
@@ -136,14 +112,6 @@ router.post(
 
       // Normalizaciones
       const correoN = normalizarCorreo(correo);
-      const emailDomain = getDomainFromEmail(correoN);
-
-      // 🚫 Validar dominio permitido
-      if (!ALLOWED_EMAIL_DOMAINS.has(emailDomain)) {
-        return res.status(400).json({
-          msg: `Dominio de correo no permitido. Usa: ${[...ALLOWED_EMAIL_DOMAINS].join(', ')}`
-        });
-      }
 
       const tipoN = String(tipo_documento).toUpperCase();
       const numeroDocN = normalizarNumeroDoc(tipoN, numero_documento);
