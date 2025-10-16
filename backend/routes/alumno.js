@@ -44,7 +44,15 @@ router.get(
         : base;
 
       const alumnos = await Alumno.find(filter).sort({ createdAt: -1 }).lean();
-      res.json(alumnos);
+      res.json({ 
+        debug: {
+          mensaje: "Versión de código para depuración activa.",
+          filtro: filter,
+          alumnosEncontrados: alumnos.length,
+          profesorId: me
+        },
+        data: alumnos 
+      });
     } catch (err) {
       console.error('listar alumnos error:', err);
       res.status(500).json({ msg: 'Error al obtener alumnos' });
