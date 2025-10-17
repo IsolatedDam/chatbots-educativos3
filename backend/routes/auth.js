@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const Alumno = require('../models/Alumno');
+const Visita = require('../models/Visita'); // Importar el modelo Visita
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -59,6 +60,14 @@ router.post('/login', async (req, res) => {
     if (alumno.habilitado === false) {
       return res.status(403).json({ msg: 'Tu acceso está deshabilitado' });
     }
+
+    // Registrar visita (no bloqueante)
+    const visita = new Visita({
+      nombre: [alumno.nombre, alumno.apellido].filter(Boolean).join(' ') || 'Alumno',
+      correo: alumno.correo,
+      whatsapp: alumno.telefono || '-'
+    });
+    visita.save().catch(err => console.error('Error al guardar visita:', err));
 
     // no await intencional
     Alumno.findByIdAndUpdate(alumno._id, { $inc: { conteo_ingresos: 1 } }).catch(() => {});

@@ -7,7 +7,8 @@ import RegistroAlumno from "./RegistroAlumno";
 import CargarAlumnos from "./CargarAlumnos";
 import DatosAlumnos from "./DatosAlumnos";
 import CursosProfesor from "./CursosProfesor";
-import AccesoChatbots from "./AccesoChatbots";   // <-- NUEVO IMPORT
+import AccesoChatbots from "./AccesoChatbots";
+import VisitasAlumnos from './VisitasAlumnos'; // <-- NUEVO COMPONENTE
 
 export default function PanelProfesor() {
   // Vista activa
@@ -155,6 +156,7 @@ export default function PanelProfesor() {
           {canLoadMassive && (
             <li className={liClass("carga")} onClick={() => setVistaActiva("carga")}>Carga masiva</li>
           )}
+          <li className={liClass("actividad")} onClick={() => setVistaActiva("actividad")}>Actividad de Alumnos</li>
         </ul>
 
         <div style={{ marginTop: "auto", padding: "1rem" }}>
@@ -210,8 +212,13 @@ export default function PanelProfesor() {
 
         {vistaActiva === "chatbots" && (
           <section className="section">
-            {/* Ahora todo vive en su propio componente */}
             <AccesoChatbots token={localStorage.getItem("token")} me={me} />
+          </section>
+        )}
+
+        {vistaActiva === "actividad" && (
+          <section className="section">
+            <VisitasAlumnos />
           </section>
         )}
 

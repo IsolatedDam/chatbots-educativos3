@@ -12,7 +12,10 @@ function VisitasRegistradas() {
   useEffect(() => {
     const fetchVisitas = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/api/visitas`);
+        const token = localStorage.getItem('token');
+        const res = await axios.get(`${API_BASE}/api/visitas`, {
+          headers: { Authorization: `Bearer ${token || ''}` },
+        });
         setVisitas(res.data);
       } catch (err) {
         console.error('Error al obtener visitas:', err);
@@ -24,10 +27,10 @@ function VisitasRegistradas() {
   const descargarExcel = async () => {
     try {
       setDescargando(true);
-
+      const token = localStorage.getItem('token');
       const res = await axios.get(`${API_BASE}/api/visitas/exportar`, {
         responseType: 'blob',
-        // headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+        headers: { Authorization: `Bearer ${token || ''}` },
       });
 
       const blob = res.data;
