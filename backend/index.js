@@ -68,6 +68,7 @@ app.use("/api/password", require("./routes/password"));
 console.log("MONTADA: /api/password");
 app.use("/api/chatbot-categorias", require("./routes/chatbot-categorias"));
 app.use("/api", require("./routes/alumno-chatbots"));              // endpoints de permisos
+app.use("/api/guest-panel", require("./routes/guest-panel"));
 
 app.get("/", (_req, res) => res.send("🚀 API funcionando correctamente en Render"));
 app.get("/health", (_req, res) => res.json({ ok: true, mongo: mongoose.connection.readyState })); // 1=ok

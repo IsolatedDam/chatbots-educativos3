@@ -13,6 +13,7 @@ import RegistroAdmin from './RegistroAdmin';
 import CargarAlumnos from './CargarAlumnos';
 import GestionarUsuarios from './GestionarUsuarios';
 import VisitasRegistradas from './VisitasRegistradas';
+import EditarPanelVisita from './EditarPanelVisita';
 
 function PanelAdmin() {
   // Vista por defecto: 'inicio' (iframe)
@@ -81,8 +82,8 @@ function PanelAdmin() {
             Gestionar Usuarios
           </li>
 
-          <li className={liClass('asignarChatbots')} onClick={() => setVistaActiva('asignarChatbots')}>
-            Asignar Chatbots
+          <li className={liClass('editarPanelVisita')} onClick={() => setVistaActiva('editarPanelVisita')}>
+            Editar Panel Visita
           </li>
 
           <li className={liClass('cargarAlumnos')} onClick={() => setVistaActiva('cargarAlumnos')}>
@@ -120,7 +121,7 @@ function PanelAdmin() {
         {/* {vistaActiva === 'registroProfesor' && (esSuper || esAdmin) && <RegistroProfesor />} */}
 
         {vistaActiva === 'usuarios' && <GestionarUsuarios />}
-        {vistaActiva === 'asignarChatbots' && <p>Aquí irá la asignación de chatbots.</p>}
+        {vistaActiva === 'editarPanelVisita' && <EditarPanelVisita />}
         {vistaActiva === 'cargarAlumnos' && <CargarAlumnos />}
         {vistaActiva === 'visitas' && <VisitasRegistradas />}
       </main>

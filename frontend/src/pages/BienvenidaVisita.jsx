@@ -1,49 +1,131 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../styles/PanelAlumno.css'; // Cambiar a PanelAlumno.css para usar los mismos estilos
+import '../styles/PanelAlumno.css';
 
-const CHATBOT_SRC =
-  'https://aipoweredchatbot-production.up.railway.app/chatbot/68d1694d375d7acbb68821ff?key=PDykle3B8BEfzdIjR8XN__jQ4UPgU6x-JjAKt_SdWAnYrFHslUNeZH5NHZgOAh2M';
+/* ===== API local/remota ===== */
+const API_ROOT = (() => {
+  const vite = typeof import.meta !== "undefined" ? import.meta.env?.VITE_API_ROOT : undefined;
+  const cra  = typeof process !== "undefined" ? process.env?.REACT_APP_API_ROOT : undefined;
+  if (vite) return vite;
+  if (cra)  return cra;
+  if (typeof window !== "undefined") {
+    const { hostname } = window.location;
+    if (hostname === "localhost" || hostname === "127.0.0.1") return "http://localhost:5000";
+  }
+  return "https://chatbots-educativos3-vhfq.onrender.com";
+})();
+const API_BASE = `${API_ROOT}/api`;
 
 export default function BienvenidaVisita() {
   const navigate = useNavigate();
-  const [seccion, setSeccion] = useState('inicio'); // Estado para la sección activa
+  const [seccion, setSeccion] = useState('inicio');
+  const [config, setConfig] = useState(null);
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    const t = setTimeout(() => setCargando(false), 7000);
-    return () => clearTimeout(t);
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/guest-panel`);
+        if (!response.ok) {
+          throw new Error('No se pudo cargar la configuración del panel.');
+        }
+        const data = await response.json();
+        setConfig(data);
+      } catch (error) {
+        console.error("Error fetching guest panel config", error);
+        // Optionally, set an error state to show in the UI
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    fetchConfig();
   }, []);
 
-  // Temporizador para cerrar sesión automáticamente después de 30 minutos
+  // Auto-logout timer
   useEffect(() => {
     const timeout = setTimeout(() => {
       alert('Tu sesión de visita ha expirado. Serás redirigido a la página principal.');
       navigate('/');
-    }, 30 * 60 * 1000); // 30 minutos en milisegundos
+    }, 30 * 60 * 1000);
 
-    return () => clearTimeout(timeout); // Limpiar al desmontar
+    return () => clearTimeout(timeout);
   }, [navigate]);
 
-  if (cargando) {
+  const cerrarSesion = () => {
+    navigate('/');
+  };
+
+  if (cargando || !config) {
     return (
       <div className="visit-loading">
         <div className="visit-spinner" />
         <p className="visit-loading-text">
-          Bienvenido a Masoterapia, te estamos redirigiendo a nuestra página… ⏳
+          Cargando recursos... ⏳
         </p>
       </div>
     );
   }
 
-  const cerrarSesion = () => {
-    navigate('/'); // Lleva a la página principal
+  const renderContent = () => {
+    if (seccion === 'inicio') {
+      return (
+        <section className="card">
+          <h3 className="card-title">{config.welcome.title}</h3>
+          <p>{config.welcome.text}</p>
+        </section>
+      );
+    }
+
+    if (seccion === 'videos') {
+      return (
+        <section className="card">
+          <h3 className="card-title">Videos Educativos</h3>
+          {config.videos.length > 0 ? (
+            config.videos.map(video => (
+              <div key={video._id} className="video-container">
+                <h4>{video.title}</h4>
+                <iframe
+                  src={video.videoUrl}
+                  title={video.title}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+            ))
+          ) : (
+            <p>No hay videos disponibles en este momento.</p>
+          )}
+        </section>
+      );
+    }
+
+    // Handle chatbot sections
+    const chatbot = config.chatbots.find(cb => cb._id === seccion);
+    if (chatbot) {
+      return (
+        <section className="card">
+          <h3 className="card-title">{chatbot.title}</h3>
+          <div className="iframe-wrap">
+            <iframe
+              src={chatbot.iframeUrl}
+              title={chatbot.title}
+              frameBorder="0"
+              allow="clipboard-write; microphone"
+              style={{ width: '100%', height: '600px' }}
+            />
+          </div>
+        </section>
+      );
+    }
+
+    return null; // Or a default message
   };
 
   return (
-    <div className="al-theme"> {/* Usar clases de PanelAlumno.css */}
+    <div className="al-theme">
       <div className="al-layout">
-        {/* Sidebar */}
         <aside className="al-sidebar">
           <div className="brand">
             <div className="logo">🤖</div>
@@ -57,21 +139,23 @@ export default function BienvenidaVisita() {
             <button className={`nav-item ${seccion === 'inicio' ? 'active' : ''}`} onClick={() => setSeccion('inicio')}>
               <span className="nav-ico">🏠</span><span>Inicio</span>
             </button>
-            <button className={`nav-item ${seccion === 'chatbot1' ? 'active' : ''}`} onClick={() => setSeccion('chatbot1')}>
-              <span className="nav-ico">💬</span><span>Chatbot Prueba</span>
-            </button>
-            <button className={`nav-item ${seccion === 'chatbot2' ? 'active' : ''}`} onClick={() => setSeccion('chatbot2')}>
-              <span className="nav-ico">🤖</span><span>Otro Chatbot</span>
-            </button>
-            <button className={`nav-item ${seccion === 'videos' ? 'active' : ''}`} onClick={() => setSeccion('videos')}>
-              <span className="nav-ico">🎥</span><span>Videos</span>
-            </button>
+            
+            {config.chatbots.map(chatbot => (
+              <button key={chatbot._id} className={`nav-item ${seccion === chatbot._id ? 'active' : ''}`} onClick={() => setSeccion(chatbot._id)}>
+                <span className="nav-ico">💬</span><span>{chatbot.title}</span>
+              </button>
+            ))}
+
+            {config.videos.length > 0 && (
+              <button className={`nav-item ${seccion === 'videos' ? 'active' : ''}`} onClick={() => setSeccion('videos')}>
+                <span className="nav-ico">🎥</span><span>Videos</span>
+              </button>
+            )}
           </nav>
 
           <button className="btn btn-logout" onClick={cerrarSesion}>Cerrar sesión</button>
         </aside>
 
-        {/* Main */}
         <main className="al-main">
           <header className="al-header">
             <div className="titles">
@@ -80,43 +164,7 @@ export default function BienvenidaVisita() {
             </div>
           </header>
 
-          {/* Contenido según sección */}
-          {seccion === 'inicio' && (
-            <section className="card">
-              <h3 className="card-title">Bienvenido a Masoterapia</h3>
-              <p>Aquí irá información adicional que agregaremos después.</p>
-            </section>
-          )}
-
-          {seccion === 'chatbot1' && (
-            <section className="card">
-              <h3 className="card-title">Chatbot de Prueba</h3>
-              <div className="iframe-wrap">
-                <iframe
-                  src={CHATBOT_SRC}
-                  title="Chatbot de prueba — Masoterapia"
-                  frameBorder="0"
-                  allow="clipboard-write; microphone"
-                  style={{ width: '100%', height: '600px' }} // Ajustar altura
-                />
-              </div>
-            </section>
-          )}
-
-          {seccion === 'chatbot2' && (
-            <section className="card">
-              <h3 className="card-title">Otro Chatbot</h3>
-              <p>Placeholder para otro chatbot. Agregaremos el iframe después.</p>
-              {/* Aquí puedes agregar otro iframe si tienes la URL */}
-            </section>
-          )}
-
-          {seccion === 'videos' && (
-            <section className="card">
-              <h3 className="card-title">Videos Educativos</h3>
-              <p>Aquí se mostrarán los videos que agregaremos después.</p>
-            </section>
-          )}
+          {renderContent()}
         </main>
       </div>
     </div>

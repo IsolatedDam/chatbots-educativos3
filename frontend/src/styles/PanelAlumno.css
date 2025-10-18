@@ -138,3 +138,21 @@
   .cards-grid{ grid-template-columns: 1fr; }
   .cb-cards.grid.two{ grid-template-columns: 1fr; }
 }
+
+/* Video container styles */
+.video-container {
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.video-container h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.video-container iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+}
