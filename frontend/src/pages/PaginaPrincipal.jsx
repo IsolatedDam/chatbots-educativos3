@@ -15,7 +15,7 @@ function PaginaPrincipal() {
             className="boton-icono"
           >
             <img
-              src="/masoterapia.jpg"
+              src="/B1.png"
               alt="Masoterapia Chile"
               className="icono"
             />
@@ -26,7 +26,7 @@ function PaginaPrincipal() {
             onClick={() => navigate('/login')}
           >
             <img
-              src="/logopagina.png"
+              src="/B2.png"
               alt="Ingreso Alumno"
               className="icono"
             />
@@ -37,7 +37,7 @@ function PaginaPrincipal() {
             onClick={() => navigate('/login-invitado')}
           >
             <img
-              src="/logoinvitado.png"
+              src="/B3.png"
               alt="Ingreso Invitado"
               className="icono"
             />

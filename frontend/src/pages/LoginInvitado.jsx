@@ -118,7 +118,7 @@ function LoginInvitado() {
   return (
     <div className="login-wrapper">
       <div className="login-container">
-        <img src="/01.jpg" alt="Logo" className="login-logo" />
+        <img src="/Logo-IA.png" alt="Logo" className="login-logo" />
         <h2>Ingreso como Visita</h2>
         <p className="login-info">Completa los datos para acceder como invitado.</p>
 
