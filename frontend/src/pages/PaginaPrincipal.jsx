@@ -67,6 +67,7 @@ function PaginaPrincipal() {
                 className="icono"
               />
             </div>
+
           </div>
         </div> {/* Fin de .botones-centrales */}
         
