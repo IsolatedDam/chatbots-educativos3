@@ -1,29 +1,177 @@
-.pagina-principal {
-  height: 100vh;
-  background: url("../../public/BG-IA.jpg");
-  background-size: cover; /* Cubre toda la pantalla */
-  background-position: center; /* Centra la imagen */
-  background-repeat: no-repeat; /* No repite la imagen */
-  display: flex;
-  justify-content: center;
-  align-items: center;
+/* --- 
+  ESTILOS CORREGIDOS PARA PAGINAPRINCIPAL.JS
+--- */
+
+@font-face {
+  font-family: 'Big John';
+  /* Ajusta la ruta si pusiste la fuente en otro lugar */
+  src: url('../../public/fonts/BigJohn.otf') format('otf');
+  /* Si solo tienes .ttf, puedes usar: 
+     src: url('/fonts/BigJohn.ttf') format('truetype'); 
+  */
+  font-weight: normal;
+  font-style: normal;
 }
 
-/* Encabezado con color principal */
+/* 1. CONTENEDOR PRINCIPAL
+ * Aquí estaba el error principal.
+ */
+.pagina-principal {
+  min-height: 100vh;
+  background: url("../../public/BG-IA.jpg"); /* Tu fondo */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  
+  /* --- ESTA ES LA CORRECCIÓN CLAVE --- */
+  display: flex;
+  flex-direction: column;  /* <-- CAMBIADO: Alinear verticalmente */
+  align-items: center;     /* <-- CAMBIADO: Centrar horizontalmente */
+  justify-content: space-between; /* <-- CAMBIADO: Distribuir espacio */
+  
+  padding: 2rem 1rem; /* Añadir padding para que no se pegue a los bordes */
+  box-sizing: border-box; /* Importante para el padding */
+  color: white; /* Color de texto por defecto */
+}
+
+/* 2. LOGO SUPERIOR
+ * (Tu estilo ya estaba bien)
+ */
+.logo-principal {
+  max-width: 400px;
+  width: 100%; /* Para que sea responsive */
+  height: auto;
+  margin-bottom: 2rem;
+}
+
+/* 3. CONTENEDOR DE CONTENIDO
+ * (Envuelve el eslogan y los botones)
+ */
+.contenido {
+  display: flex;
+  /* --- ESTA ES LA SEGUNDA CORRECCIÓN --- */
+  flex-direction: column; /* <-- AÑADIDO: Pone el slogan SOBRE los botones */
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+/* 4. ESLOGAN
+ * (Se le añadió color)
+ */
+.slogan {
+  font-family: 'Big John', sans-serif;
+  font-size: 1.5rem;
+  font-weight: bold;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-top: -2rem;
+  margin-bottom: 2.5rem;
+  color: white; /* <-- AÑADIDO: Color de texto */
+  text-shadow: 0 0 10px rgba(0, 194, 255, 0.7); /* Efecto neón de la imagen */
+}
+
+/* 5. SECCIÓN DE BOTONES
+ * (Tu estilo de 'gap' y 'justify' estaba bien)
+ */
+.botones-centrales {
+  display: flex;
+  gap: 4rem; /* Tu preferencia de 4rem */
+  justify-content: center;
+  align-items: flex-start; /* Alinea las columnas por arriba */
+  flex-wrap: wrap; /* Para que se adapten a móviles */
+  width: 100%;
+}
+
+/* --- 6. ESTILOS FALTANTES (¡MUY IMPORTANTES!) --- */
+
+/* La columna individual (botón + descripción) */
+.columna-boton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 280px; /* Ancho fijo para cada columna (ajusta si quieres) */
+}
+
+/* La caja de descripción de texto */
+.descripcion-boton {
+  background-color: rgba(14, 23, 54, 0.7); /* Fondo oscuro semitransparente */
+  border: 1px solid rgba(0, 194, 255, 0.5); /* Borde azulado */
+  border-radius: 10px;
+  padding: 1rem;
+  margin-top: 1rem; /* Espacio entre el botón y la descripción */
+  width: 100%;
+  min-height: 130px; /* Alto mínimo para alinear */
+  box-sizing: border-box;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  font-weight: 500;
+  color: #e0e0e0;
+}
+
+/* --- 7. TUS ESTILOS DE BOTÓN (CORREGIDOS) --- */
+    
+.boton-icono {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  display: block; /* Asegura que el 'a' o 'div' se comporte bien */
+}
+
+.boton-icono:hover {
+  transform: scale(1.05); /* Tu hover (1.1 era un poco grande) */
+}
+
+.icono {
+  /* --- CORRECCIÓN DE IMAGEN --- */
+  width: 100%;     /* <-- CAMBIADO: Que se ajuste a la columna */
+  max-width: 250px; /* <-- CAMBIADO: Límite de ancho */
+  height: auto;     /* <-- CAMBIADO: Evita distorsión de la imagen */
+  border-radius: 12px;
+}
+
+/* 8. FOOTER (URL INFERIOR)
+ * (Se le añadió color)
+ */
+.footer-url {
+  font-family: 'Big John', sans-serif;
+  width: 100%;
+  text-align: center;
+  margin-top: 3rem;
+  font-size: 1rem;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  color: white; /* <-- AÑADIDO: Color de texto */
+}
+
+/* 9. RESPONSIVE PARA MÓVILES (Recomendado) */
+@media (max-width: 960px) {
+  
+  .botones-centrales {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+  
+  .columna-boton {
+    width: 90%;
+    max-width: 350px;
+  }
+}
+
+/* --- 
+  Estilos que tenías pero no se usan en PaginaPrincipal.js
+  (Los dejo comentados por si los usas en otra parte)
+--- */
+
+/*
 .encabezado {
   padding: 20px 0;
   text-align: center;
   font-size: 2rem;
   font-weight: bold;
-  background-color: #CCEAF4; /* Celeste claro */
+  background-color: #CCEAF4;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   color: #232323;
-}
-
-.contenido {
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 
 .boton-img-lateral {
@@ -39,30 +187,8 @@
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
 }
 
-
 .zona-central .slick-slider {
   width: 100%;
   max-width: 900px;
 }
-
-.botones-centrales {
-  display: flex;
-  gap: 4rem; /* Más separados */
-  justify-content: center;
-  align-items: center;
-}
-
-.boton-icono {
-  cursor: pointer;
-  transition: transform 0.2s ease;
-}
-
-.boton-icono:hover {
-  transform: scale(1.1);
-}
-
-.icono {
-  width: 250px; /* Más grandes */
-  height: 250px;
-  border-radius: 12px;
-}
+*/
