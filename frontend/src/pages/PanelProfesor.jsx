@@ -126,41 +126,54 @@ export default function PanelProfesor() {
   }, []); // mount
 
   const liClass = (key) => (vistaActiva === key ? "active" : "");
+  const [isSidebarVisible, setSidebarVisible] = useState(false);
+
+  const handleMenuClick = (vista) => {
+    setVistaActiva(vista);
+    if (window.innerWidth <= 768) {
+      setSidebarVisible(false);
+    }
+  };
 
   return (
     <div className="admin-panel">
       {/* Sidebar */}
-      <aside className="admin-sidebar">
-        <h2>Panel Profesor</h2>
+      <aside className={`admin-sidebar ${isSidebarVisible ? 'sidebar-visible' : ''}`}>
+        <button className="hamburger-menu" onClick={() => setSidebarVisible(!isSidebarVisible)}>
+          ☰ Menú
+        </button>
+        <div className="sidebar-content">
+          <h2>Panel Profesor</h2>
 
-        {/* Chip de usuario */}
-        <div className="user-chip">
-          <div className="user-avatar" aria-hidden>{initials}</div>
-          <div className="user-meta">
-            <div className="user-name" title={displayName}>{displayName}</div>
-            <div className="user-role">{role || "—"}</div>
+          {/* Chip de usuario */}
+          <div className="user-chip">
+            <div className="user-avatar" aria-hidden>{initials}</div>
+            <div className="user-meta">
+              <div className="user-name" title={displayName}>{displayName}</div>
+              <div className="user-role">{role || "—"}</div>
+            </div>
           </div>
-        </div>
 
-        <ul>
-          <li className={liClass("cuenta")} onClick={() => setVistaActiva("cuenta")}>Mi cuenta</li>
-          <li className={liClass("inicio")} onClick={() => setVistaActiva("inicio")}>Página Chatbots</li>
-          <li className={liClass("datos")} onClick={() => setVistaActiva("datos")}>Datos del alumno</li>
-          <li className={liClass("cursos")} onClick={() => setVistaActiva("cursos")}>Cursos</li>
-          <li className={liClass("chatbots")} onClick={() => setVistaActiva("chatbots")}>Acceso a chatbots</li>
+          <ul>
+            <li className={liClass("cuenta")} onClick={() => handleMenuClick("cuenta")}>Mi cuenta</li>
+            <li className={liClass("inicio")} onClick={() => handleMenuClick("inicio")}>Página Chatbots</li>
+            <li className={liClass("datos")} onClick={() => handleMenuClick("datos")}>Datos del alumno</li>
+            <li className={liClass("cursos")} onClick={() => handleMenuClick("cursos")}>Cursos</li>
+            <li className={liClass("chatbots")} onClick={() => handleMenuClick("chatbots")}>Acceso a chatbots</li>
 
-          {/* Siempre visible */}
-          <li className={liClass("registro")} onClick={() => setVistaActiva("registro")}>Registrar alumno</li>
+            {/* Siempre visible */}
+            <li className={liClass("registro")} onClick={() => handleMenuClick("registro")}>Registrar alumno</li>
 
-          {/* Carga masiva (si permiso) */}
-          {canLoadMassive && (
-            <li className={liClass("carga")} onClick={() => setVistaActiva("carga")}>Carga masiva</li>
-          )}
-          <li className={liClass("actividad")} onClick={() => setVistaActiva("actividad")}>Actividad de Alumnos</li>
-        </ul>
+            {/* Carga masiva (si permiso) */}
+            {canLoadMassive && (
+              <li className={liClass("carga")} onClick={() => handleMenuClick("carga")}>Carga masiva</li>
+            )}
+            <li className={liClass("actividad")} onClick={() => handleMenuClick("actividad")}>Actividad de Alumnos</li>
+          </ul>
 
-        <div style={{ marginTop: "auto", padding: "1rem" }}>
-          <button className="btn btn-danger" onClick={handleLogout}>Cerrar sesión</button>
+          <div style={{ marginTop: "auto", padding: "1rem" }}>
+            <button className="btn btn-danger" onClick={handleLogout}>Cerrar sesión</button>
+          </div>
         </div>
       </aside>
 

@@ -427,10 +427,10 @@ export default function AccesoChatbots() {
               <div className="cb-tablewrap">
                 <table className="cb-table">
                   <colgroup>
-                    <col style={{width:"30%"}} />
-                    <col style={{width:"20%"}} />
-                    <col style={{width:"20%"}} />
-                    <col style={{width:"15%"}} />
+                    <col style={{width:"25%"}} />
+                    <col style={{width:"25%"}} />
+                    <col style={{width:"25%"}} />
+                    <col style={{width:"10%"}} />
                     <col style={{width:"15%"}} />
                   </colgroup>
                   <thead>
@@ -448,15 +448,15 @@ export default function AccesoChatbots() {
                     ) : bots.length ? (
                       bots.map(b => (
                         <tr key={b._id || b.id}>
-                          <td className="cb-ellipsis">
+                          <td data-label="Nombre" className="cb-ellipsis">
                             <button className="btn btn-link" onClick={() => setSelectedBot(b)}>
                               {b.nombre || "—"}
                             </button>
                           </td>
-                          <td>{creadoPor(b)}</td>
-                          <td>{fecha(b.createdAt)}</td>
-                          <td>{(b.videos || []).length}</td>
-                          <td>
+                          <td data-label="Creado por">{creadoPor(b)}</td>
+                          <td data-label="Creado">{fecha(b.createdAt)}</td>
+                          <td data-label="Videos">{(b.videos || []).length}</td>
+                          <td data-label="Acciones">
                             <button
                               className="btn btn-info btn-sm"
                               title="Editar chatbot"

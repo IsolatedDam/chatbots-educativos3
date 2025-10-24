@@ -1,4 +1,8 @@
 /* ===================== LAYOUT BASE ===================== */
+* {
+  box-sizing: border-box;
+}
+
 .admin-panel{
   display:flex;
   height:100vh;
@@ -234,10 +238,73 @@
 }
 
 /* ===================== RESPONSIVE ===================== */
+.hamburger-menu {
+  display: none;
+}
+
 @media (max-width:900px){
   .admin-sidebar{width:200px}
   .toolbar{gap:8px}
   .toolbar .search{max-width:100%}
   .toolbar .select{min-width:140px}
   .datos-table-wrap{max-height:calc(100vh - 220px);}
+}
+
+@media (max-width: 768px) {
+  .admin-panel {
+    flex-direction: column;
+  }
+
+  .admin-sidebar {
+    width: 100%;
+    height: auto;
+    position: static;
+    transform: none;
+  }
+
+  .admin-sidebar .sidebar-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-in-out;
+  }
+
+  .admin-sidebar.sidebar-visible .sidebar-content {
+    max-height: 1000px; /* Un valor suficientemente grande */
+  }
+
+  .admin-main {
+    width: 100%;
+    padding: 20px;
+  }
+
+  .hamburger-menu {
+    display: block;
+    background: #005D8C;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar .search, .toolbar .select, .toolbar .btn {
+    max-width: 100%;
+    width: 100%;
+    margin-left: 0 !important;
+  }
+
+  .toolbar > div[style*="margin-left:auto"] {
+    margin-left: 0 !important;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
 }

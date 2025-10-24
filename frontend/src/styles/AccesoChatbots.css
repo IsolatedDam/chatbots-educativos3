@@ -14,14 +14,58 @@
 .btn-danger { background: #dc2626; color: #fff; }
 .btn-ghost { background: transparent; color: #6b7280; border: 1px solid #e5e7eb; }
 
-.cb-grid { display: grid; grid-template-columns: 240px 1fr; gap: 12px; align-items: start; }
+.cb-grid { display: grid; grid-template-columns: 30% 70%; gap: 12px; align-items: start; }
+
+@media (max-width: 768px) {
+  .cb-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cb-row {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .cb-table thead {
+    display: none;
+  }
+
+  .cb-table tbody, .cb-table tr, .cb-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .cb-table tr {
+    margin-bottom: 15px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px;
+  }
+
+  .cb-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .cb-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    margin-right: 10px;
+  }
+}
 
 .cb-empty { color: #6b7280; padding: 10px 4px; }
 
-.cb-tablewrap { overflow: auto; border: 1px solid #e5e7eb; border-radius: 8px; }
-.cb-table { width: 100%; border-collapse: collapse; }
-.cb-table th, .cb-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; text-align: left; }
-.cb-ellipsis { max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cb-tablewrap { overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 8px; }
+.cb-table { width: 100%; border-collapse: collapse; min-width: 700px; }
+.cb-table th, .cb-table td { padding: 16px; border-bottom: 1px solid #f1f5f9; text-align: left; }
+.cb-table td:last-child { display: flex; gap: 8px; }
+.cb-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cb-ellipsis .btn-link { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; }
 
 /* ---------- Categorías (sin scroll interno) ---------- */
 .cb-catlist {
