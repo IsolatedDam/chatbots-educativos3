@@ -186,14 +186,13 @@ export default function DatosAlumnos({ canDeleteAlumno, canEditEstado, canEditRi
                        title={allSelected?"Quitar selección":"Seleccionar todos"} />
               </th>
               <th>RUT/DNI</th><th>Nombre</th><th>Apellido</th><th>Año</th><th>Semestre</th>
-              <th>Jornada</th><th>Estado</th><th>Riesgo</th><th>Vence</th><th>Acciones</th>
+              <th>Jornada</th><th>Estado</th><th>Riesgo</th><th>N° de Ingresos</th><th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {loading ? <tr><td colSpan="99">Cargando…</td></tr> :
              rows.length ? rows.map(a=>{
               const riesgoBase=a.riesgo??a.color_riesgo??a.riesgo_color??calcRiesgoFE(a.suscripcionVenceEl)??"";
-              const venceStr=a.suscripcionVenceEl?String(a.suscripcionVenceEl).slice(0,10):"—";
               const checked=selected.has(a._id);
               return (
                 <tr key={a._id}>
@@ -206,7 +205,7 @@ export default function DatosAlumnos({ canDeleteAlumno, canEditEstado, canEditRi
                   <td>{a.jornada ?? "-"}</td>
                   <td>{a.habilitado===false?"Suspendido":"Activo"}</td>
                   <td title={riesgoMensajeFE(String(riesgoBase).toLowerCase())}>{riesgoTextoTabla(a)}</td>
-                  <td>{venceStr}</td>
+                  <td>{a.conteo_ingresos || 0}</td>
                   <td className="cell-actions">
                     <button className="btn btn-primary" onClick={()=>openEdit(a)}>Editar</button>
                     {canDeleteAlumno && <button className="btn btn-danger" onClick={()=>handleDelete(a._id)} style={{marginLeft:8}}>Eliminar</button>}
