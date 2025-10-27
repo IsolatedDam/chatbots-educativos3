@@ -183,5 +183,22 @@ router.get('/alumnos', verificarToken, autorizarRoles('profesor'), async (req, r
   }
 });
 
+/* ========= Eliminar todas las visitas de un correo (Solo Superadmin) ========= */
+router.delete('/:correo', verificarToken, autorizarRoles('superadmin'), async (req, res) => {
+  try {
+    const { correo } = req.params;
+    const result = await Visita.deleteMany({ correo });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ msg: 'No se encontraron visitas para el correo proporcionado.' });
+    }
+
+    res.json({ msg: `Se eliminaron ${result.deletedCount} visitas.` });
+  } catch (err) {
+    console.error('Error al eliminar visitas:', err);
+    res.status(500).json({ msg: 'Error al eliminar visitas' });
+  }
+});
+
 
 module.exports = router;

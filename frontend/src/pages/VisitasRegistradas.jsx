@@ -9,20 +9,36 @@ function VisitasRegistradas() {
   const [visitas, setVisitas] = useState([]);
   const [descargando, setDescargando] = useState(false);
 
+  const fetchVisitas = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${API_BASE}/api/visitas`, {
+        headers: { Authorization: `Bearer ${token || ''}` },
+      });
+      setVisitas(res.data);
+    } catch (err) {
+      console.error('Error al obtener visitas:', err);
+    }
+  };
+
   useEffect(() => {
-    const fetchVisitas = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get(`${API_BASE}/api/visitas`, {
-          headers: { Authorization: `Bearer ${token || ''}` },
-        });
-        setVisitas(res.data);
-      } catch (err) {
-        console.error('Error al obtener visitas:', err);
-      }
-    };
     fetchVisitas();
   }, []);
+
+  const handleDelete = async (correo) => {
+    if (window.confirm(`¿Estás seguro de que quieres eliminar todas las visitas de ${correo}?`)) {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.delete(`${API_BASE}/api/visitas/${correo}`, {
+          headers: { Authorization: `Bearer ${token || ''}` },
+        });
+        fetchVisitas(); // Re-fetch visits after deletion
+      } catch (err) {
+        console.error('Error al eliminar visita:', err);
+        alert('Error al eliminar la visita.');
+      }
+    }
+  };
 
   const descargarExcel = async () => {
     try {
@@ -107,6 +123,7 @@ function VisitasRegistradas() {
               <th>WhatsApp</th>
               <th>N° de Visitas</th>
               <th>Última Visita</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -121,11 +138,16 @@ function VisitasRegistradas() {
                     ? new Date(v.ultimaVisita).toLocaleString('es-CL')
                     : '-'}
                 </td>
+                <td>
+                  <button className="delete-btn" onClick={() => handleDelete(v.correo)}>
+                    Eliminar
+                  </button>
+                </td>
               </tr>
             ))}
             {!visitas.length && (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', color: '#6e7a86' }}>
+                <td colSpan={6} style={{ textAlign: 'center', color: '#6e7a86' }}>
                   Sin visitas registradas.
                 </td>
               </tr>
