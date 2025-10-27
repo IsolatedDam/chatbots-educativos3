@@ -1,0 +1,77 @@
+.hero-section {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    gap: 2rem;
+    padding: 3rem 1rem;
+    width: 100%;
+    box-sizing: border-box;
+    flex-wrap: wrap;
+}
+
+.hero-block {
+    flex: 1;
+    min-width: 280px;
+    max-width: 350px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: center;
+    padding: 2rem;
+    border-radius: 12px;
+    background-color: #ffffff;
+    color: #1f2937; /* Dark gray for text */
+    border: 1px solid #e5e7eb; /* Subtle border */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.hero-block:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Color-specific styles can be added here if needed, e.g., for a top border */
+.block-1:hover { border-top: 5px solid #f59e0b; }
+.block-2:hover { border-top: 5px solid #10b981; }
+.block-3:hover { border-top: 5px solid #374151; }
+
+
+.hero-block h2 {
+    font-size: 1.75rem;
+    font-weight: bold;
+    margin-bottom: 1.5rem;
+    min-height: 50px;
+    color: #111827; /* Even darker for titles */
+}
+
+.hero-image-link {
+    display: block;
+    margin: 1rem 0;
+    cursor: pointer;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: opacity 0.3s ease;
+}
+
+.hero-image-link:hover {
+    opacity: 0.9;
+}
+
+.hero-image-link img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.hero-block-footer {
+    font-size: 0.9rem;
+    margin-top: 1.5rem;
+    color: #6b7280; /* Lighter gray for footer text */
+}
+
+.hero-block-footer::before {
+    content: '📄';
+    margin-right: 8px;
+    font-size: 1.1rem;
+}

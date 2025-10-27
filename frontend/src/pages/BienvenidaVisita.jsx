@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/PanelAlumno.css';
+import '../styles/HeroSection.css';
+import HeroSection from '../components/HeroSection';
 
 /* ===== API local/remota ===== */
 const API_ROOT = (() => {
@@ -70,10 +72,13 @@ export default function BienvenidaVisita() {
   const renderContent = () => {
     if (seccion === 'inicio') {
       return (
-        <section className="card">
-          <h3 className="card-title">{config.welcome.title}</h3>
-          <p>{config.welcome.text}</p>
-        </section>
+        <>
+          <section className="card">
+            <h3 className="card-title">{config.welcome.title}</h3>
+            <p>{config.welcome.text}</p>
+          </section>
+          <HeroSection />
+        </>
       );
     }
 
@@ -139,6 +144,10 @@ export default function BienvenidaVisita() {
             <button className={`nav-item ${seccion === 'inicio' ? 'active' : ''}`} onClick={() => setSeccion('inicio')}>
               <span className="nav-ico">🏠</span><span>Inicio</span>
             </button>
+            <a href="https://wa.me/56226970116" target="_blank" rel="noopener noreferrer" className="nav-item">
+<span className="nav-ico">🟢</span>
+              <span>WhatsApp</span>
+            </a>
             
             {config.chatbots.map(chatbot => (
               <button key={chatbot._id} className={`nav-item ${seccion === chatbot._id ? 'active' : ''}`} onClick={() => setSeccion(chatbot._id)}>
