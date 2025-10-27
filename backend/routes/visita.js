@@ -32,8 +32,28 @@ router.post('/registro', async (req, res) => {
 /* ========= Exportar TODAS las visitas como XLSX (Solo Superadmin) ========= */
 router.get('/exportar', verificarToken, autorizarRoles('superadmin'), async (req, res) => {
   try {
-    // Sin filtro, trae todas las visitas
-    const visitas = await Visita.find().sort({ fechaHora: -1 }).lean();
+    const visitas = await Visita.aggregate([
+      {
+        $group: {
+          _id: '$correo',
+          nombre: { $first: '$nombre' },
+          whatsapp: { $first: '$whatsapp' },
+          visitas: { $sum: 1 },
+          ultimaVisita: { $max: '$fechaHora' },
+        },
+      },
+      { $sort: { ultimaVisita: -1 } },
+      {
+        $project: {
+          _id: 0,
+          correo: '$_id',
+          nombre: 1,
+          whatsapp: 1,
+          visitas: 1,
+          ultimaVisita: 1,
+        },
+      },
+    ]);
 
     const wb = new ExcelJS.Workbook();
     wb.creator = 'Chatbots Educativos';
@@ -44,7 +64,8 @@ router.get('/exportar', verificarToken, autorizarRoles('superadmin'), async (req
       { header: 'Nombre', key: 'nombre', width: 28 },
       { header: 'Correo', key: 'correo', width: 34 },
       { header: 'WhatsApp', key: 'whatsapp', width: 18 },
-      { header: 'Fecha y Hora', key: 'fechaHora', width: 22 },
+      { header: 'N° de Visitas', key: 'visitas', width: 15 },
+      { header: 'Última Visita', key: 'ultimaVisita', width: 22 },
     ];
     ws.getRow(1).font = { bold: true };
 
@@ -53,11 +74,12 @@ router.get('/exportar', verificarToken, autorizarRoles('superadmin'), async (req
         nombre: v.nombre || '',
         correo: v.correo || '',
         whatsapp: v.whatsapp || '',
-        fechaHora: v.fechaHora ? new Date(v.fechaHora) : '',
+        visitas: v.visitas || 0,
+        ultimaVisita: v.ultimaVisita ? new Date(v.ultimaVisita) : '',
       });
     });
 
-    ws.getColumn('fechaHora').numFmt = 'dd/mm/yyyy hh:mm';
+    ws.getColumn('ultimaVisita').numFmt = 'dd/mm/yyyy hh:mm';
     ws.eachRow((row) => {
       row.alignment = { vertical: 'middle', wrapText: false };
       row.eachCell((cell) => {
@@ -83,8 +105,28 @@ router.get('/exportar', verificarToken, autorizarRoles('superadmin'), async (req
 /* ========= Obtener TODAS las visitas (Solo Superadmin) ========= */
 router.get('/', verificarToken, autorizarRoles('superadmin'), async (req, res) => {
   try {
-    // Devuelve todas las visitas sin filtrar
-    const visitas = await Visita.find().sort({ fechaHora: -1 });
+    const visitas = await Visita.aggregate([
+      {
+        $group: {
+          _id: '$correo',
+          nombre: { $first: '$nombre' },
+          whatsapp: { $first: '$whatsapp' },
+          visitas: { $sum: 1 },
+          ultimaVisita: { $max: '$fechaHora' },
+        },
+      },
+      { $sort: { ultimaVisita: -1 } },
+      {
+        $project: {
+          _id: 0,
+          correo: '$_id',
+          nombre: 1,
+          whatsapp: 1,
+          visitas: 1,
+          ultimaVisita: 1,
+        },
+      },
+    ]);
     res.json(visitas);
   } catch (err) {
     console.error(err);
@@ -99,19 +141,41 @@ router.get('/alumnos', verificarToken, autorizarRoles('profesor'), async (req, r
 
     // 1. Encontrar los alumnos de este profesor
     const alumnos = await Alumno.find({ createdBy: profesorId }).lean();
-    
+
     // 2. Si no tiene alumnos, no puede ver ninguna visita
     if (!alumnos || alumnos.length === 0) {
       return res.json([]);
     }
 
     // 3. Extraer sus correos
-    const correosAlumnos = alumnos.map(a => a.correo);
+    const correosAlumnos = alumnos.map((a) => a.correo);
 
     // 4. Crear el filtro para que `correo` esté en la lista de sus alumnos
     const filtroVisitas = { correo: { $in: correosAlumnos } };
 
-    const visitas = await Visita.find(filtroVisitas).sort({ fechaHora: -1 });
+    const visitas = await Visita.aggregate([
+      { $match: filtroVisitas },
+      {
+        $group: {
+          _id: '$correo',
+          nombre: { $first: '$nombre' },
+          whatsapp: { $first: '$whatsapp' },
+          visitas: { $sum: 1 },
+          ultimaVisita: { $max: '$fechaHora' },
+        },
+      },
+      { $sort: { ultimaVisita: -1 } },
+      {
+        $project: {
+          _id: 0,
+          correo: '$_id',
+          nombre: 1,
+          whatsapp: 1,
+          visitas: 1,
+          ultimaVisita: 1,
+        },
+      },
+    ]);
     res.json(visitas);
   } catch (err) {
     console.error('Error al obtener visitas de alumnos:', err);
