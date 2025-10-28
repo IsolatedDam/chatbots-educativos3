@@ -131,12 +131,190 @@
 }
 @keyframes shimmer{ 100% { transform:translateX(100%); } }
 
-/* Responsive */
-@media (max-width: 1100px){
-  .al-layout{ grid-template-columns: 1fr; }
-  .al-sidebar{ position:static; height:auto; }
-  .cards-grid{ grid-template-columns: 1fr; }
-  .cb-cards.grid.two{ grid-template-columns: 1fr; }
+.al-menu-toggle {
+  display: none; /* Oculto por defecto */
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 1110;
+  background: var(--panel);
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.al-menu-toggle span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: var(--fg);
+  margin: 4px 0;
+  transition: transform 0.3s;
+}
+
+@media (max-width: 992px) {
+  .al-menu-toggle {
+    display: block;
+  }
+}
+
+.al-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1040;
+}
+
+.sidebar-open .al-overlay {
+  display: block;
+}
+
+
+
+/* ===== Responsive ===== */
+
+/* Overlay: se muestra cuando el sidebar está abierto */
+.sidebar-open .al-overlay {
+  display: block;
+  z-index: 1050; /* Entre el sidebar y el contenido */
+}
+
+/* Botón de cierre del sidebar (visible en móvil) */
+.al-sidebar-close {
+  display: none;
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+/* Tablet y móvil */
+@media (max-width: 992px) {
+  .al-layout {
+    grid-template-columns: 1fr; /* Layout de una sola columna */
+    padding: 0;
+    gap: 0;
+  }
+
+  /* El sidebar se oculta por defecto */
+  .al-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    height: 100%;
+    z-index: 1100;
+    transition: transform 0.3s ease-in-out;
+    transform: translateX(-100%); /* Oculto fuera de la pantalla */
+    border-radius: 0;
+  }
+
+  /* El sidebar se muestra cuando el layout tiene la clase 'sidebar-open' */
+  .sidebar-open .al-sidebar {
+    transform: translateX(0);
+  }
+
+  /* Botón de menú hamburguesa visible */
+  .al-menu-toggle {
+    display: block;
+  }
+
+  /* Botón de cierre del sidebar visible */
+  .al-sidebar-close {
+    display: block;
+  }
+
+  .al-main {
+    padding: 16px;
+    padding-top: 80px; /* Espacio para el header fijo */
+  }
+
+  /* El header se vuelve fijo para contener el botón de menú */
+  .al-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg);
+    padding: 16px;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+  }
+
+  .al-header .titles {
+    width: 100%;
+    text-align: center;
+    padding-left: 40px; /* Espacio para que el título no se solape con el botón */
+  }
+
+  /* Ajustes de layout para tarjetas y grids */
+  .cards-grid,
+  .kv-grid,
+  .cb-cards.grid.two {
+    grid-template-columns: 1fr;
+  }
+
+  .card.span-2 {
+    grid-column: span 1;
+  }
+}
+
+/* Móvil pequeño */
+@media (max-width: 768px) {
+  .al-main {
+    padding: 12px;
+    padding-top: 70px;
+  }
+  .al-header {
+    padding: 12px;
+  }
+  .al-menu-toggle {
+    top: 12px;
+    left: 12px;
+  }
+  .al-header .titles {
+    padding-left: 45px;
+    padding-right: 15px;
+  }
+  .al-header .titles h1 {
+    font-size: 20px;
+  }
+  .subtitle {
+    font-size: 13px;
+  }
+
+  /* Iframe a pantalla completa en móvil */
+  .persistent-iframe {
+    padding: 0 !important;
+  }
+  .persistent-iframe > div {
+    border-radius: 0 !important;
+    height: 100vh;
+    height: -webkit-fill-available; /* iOS fix */
+  }
+  .persistent-iframe button[onClick*="setExpandedCat"] {
+    top: 15px !important;
+    right: 15px !important;
+  }
+
+  /* Ajuste en los grupos de chatbots */
+  .cb-group-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
 }
 
 /* Video container styles */

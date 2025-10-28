@@ -226,12 +226,20 @@ export default function PanelAlumno() {
     }
   };
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   /* ===== UI ===== */
   return (
     <div className="al-theme">
-      <div className="al-layout">
+      <div className={`al-layout ${isSidebarOpen ? 'sidebar-open' : ''}`}>
+        <div className="al-overlay" onClick={() => setIsSidebarOpen(false)}></div>
+
+
+
+
         {/* Sidebar */}
         <aside className="al-sidebar">
+          <button className="al-sidebar-close" onClick={() => setIsSidebarOpen(false)}>&times;</button>
           <div className="brand">
             <div className="logo">🤖</div>
             <div className="brand-text">
@@ -241,7 +249,7 @@ export default function PanelAlumno() {
           </div>
 
           <div className="user-card">
-            <img src="/avatar.png" alt="Perfil" className="avatar" />
+            <img src="/logoinvitado.png" alt="Perfil" className="avatar" />
             <div className="user-info">
               <div className="user-name">{usuario?.nombre} {usuario?.apellido}</div>
               <div className="user-doc">{usuario?.tipo_documento} {usuario?.numero_documento}</div>
@@ -264,18 +272,25 @@ export default function PanelAlumno() {
         </aside>
 
         {/* Main */}
-        <main className="al-main">
+        <div className="al-main-container">
           <header className="al-header">
+            {/* Botón de menú para móviles */}
+            <button className="al-menu-toggle" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
             <div className="titles">
               <h1>Panel del Alumno</h1>
               <p className="subtitle">Tu información personal, académica y accesos.</p>
             </div>
           </header>
 
-          {/* Iframe persistente: siempre renderizado, visible solo en chatbots con acordeón abierto */}
-          {activeIframeSrc && (
-            <div
-              className="persistent-iframe"
+          <main className="al-main">
+            {/* Iframe persistente: siempre renderizado, visible solo en chatbots con acordeón abierto */}
+            {activeIframeSrc && (
+              <div
+                className="persistent-iframe"
               style={{
                 position: 'fixed',
                 top: 0,
@@ -297,7 +312,8 @@ export default function PanelAlumno() {
                   margin: '0 auto',
                   background: 'white',
                   borderRadius: '8px',
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  position: 'relative' // Añadido para el posicionamiento del botón
                 }}
               >
                 <iframe
@@ -313,16 +329,22 @@ export default function PanelAlumno() {
                   onClick={() => setExpandedCat({})} // Cierra todos los acordeones
                   style={{
                     position: 'absolute',
-                    top: '10px',
-                    right: '10px',
-                    background: 'red',
+                    top: '15px',
+                    right: '15px',
+                    background: 'rgba(0,0,0,0.5)',
                     color: 'white',
                     border: 'none',
-                    padding: '5px 10px',
-                    cursor: 'pointer'
+                    borderRadius: '50%',
+                    width: '30px',
+                    height: '30px',
+                    lineHeight: '30px',
+                    textAlign: 'center',
+                    padding: 0,
+                    cursor: 'pointer',
+                    zIndex: 10 // Asegura que esté por encima del iframe
                   }}
                 >
-                  Cerrar
+                  &times;
                 </button>
               </div>
             </div>
@@ -474,6 +496,7 @@ export default function PanelAlumno() {
             </section>
           )}
         </main>
+      </div>
       </div>
     </div>
   );
