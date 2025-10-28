@@ -1,92 +1,148 @@
+
 .editar-panel-visita {
-  padding: 20px;
+  padding: 2rem;
+  background-color: #f0f2f5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 .editar-panel-visita .card {
-  background: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.editar-panel-visita .card:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
 .editar-panel-visita h2 {
-  margin-bottom: 20px;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  color: #333;
+  text-align: center;
 }
 
 .editar-panel-visita h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
   margin-top: 0;
-  margin-bottom: 15px;
+  margin-bottom: 1.5rem;
+  color: #444;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 0.5rem;
 }
 
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 1.5rem;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #555;
 }
 
 .form-control {
   width: 100%;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-control:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  outline: none;
 }
 
 .item-list {
-  list-style: none;
   padding: 0;
+  list-style: none;
 }
 
-.item-list li {
+.chatbot-item, .item-list li {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px;
-  border-bottom: 1px solid #eee;
+  padding: 0.75rem 1rem;
+  background-color: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+  transition: background-color 0.3s ease;
+}
+
+.chatbot-item:hover, .item-list li:hover {
+  background-color: #f0f0f0;
 }
 
 .btn-delete {
-  background-color: #dc3545;
+  background-color: #ff4d4f;
   color: white;
   border: none;
-  padding: 5px 10px;
-  border-radius: 4px;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
   cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.btn-delete:hover {
+  background-color: #d9363e;
 }
 
 .add-item-form {
-  margin-top: 20px;
-  padding-top: 20px;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
   border-top: 1px solid #eee;
 }
 
 .add-item-form h4 {
   margin-top: 0;
+  margin-bottom: 1rem;
+  font-weight: 600;
 }
 
 .add-item-form .form-control {
-  margin-bottom: 10px;
+  margin-bottom: 1rem;
 }
 
 .btn-add {
   background-color: #28a745;
   color: white;
   border: none;
-  padding: 10px 15px;
-  border-radius: 4px;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
   cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.btn-add:hover {
+  background-color: #218838;
 }
 
 .btn-save {
+  display: block;
+  width: 100%;
   background-color: #007bff;
   color: white;
   border: none;
-  padding: 12px 20px;
-  border-radius: 4px;
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+  margin-top: 2rem;
 }
+
+.btn-save:hover {
+  background-color: #0056b3;
+}
+

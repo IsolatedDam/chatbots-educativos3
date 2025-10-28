@@ -61,7 +61,7 @@ function EditarPanelVisita() {
 
     try {
       const config = { welcome, chatbots, videos };
-      const response = await fetch(`${API_BASE}/guest-panel`, {
+      const response = await fetch(`${API_BASE}/guest-panel/config`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -151,14 +151,14 @@ function EditarPanelVisita() {
 
       <section className="card">
         <h3>Gestionar Chatbots</h3>
-        <ul className="item-list">
+        <div className="item-list">
           {chatbots.map(chatbot => (
-            <li key={chatbot.id}>
+            <div key={chatbot.id} className="chatbot-item">
               <span>{chatbot.title}</span>
               <button onClick={() => handleDeleteChatbot(chatbot.id)} className="btn-delete">Eliminar</button>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
         <div className="add-item-form">
           <h4>Añadir nuevo chatbot</h4>
           <input

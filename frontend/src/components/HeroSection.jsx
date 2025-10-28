@@ -1,51 +1,53 @@
-import React from 'react';
+// Re-adding a comment to force a rebuild
+import React, { useState, useEffect } from 'react';
 
-const Block = ({ bgColorClass, title, imageUrl, imageAlt, linkUrl, footerText }) => (
-    <div className={`hero-block ${bgColorClass}`}>
-        <div>
-            <h2>{title}</h2>
-        </div>
-        <a href={linkUrl} className="hero-image-link" aria-label={`Descargar ${title}`}>
-            <img src={imageUrl} alt={imageAlt} />
-        </a>
-        <div className="hero-block-footer">
-            {footerText}
-        </div>
-    </div>
-);
+const API_ROOT = (() => {
+  const vite = typeof import.meta !== "undefined" ? import.meta.env?.VITE_API_ROOT : undefined;
+  const cra  = typeof process !== "undefined" ? process.env?.REACT_APP_API_ROOT : undefined;
+  if (vite) return vite;
+  if (cra)  return cra;
+  if (typeof window !== "undefined") {
+    const { hostname } = window.location;
+    if (hostname === "localhost" || hostname === "127.0.0.1") return "http://localhost:5000";
+  }
+  return "https://chatbots-educativos3-vhfq.onrender.com";
+})();
+const API_BASE = `${API_ROOT}/api`;
 
 const HeroSection = () => {
-    const blocksData = [
-        {
-            bgColorClass: 'block-1',
-            title: 'Cursos Cortos',
-            imageUrl: '/B1.png',
-            imageAlt: 'Icono de guía de inicio',
-            linkUrl: '#',
-            footerText: 'Descargar la guía en PDF'
-        },
-        {
-            bgColorClass: 'block-2',
-            title: 'Matriculas Abiertas 2026',
-            imageUrl: '/B2.png',
-            imageAlt: 'Icono de catálogo de cursos',
-            linkUrl: '#',
-            footerText: 'Explorar nuestro catálogo PDF'
-        },
-        {
-            bgColorClass: 'block-3',
-            title: 'Información Adicional',
-            imageUrl: '/B3.png',
-            imageAlt: 'Icono de información adicional',
-            linkUrl: '#',
-            footerText: 'Consultar detalles en PDF'
-        }
-    ];
+    const [heroBlocks, setHeroBlocks] = useState([]);
+
+    useEffect(() => {
+        const fetchGuestPanel = async () => {
+            try {
+                const response = await fetch(`${API_BASE}/guest-panel`);
+                if (!response.ok) {
+                    throw new Error('Error al cargar los datos del panel de visita.');
+                }
+                const data = await response.json();
+                setHeroBlocks(data.heroBlocks);
+            } catch (error) {
+                console.error(error.message);
+            }
+        };
+
+        fetchGuestPanel();
+    }, []);
 
     return (
         <section className="hero-section">
-            {blocksData.map((block, index) => (
-                <Block key={index} {...block} />
+            {heroBlocks.map((block, index) => (
+                <div key={index} className={`hero-block block-${index + 1}`}>
+                    <div>
+                        <h2>{block.title}</h2>
+                    </div>
+                    <a href={`${API_ROOT}/uploads/${block.pdf}`} className="hero-image-link" aria-label={`Descargar ${block.title}`}>
+                        <img src={`${API_ROOT}/uploads/${block.image}`} alt={block.title} />
+                    </a>
+                    <div className="hero-block-footer">
+                        <p>Descargar</p>
+                    </div>
+                </div>
             ))}
         </section>
     );

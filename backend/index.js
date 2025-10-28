@@ -54,6 +54,7 @@ app.use((req, res, next) => { if (req.method === "OPTIONS") return res.sendStatu
 
 /* ====== Parsers ====== */
 app.use(express.json({ limit: "2mb" }));
+app.use('/uploads', express.static('uploads'));
 
 /* ====== Rutas ====== */
 // Nota: cada prefijo montado **una sola vez**
@@ -69,6 +70,8 @@ console.log("MONTADA: /api/password");
 app.use("/api/chatbot-categorias", require("./routes/chatbot-categorias"));
 app.use("/api", require("./routes/alumno-chatbots"));              // endpoints de permisos
 app.use("/api/guest-panel", require("./routes/guest-panel"));
+app.use("/api/guest-panel/config", require("./routes/guest-panel-config"));
+
 
 app.get("/", (_req, res) => res.send("🚀 API funcionando correctamente en Render"));
 app.get("/health", (_req, res) => res.json({ ok: true, mongo: mongoose.connection.readyState })); // 1=ok

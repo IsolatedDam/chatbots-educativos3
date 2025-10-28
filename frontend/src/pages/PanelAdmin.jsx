@@ -14,6 +14,7 @@ import CargarAlumnos from './CargarAlumnos';
 import GestionarUsuarios from './GestionarUsuarios';
 import VisitasRegistradas from './VisitasRegistradas';
 import EditarPanelVisita from './EditarPanelVisita';
+import EditarHeroSection from './EditarHeroSection';
 
 function PanelAdmin() {
   // Vista por defecto: 'inicio' (iframe)
@@ -86,6 +87,10 @@ function PanelAdmin() {
             Editar Panel Visita
           </li>
 
+          <li className={liClass('editarHeroSection')} onClick={() => setVistaActiva('editarHeroSection')}>
+            Editar Hero Section
+          </li>
+
           <li className={liClass('cargarAlumnos')} onClick={() => setVistaActiva('cargarAlumnos')}>
             Cargar desde archivo
           </li>
@@ -122,6 +127,7 @@ function PanelAdmin() {
 
         {vistaActiva === 'usuarios' && <GestionarUsuarios />}
         {vistaActiva === 'editarPanelVisita' && <EditarPanelVisita />}
+        {vistaActiva === 'editarHeroSection' && <EditarHeroSection />}
         {vistaActiva === 'cargarAlumnos' && <CargarAlumnos />}
         {vistaActiva === 'visitas' && <VisitasRegistradas />}
       </main>
