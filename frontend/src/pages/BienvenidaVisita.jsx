@@ -29,6 +29,11 @@ export default function BienvenidaVisita() {
   const [seccion, setSeccion] = useState('inicio');
   const [config, setConfig] = useState(null);
   const [cargando, setCargando] = useState(true);
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    setSidebarOpen(!isSidebarOpen);
+  };
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -134,10 +139,19 @@ export default function BienvenidaVisita() {
     return null; // Or a default message
   };
 
+  const handleNavClick = (seccion) => {
+    setSeccion(seccion);
+    if (window.innerWidth <= 992) {
+      toggleSidebar();
+    }
+  };
+
   return (
     <div className="al-theme">
-      <div className="al-layout">
+      <div className={`al-layout ${isSidebarOpen ? 'sidebar-open' : ''}`}>
+        <div className="al-overlay" onClick={toggleSidebar}></div>
         <aside className="al-sidebar">
+          <button className="al-sidebar-close" onClick={toggleSidebar}>&times;</button>
           <div className="brand">
             <div className="logo">🤖</div>
             <div className="brand-text">
@@ -147,7 +161,7 @@ export default function BienvenidaVisita() {
           </div>
 
           <nav className="al-nav">
-            <button className={`nav-item ${seccion === 'inicio' ? 'active' : ''}`} onClick={() => setSeccion('inicio')}>
+            <button className={`nav-item ${seccion === 'inicio' ? 'active' : ''}`} onClick={() => handleNavClick('inicio')}>
               <span className="nav-ico">🏠</span><span>Inicio</span>
             </button>
             <a href="https://wa.me/56226970116" target="_blank" rel="noopener noreferrer" className="nav-item">
@@ -156,13 +170,13 @@ export default function BienvenidaVisita() {
             </a>
             
             {config.chatbots.map(chatbot => (
-              <button key={chatbot._id} className={`nav-item ${seccion === chatbot._id ? 'active' : ''}`} onClick={() => setSeccion(chatbot._id)}>
+              <button key={chatbot._id} className={`nav-item ${seccion === chatbot._id ? 'active' : ''}`} onClick={() => handleNavClick(chatbot._id)}>
                 <span className="nav-ico">💬</span><span>{chatbot.title}</span>
               </button>
             ))}
 
             {config.videos.length > 0 && (
-              <button className={`nav-item ${seccion === 'videos' ? 'active' : ''}`} onClick={() => setSeccion('videos')}>
+              <button className={`nav-item ${seccion === 'videos' ? 'active' : ''}`} onClick={() => handleNavClick('videos')}>
                 <span className="nav-ico">🎥</span><span>Videos</span>
               </button>
             )}
@@ -173,6 +187,11 @@ export default function BienvenidaVisita() {
 
         <main className="al-main">
           <header className="al-header">
+            <button className="al-menu-toggle" onClick={toggleSidebar}>
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
             <div className="titles">
               <h1>Panel de Visita</h1>
               <p className="subtitle">Explora nuestros recursos educativos.</p>
